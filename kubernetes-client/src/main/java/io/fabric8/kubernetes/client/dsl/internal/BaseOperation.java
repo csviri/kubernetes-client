@@ -992,7 +992,8 @@ public class BaseOperation<T extends HasMetadata, L extends KubernetesResourceLi
       public void onNothing() {
         test.accept(informer.getStore().list());
       }
-    }).start().whenComplete((v, t) -> {
+    });
+    informer.start().whenComplete((v, t) -> {
       if (t != null) {
         future.completeExceptionally(t);
       }

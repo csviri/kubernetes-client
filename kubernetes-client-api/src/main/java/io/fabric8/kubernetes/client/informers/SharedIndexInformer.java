@@ -71,7 +71,16 @@ public interface SharedIndexInformer<T> extends AutoCloseable {
    *
    * @param handler event handler
    */
-  SharedIndexInformer<T> addEventHandler(ResourceEventHandler<? super T> handler);
+  ResourceEventHandlerRegistration addEventHandler(ResourceEventHandler<? super T> handler);
+
+  /**
+   * Remove event handler.
+   * <p>
+   * The handler methods will be called using the client's {@link Executor}
+   *
+   * @param registration event handler registration
+   */
+  void removeEventHandler(ResourceEventHandlerRegistration registration);
 
   /**
    * Adds an event handler to the shared informer using the specified resync period.
@@ -83,7 +92,7 @@ public interface SharedIndexInformer<T> extends AutoCloseable {
    * @param handle the event handler
    * @param resyncPeriod the specific resync period
    */
-  SharedIndexInformer<T> addEventHandlerWithResyncPeriod(ResourceEventHandler<? super T> handle,
+  ResourceEventHandlerRegistration addEventHandlerWithResyncPeriod(ResourceEventHandler<? super T> handle,
       long resyncPeriod);
 
   /**

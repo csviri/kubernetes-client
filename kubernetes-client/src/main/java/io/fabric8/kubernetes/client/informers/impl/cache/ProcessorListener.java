@@ -16,6 +16,7 @@
 package io.fabric8.kubernetes.client.informers.impl.cache;
 
 import io.fabric8.kubernetes.client.informers.ResourceEventHandler;
+import io.fabric8.kubernetes.client.informers.ResourceEventHandlerRegistration;
 
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
@@ -34,7 +35,7 @@ import java.time.temporal.ChronoUnit;
  *
  * @param <T> type of ProcessorListener
  */
-public class ProcessorListener<T> {
+public class ProcessorListener<T> implements ResourceEventHandlerRegistration {
   private long resyncPeriodInMillis;
   private ZonedDateTime nextResync;
   private ResourceEventHandler<? super T> handler;
@@ -60,6 +61,10 @@ public class ProcessorListener<T> {
 
   public boolean shouldResync(ZonedDateTime now) {
     return this.resyncPeriodInMillis != 0 && (now.isAfter(this.nextResync) || now.equals(this.nextResync));
+  }
+
+  public long resyncPeriodInMillis() {
+     return resyncPeriodInMillis;
   }
 
   public abstract static class Notification<T> {

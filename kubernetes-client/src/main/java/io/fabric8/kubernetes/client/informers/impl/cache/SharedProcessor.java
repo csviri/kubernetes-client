@@ -175,6 +175,13 @@ public class SharedProcessor<T> {
     }
   }
 
+  public void removeProcessorListener(ProcessorListener<? super T> listener) {
+     this.listeners.remove(listener);
+     if (listener.isReSync()) {
+       this.syncingListeners.remove(listener);
+     }
+  }
+
   public void executeIfPossible(Runnable runnable) {
     try {
       this.executor.execute(runnable);

@@ -417,9 +417,9 @@ class InformTest {
     SharedIndexInformer<Pod> informer = client.pods()
         .runnableInformer(0)
         .itemStore(new BasicItemStore<>(Cache::metaUidKeyFunc))
-        .removeNamespaceIndex()
-        .addEventHandler(handler)
-        .run();
+        .removeNamespaceIndex();
+        informer.addEventHandler(handler);
+        informer.run();
 
     assertTrue(addLatch.await(10, TimeUnit.SECONDS));
     assertTrue(informer.getIndexer().getIndexers().isEmpty());
@@ -486,9 +486,10 @@ class InformTest {
         .itemStore(
             new ReducedStateItemStore<>(ReducedStateItemStore.NAME_KEY_STATE, Pod.class,
                 new KubernetesSerialization(), "metadata.ownerReferences"))
-        .removeNamespaceIndex()
-        .addEventHandler(handler)
-        .run();
+        .removeNamespaceIndex();
+
+      informer.addEventHandler(handler);
+      informer.run();
 
     assertTrue(addLatch.await(10, TimeUnit.SECONDS));
     assertTrue(informer.getIndexer().getIndexers().isEmpty());

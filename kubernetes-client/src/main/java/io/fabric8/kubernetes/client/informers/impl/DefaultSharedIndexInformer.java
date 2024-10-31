@@ -20,11 +20,13 @@ import io.fabric8.kubernetes.api.model.KubernetesResourceList;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.informers.ExceptionHandler;
 import io.fabric8.kubernetes.client.informers.ResourceEventHandler;
+import io.fabric8.kubernetes.client.informers.ResourceEventHandlerRegistration;
 import io.fabric8.kubernetes.client.informers.SharedIndexInformer;
 import io.fabric8.kubernetes.client.informers.cache.Indexer;
 import io.fabric8.kubernetes.client.informers.cache.ItemStore;
 import io.fabric8.kubernetes.client.informers.cache.Store;
 import io.fabric8.kubernetes.client.informers.impl.cache.CacheImpl;
+import io.fabric8.kubernetes.client.informers.impl.cache.ProcessorListener;
 import io.fabric8.kubernetes.client.informers.impl.cache.ProcessorStore;
 import io.fabric8.kubernetes.client.informers.impl.cache.Reflector;
 import io.fabric8.kubernetes.client.informers.impl.cache.SharedProcessor;
@@ -97,17 +99,23 @@ public class DefaultSharedIndexInformer<T extends HasMetadata, L extends Kuberne
    * @param handler event handler
    */
   @Override
-  public DefaultSharedIndexInformer<T, L> addEventHandler(ResourceEventHandler<? super T> handler) {
-    addEventHandlerWithResyncPeriod(handler, defaultEventHandlerResyncPeriod);
-    return this;
+  public ResourceEventHandlerRegistration addEventHandler(ResourceEventHandler<? super T> handler) {
+    return addEventHandlerWithResyncPeriod(handler, defaultEventHandlerResyncPeriod);
   }
 
   @Override
-  public SharedIndexInformer<T> addEventHandlerWithResyncPeriod(ResourceEventHandler<? super T> handler,
+  public void removeEventHandler(ResourceEventHandlerRegistration registration) {
+    var processorListener = (ProcessorListener<? super T>) registration;
+
+    this.processor.removeProcessorListener(processorListener);
+  }
+
+  @Override
+  public ResourceEventHandlerRegistration addEventHandlerWithResyncPeriod(ResourceEventHandler<? super T> handler,
       long resyncPeriodMillis) {
     if (stopped) {
       log.info("DefaultSharedIndexInformer#Handler was not added to {} because it has stopped already", this);
-      return this;
+      return null;
     }
 
     if (resyncPeriodMillis > 0) {
@@ -131,11 +139,8 @@ public class DefaultSharedIndexInformer<T extends HasMetadata, L extends Kuberne
         }
       }
     }
-
-    this.processor.addProcessorListener(handler,
+    return this.processor.addProcessorListener(handler,
         determineResyncPeriod(resyncPeriodMillis, this.resyncCheckPeriodMillis), this.indexer::list);
-
-    return this;
   }
 
   @Override
