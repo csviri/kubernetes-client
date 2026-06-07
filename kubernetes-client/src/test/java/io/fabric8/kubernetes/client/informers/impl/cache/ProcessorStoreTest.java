@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -94,13 +95,17 @@ class ProcessorStoreTest {
     List<Pod> pods = Arrays.asList(pod, pod2);
     processorStore.update(pods);
 
-    processorStore.syncList(pods.stream().map(Cache::metaNamespaceKeyFunc).collect(Collectors.toSet()));
+    List<Notification<Pod>> firstSync = new ArrayList<>();
+    processorStore.syncList(pods.stream().map(Cache::metaNamespaceKeyFunc).collect(Collectors.toSet()), firstSync);
+    processorStore.distributeListNotifications(firstSync);
 
     // resync two values
     processorStore.resync();
 
     // relist with deletes
-    processorStore.syncList(Collections.emptySet());
+    List<Notification<Pod>> secondSync = new ArrayList<>();
+    processorStore.syncList(Collections.emptySet(), secondSync);
+    processorStore.distributeListNotifications(secondSync);
 
     Mockito.verify(processor, Mockito.times(6)).distribute(notificationCaptor.capture(), syncCaptor.capture());
 

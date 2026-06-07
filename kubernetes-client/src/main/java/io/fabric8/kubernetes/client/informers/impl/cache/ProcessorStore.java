@@ -96,16 +96,21 @@ public class ProcessorStore<T extends HasMetadata> {
 
   /**
    * Syncs the cache with the given set of keys from the latest list operation.
-   * Emits deferred add notifications if this is the first sync, and emits delete notifications
-   * for any cached items whose keys are not in {@code nextKeys}.
+   * <p>
+   * The cache is mutated immediately (deleting any cached items whose keys are not in
+   * {@code nextKeys}), but the resulting notifications are <em>not</em> distributed here. Instead
+   * the deferred add notifications (if this is the first sync) and the delete notifications are
+   * collected into {@code notifications} so the caller can distribute them after the {@code onList}
+   * event has been emitted (see {@link #distributeListNotifications(List)}).
    *
    * @param nextKeys the set of keys from the latest list result
+   * @param notifications collector populated with the notifications to be distributed afterwards
    * @return {@code true} if the cache was empty before processing deletions, {@code false} otherwise
    */
-  public boolean syncList(Set<String> nextKeys) {
+  public boolean syncList(Set<String> nextKeys, List<Notification<T>> notifications) {
     if (synced.compareAndSet(false, true)) {
       deferredAdd.stream().map(cache::getByKey).filter(Objects::nonNull)
-          .forEach(v -> this.processor.distribute(new ProcessorListener.AddNotification<>(v), false));
+          .forEach(v -> notifications.add(new ProcessorListener.AddNotification<>(v)));
       deferredAdd.clear();
     }
     List<T> current = cache.list();
@@ -113,10 +118,21 @@ public class ProcessorStore<T extends HasMetadata> {
       String key = cache.getKey(v);
       if (!nextKeys.contains(key)) {
         cache.remove(v);
-        this.processor.distribute(new ProcessorListener.DeleteNotification<>(v, true), false);
+        notifications.add(new ProcessorListener.DeleteNotification<>(v, true));
       }
     });
     return current.isEmpty();
+  }
+
+  /**
+   * Distributes the notifications collected by {@link #syncList(Set, List)}. This is kept separate
+   * from the cache sync so that callers can emit the {@code onList} event before these add/delete
+   * events are propagated to the handlers.
+   *
+   * @param notifications the notifications collected during the cache sync
+   */
+  public void distributeListNotifications(List<Notification<T>> notifications) {
+    notifications.forEach(n -> this.processor.distribute(n, false));
   }
 
   /**

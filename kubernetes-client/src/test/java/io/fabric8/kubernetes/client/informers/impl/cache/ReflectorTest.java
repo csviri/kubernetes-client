@@ -230,7 +230,7 @@ class ReflectorTest {
     reflector.getWatcher().eventReceived(Action.BOOKMARK, bookmarkPod);
 
     // Verify syncList and onList were called
-    Mockito.verify(mockStore).syncList(Mockito.anySet());
+    Mockito.verify(mockStore).syncList(Mockito.anySet(), Mockito.anyList());
     Mockito.verify(mockStore).onList(Mockito.eq("42"), Mockito.anyBoolean());
 
     // Verify lastSyncResourceVersion was set from the bookmark

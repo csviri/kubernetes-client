@@ -30,6 +30,8 @@ import io.fabric8.kubernetes.client.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -168,15 +170,20 @@ public class Reflector<T extends HasMetadata, L extends KubernetesResourceList<T
    * <li>sync the underlying store based upon the keySet
    * <li>update the last sync version
    * <li>emit the onList event
+   * <li>propagate the add/delete events resulting from the sync
    * <li>signal the watch to start
    * </ol>
    */
   private void syncList(Set<String> nextKeys, final String latestResourceVersion, CompletableFuture<?> cf) {
     logger.debug("Listing items ({}) for {} at v{}", nextKeys.size(), this, latestResourceVersion);
-    boolean wasEmpty = store.syncList(nextKeys);
+    List<ProcessorListener.Notification<T>> listNotifications = new ArrayList<>();
+    boolean wasEmpty = store.syncList(nextKeys, listNotifications);
     boolean startWatchImmediately = cachedListing && lastSyncResourceVersion == null;
     lastSyncResourceVersion = latestResourceVersion;
+    // emit onList before propagating the add/delete events so that handlers observe the fully
+    // synced cache state through onList prior to receiving the individual events
     Executor executor = store.onList(latestResourceVersion, wasEmpty && nextKeys.isEmpty());
+    store.distributeListNotifications(listNotifications);
     if (startWatchImmediately) {
       cf.complete(null);
     } else {
