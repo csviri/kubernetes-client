@@ -124,12 +124,13 @@ public class ProcessorStore<T extends HasMetadata> {
    * used for event processing. Callers can use the returned executor to schedule work that
    * must run after all handler notifications have been processed.
    *
-   * @param resourceVersion the latest resource version known to the list operation
-   * @param remainedEmpty {@code true} if the cache was empty both before and after the list operation
+   * @param resourceVersion             the latest resource version known to the list operation
+   * @param lastSyncVersionBeforeReList
+   * @param remainedEmpty               {@code true} if the cache was empty both before and after the list operation
    * @return the serial executor that processes handler notifications
    */
-  public Executor onList(String resourceVersion, boolean remainedEmpty) {
-    this.processor.distribute(l -> l.getHandler().onList(resourceVersion, remainedEmpty), false);
+  public Executor onList(String resourceVersion, String lastSyncVersionBeforeReList, boolean remainedEmpty) {
+    this.processor.distribute(l -> l.getHandler().onList(resourceVersion,lastSyncVersionBeforeReList, remainedEmpty), false);
     return this.processor.getSerialExecutor();
   }
 

@@ -31,7 +31,7 @@ public interface ResourceEventHandler<T> {
    * <p>
    * Should not be implemented with long-running logic as that may lead to memory issues.
    * 
-   * @deprecated - use {@link #onList(String, boolean)} and check if the cache remained empty
+   * @deprecated - use {@link #onList(String, String, boolean)} and check if the cache remained empty
    */
   @Deprecated
   default void onNothing() {
@@ -42,12 +42,13 @@ public interface ResourceEventHandler<T> {
    * Called after a listing is completed. By default calls {@link #onNothing()} when remainedEmpty is true.
    * <p>
    * Should not be implemented with long-running logic as that may lead to memory issues.
-   * 
-   * @param resourceVersion the latest resource version known to the list operation
-   * @param remainedEmpty will be true if the cache remained empty prior to and after the list operation meaning no
-   *        other events would have been emitted as part of the relist
+   *
+   * @param resourceVersion                 the latest resource version known to the list operation
+   * @param latestResourceVersionBeforeList
+   * @param remainedEmpty                   will be true if the cache remained empty prior to and after the list operation meaning no
+   *                                        other events would have been emitted as part of the relist
    */
-  default void onList(String resourceVersion, boolean remainedEmpty) {
+  default void onList(String resourceVersion, String latestResourceVersionBeforeList, boolean remainedEmpty) {
     if (remainedEmpty) {
       onNothing();
     }

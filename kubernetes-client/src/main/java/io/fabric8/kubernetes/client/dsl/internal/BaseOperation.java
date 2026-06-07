@@ -1103,7 +1103,7 @@ public class BaseOperation<T extends HasMetadata, L extends KubernetesResourceLi
       }
 
       @Override
-      public void onList(String resourceVersion, boolean remainedEmpty) {
+      public void onList(String resourceVersion, String latestResourceVersionBeforeList, boolean remainedEmpty) {
         if (remainedEmpty) {
           test.accept(Collections.emptyList());
         }

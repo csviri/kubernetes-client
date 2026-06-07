@@ -102,7 +102,7 @@ class InformTest {
       }
 
       @Override
-      public void onList(String resourceVersion, boolean remainedEmpty) {
+      public void onList(String resourceVersion, String latestResourceVersionBeforeList, boolean remainedEmpty) {
         if (!remainedEmpty) {
           nonEmptyList.countDown();
         }

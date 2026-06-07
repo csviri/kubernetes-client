@@ -46,6 +46,7 @@ public class Reflector<T extends HasMetadata, L extends KubernetesResourceList<T
   private static long MIN_TIMEOUT = TimeUnit.MINUTES.toSeconds(5);
 
   private volatile String lastSyncResourceVersion;
+  private volatile String lastSyncVersionBeforeReList;
   private final ListerWatcher<T, L> listerWatcher;
   private final ProcessorStore<T> store;
   private final ReflectorWatcher watcher;
@@ -134,7 +135,7 @@ public class Reflector<T extends HasMetadata, L extends KubernetesResourceList<T
     if (isStopped()) {
       return CompletableFuture.completedFuture(null);
     }
-
+    lastSyncVersionBeforeReList = lastSyncResourceVersion;
     CompletableFuture<Void> theFuture = null;
     if (watchList) {
       watchListState = new WatchListState();
@@ -176,7 +177,7 @@ public class Reflector<T extends HasMetadata, L extends KubernetesResourceList<T
     boolean wasEmpty = store.syncList(nextKeys);
     boolean startWatchImmediately = cachedListing && lastSyncResourceVersion == null;
     lastSyncResourceVersion = latestResourceVersion;
-    Executor executor = store.onList(latestResourceVersion, wasEmpty && nextKeys.isEmpty());
+    Executor executor = store.onList(latestResourceVersion, lastSyncVersionBeforeReList,wasEmpty && nextKeys.isEmpty());
     if (startWatchImmediately) {
       cf.complete(null);
     } else {

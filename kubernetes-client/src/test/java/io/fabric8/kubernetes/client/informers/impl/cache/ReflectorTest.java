@@ -41,6 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeast;
 
 class ReflectorTest {
@@ -50,7 +51,7 @@ class ReflectorTest {
   @BeforeEach
   void setup() {
     mockStore = Mockito.mock(ProcessorStore.class);
-    Mockito.when(mockStore.onList(Mockito.anyString(), Mockito.anyBoolean())).thenReturn(Runnable::run);
+    Mockito.when(mockStore.onList(Mockito.anyString(), any(), Mockito.anyBoolean())).thenReturn(Runnable::run);
   }
 
   @Test
@@ -231,7 +232,7 @@ class ReflectorTest {
 
     // Verify syncList and onList were called
     Mockito.verify(mockStore).syncList(Mockito.anySet());
-    Mockito.verify(mockStore).onList(Mockito.eq("42"), Mockito.anyBoolean());
+    Mockito.verify(mockStore).onList(Mockito.eq("42"), null, Mockito.anyBoolean());
 
     // Verify lastSyncResourceVersion was set from the bookmark
     assertEquals("42", reflector.getLastSyncResourceVersion());
