@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,8 +16,8 @@
 package io.fabric8.java.generator.gradle.plugin;
 
 import io.fabric8.java.generator.Config;
-import org.gradle.api.Project;
 import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.file.ProjectLayout;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.ListProperty;
 
@@ -29,12 +29,12 @@ import java.util.Map;
 public abstract class JavaGeneratorPluginExtension {
 
   public static final String NAME = "javaGen";
-  protected Project gradleProject;
+  protected final ProjectLayout layout;
 
   private Config javaGeneratorConfig = Config.builder().build();
 
-  public JavaGeneratorPluginExtension(Project gradleProject) {
-    this.gradleProject = gradleProject;
+  public JavaGeneratorPluginExtension(ProjectLayout layout) {
+    this.layout = layout;
   }
 
   public Config getConfig() {
@@ -68,7 +68,7 @@ public abstract class JavaGeneratorPluginExtension {
 
   public File getDownloadTargetOrDefault() {
     return this.getDownloadTarget().getAsFile()
-        .getOrElse(this.gradleProject.getLayout().getProjectDirectory()
+        .getOrElse(layout.getProjectDirectory()
             .dir("build")
             .dir("crds")
             .getAsFile());
@@ -82,7 +82,7 @@ public abstract class JavaGeneratorPluginExtension {
 
   public File getTargetOrDefault() {
     return this.getTarget().getAsFile()
-        .getOrElse(this.gradleProject.getLayout().getProjectDirectory()
+        .getOrElse(layout.getProjectDirectory()
             .dir("build")
             .dir("generated")
             .dir("sources").getAsFile());
@@ -100,7 +100,12 @@ public abstract class JavaGeneratorPluginExtension {
     javaGeneratorConfig = new Config(isEnumUppercase,
         javaGeneratorConfig.isObjectExtraAnnotations(),
         javaGeneratorConfig.isGeneratedAnnotations(),
-        javaGeneratorConfig.getPackageOverrides());
+        javaGeneratorConfig.isAlwaysPreserveUnknown(),
+        javaGeneratorConfig.getPackageOverrides(),
+        javaGeneratorConfig.getFilesSuffixes(),
+        javaGeneratorConfig.getSerDatetimeFormat(),
+        javaGeneratorConfig.getDeserDatetimeFormat(),
+        javaGeneratorConfig.getExistingJavaTypes());
   }
 
   /**
@@ -115,7 +120,12 @@ public abstract class JavaGeneratorPluginExtension {
     javaGeneratorConfig = new Config(javaGeneratorConfig.isUppercaseEnums(),
         isExtraAnnotations,
         javaGeneratorConfig.isGeneratedAnnotations(),
-        javaGeneratorConfig.getPackageOverrides());
+        javaGeneratorConfig.isAlwaysPreserveUnknown(),
+        javaGeneratorConfig.getPackageOverrides(),
+        javaGeneratorConfig.getFilesSuffixes(),
+        javaGeneratorConfig.getSerDatetimeFormat(),
+        javaGeneratorConfig.getDeserDatetimeFormat(),
+        javaGeneratorConfig.getExistingJavaTypes());
   }
 
   /**
@@ -123,14 +133,39 @@ public abstract class JavaGeneratorPluginExtension {
    *
    */
   public Boolean getGeneratedAnnotations() {
-    return javaGeneratorConfig.isUppercaseEnums();
+    return javaGeneratorConfig.isGeneratedAnnotations();
   }
 
   public void setGeneratedAnnotations(final Boolean isGeneratedAnnotations) {
     javaGeneratorConfig = new Config(javaGeneratorConfig.isUppercaseEnums(),
         javaGeneratorConfig.isObjectExtraAnnotations(),
         isGeneratedAnnotations,
-        javaGeneratorConfig.getPackageOverrides());
+        javaGeneratorConfig.isAlwaysPreserveUnknown(),
+        javaGeneratorConfig.getPackageOverrides(),
+        javaGeneratorConfig.getFilesSuffixes(),
+        javaGeneratorConfig.getSerDatetimeFormat(),
+        javaGeneratorConfig.getDeserDatetimeFormat(),
+        javaGeneratorConfig.getExistingJavaTypes());
+  }
+
+  /**
+   * Always preserve unknown fields in the generated classes by emitting an additionalProperties field
+   *
+   */
+  public Boolean getAlwaysPreserveUnknown() {
+    return javaGeneratorConfig.isAlwaysPreserveUnknown();
+  }
+
+  public void setAlwaysPreserveUnknown(final Boolean isAlwaysPreserveUnknown) {
+    javaGeneratorConfig = new Config(javaGeneratorConfig.isUppercaseEnums(),
+        javaGeneratorConfig.isObjectExtraAnnotations(),
+        javaGeneratorConfig.isGeneratedAnnotations(),
+        isAlwaysPreserveUnknown,
+        javaGeneratorConfig.getPackageOverrides(),
+        javaGeneratorConfig.getFilesSuffixes(),
+        javaGeneratorConfig.getSerDatetimeFormat(),
+        javaGeneratorConfig.getDeserDatetimeFormat(),
+        javaGeneratorConfig.getExistingJavaTypes());
   }
 
   /**
@@ -145,6 +180,91 @@ public abstract class JavaGeneratorPluginExtension {
     javaGeneratorConfig = new Config(javaGeneratorConfig.isUppercaseEnums(),
         javaGeneratorConfig.isObjectExtraAnnotations(),
         javaGeneratorConfig.isGeneratedAnnotations(),
-        packageOverrides);
+        javaGeneratorConfig.isAlwaysPreserveUnknown(),
+        packageOverrides,
+        javaGeneratorConfig.getFilesSuffixes(),
+        javaGeneratorConfig.getSerDatetimeFormat(),
+        javaGeneratorConfig.getDeserDatetimeFormat(),
+        javaGeneratorConfig.getExistingJavaTypes());
+  }
+
+  /**
+   * Files suffixes to be processed
+   *
+   */
+  public List<String> getFilesSuffixes() {
+    return javaGeneratorConfig.getFilesSuffixes();
+  }
+
+  public void setFilesSuffixes(final List<String> filesSuffixes) {
+    javaGeneratorConfig = new Config(javaGeneratorConfig.isUppercaseEnums(),
+        javaGeneratorConfig.isObjectExtraAnnotations(),
+        javaGeneratorConfig.isGeneratedAnnotations(),
+        javaGeneratorConfig.isAlwaysPreserveUnknown(),
+        javaGeneratorConfig.getPackageOverrides(),
+        filesSuffixes,
+        javaGeneratorConfig.getSerDatetimeFormat(),
+        javaGeneratorConfig.getDeserDatetimeFormat(),
+        javaGeneratorConfig.getExistingJavaTypes());
+  }
+
+  /**
+   * DateTime format used for Serialization of fields of type `date-time`
+   *
+   */
+  public String getSerializationDatetimeFormat() {
+    return javaGeneratorConfig.getSerDatetimeFormat();
+  }
+
+  public void setSerializationDatetimeFormat(final String serDatetimeFmt) {
+    javaGeneratorConfig = new Config(javaGeneratorConfig.isUppercaseEnums(),
+        javaGeneratorConfig.isObjectExtraAnnotations(),
+        javaGeneratorConfig.isGeneratedAnnotations(),
+        javaGeneratorConfig.isAlwaysPreserveUnknown(),
+        javaGeneratorConfig.getPackageOverrides(),
+        javaGeneratorConfig.getFilesSuffixes(),
+        serDatetimeFmt,
+        javaGeneratorConfig.getDeserDatetimeFormat(),
+        javaGeneratorConfig.getExistingJavaTypes());
+  }
+
+  /**
+   * DateTime format used for Deserialization of fields of type `date-time`
+   *
+   */
+  public String getDeserializationDatetimeFormat() {
+    return javaGeneratorConfig.getDeserDatetimeFormat();
+  }
+
+  public void setDeserializationDatetimeFormat(final String deserDatetimeFmt) {
+    javaGeneratorConfig = new Config(javaGeneratorConfig.isUppercaseEnums(),
+        javaGeneratorConfig.isObjectExtraAnnotations(),
+        javaGeneratorConfig.isGeneratedAnnotations(),
+        javaGeneratorConfig.isAlwaysPreserveUnknown(),
+        javaGeneratorConfig.getPackageOverrides(),
+        javaGeneratorConfig.getFilesSuffixes(),
+        javaGeneratorConfig.getSerDatetimeFormat(),
+        deserDatetimeFmt,
+        javaGeneratorConfig.getExistingJavaTypes());
+  }
+
+  /**
+   * Mapping from fully qualified generated type to fully qualified existing Java type
+   *
+   */
+  public Map<String, String> getExistingJavaTypes() {
+    return javaGeneratorConfig.getExistingJavaTypes();
+  }
+
+  public void setExistingJavaTypes(final Map<String, String> existingJavaTypes) {
+    javaGeneratorConfig = new Config(javaGeneratorConfig.isUppercaseEnums(),
+        javaGeneratorConfig.isObjectExtraAnnotations(),
+        javaGeneratorConfig.isGeneratedAnnotations(),
+        javaGeneratorConfig.isAlwaysPreserveUnknown(),
+        javaGeneratorConfig.getPackageOverrides(),
+        javaGeneratorConfig.getFilesSuffixes(),
+        javaGeneratorConfig.getSerDatetimeFormat(),
+        javaGeneratorConfig.getDeserDatetimeFormat(),
+        existingJavaTypes);
   }
 }

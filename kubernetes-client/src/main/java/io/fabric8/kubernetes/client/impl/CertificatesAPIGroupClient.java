@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,7 @@
 package io.fabric8.kubernetes.client.impl;
 
 import io.fabric8.kubernetes.client.dsl.CertificatesAPIGroupDSL;
+import io.fabric8.kubernetes.client.dsl.V1Alpha1CertificatesAPIGroupDSL;
 import io.fabric8.kubernetes.client.dsl.V1CertificatesAPIGroupDSL;
 import io.fabric8.kubernetes.client.dsl.V1beta1CertificatesAPIGroupDSL;
 import io.fabric8.kubernetes.client.extension.ClientAdapter;
@@ -30,6 +31,11 @@ public class CertificatesAPIGroupClient extends ClientAdapter<CertificatesAPIGro
   @Override
   public V1beta1CertificatesAPIGroupDSL v1beta1() {
     return adapt(V1beta1CertificatesAPIGroupClient.class);
+  }
+
+  @Override
+  public V1Alpha1CertificatesAPIGroupDSL v1alpha1() {
+    return adapt(V1Alpha1CertificatesAPIGroupClient.class);
   }
 
   @Override

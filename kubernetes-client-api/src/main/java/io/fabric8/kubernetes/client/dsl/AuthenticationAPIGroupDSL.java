@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,4 @@ import io.fabric8.kubernetes.client.V1AuthenticationAPIGroupDSL;
 
 public interface AuthenticationAPIGroupDSL extends Client {
   V1AuthenticationAPIGroupDSL v1();
-
-  V1Alpha1AuthenticationAPIGroupDSL v1alpha1();
 }

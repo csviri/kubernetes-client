@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,9 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.openshift.client.server.mock;
 
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.openshift.api.model.LocalResourceAccessReviewBuilder;
 import io.fabric8.openshift.api.model.LocalSubjectAccessReviewBuilder;
 import io.fabric8.openshift.api.model.ResourceAccessReviewBuilder;
@@ -29,7 +30,6 @@ import io.fabric8.openshift.api.model.SubjectAccessReviewResponseBuilder;
 import io.fabric8.openshift.api.model.SubjectRulesReview;
 import io.fabric8.openshift.api.model.SubjectRulesReviewBuilder;
 import io.fabric8.openshift.client.NamespacedOpenShiftClient;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static java.net.HttpURLConnection.HTTP_CREATED;
@@ -37,16 +37,11 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class SubjectAccessReviewTest {
 
-  OpenShiftMockServer server;
+  KubernetesMockServer server;
   NamespacedOpenShiftClient client;
-
-  @BeforeEach
-  void setUp() {
-    client = server.createOpenShiftClient();
-  }
 
   @Test
   void testCreate() {

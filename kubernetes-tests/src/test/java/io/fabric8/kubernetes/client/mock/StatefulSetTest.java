@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.mock;
 
 import io.fabric8.kubernetes.api.model.KubernetesListBuilder;
@@ -35,7 +34,7 @@ import io.fabric8.kubernetes.client.dsl.TimeoutImageEditReplacePatchable;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.kubernetes.client.utils.Utils;
-import okhttp3.mockwebserver.RecordedRequest;
+import io.fabric8.mockwebserver.http.RecordedRequest;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -53,7 +52,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnableKubernetesMockClient
+@EnableKubernetesMockClient(https = false)
 public class StatefulSetTest {
 
   KubernetesMockServer server;
@@ -167,13 +166,13 @@ public class StatefulSetTest {
             .build())
         .times(5);
 
-    boolean deleted = client.apps().statefulSets().withName("repl1").delete().size() == 1;
+    boolean deleted = client.apps().statefulSets().withName("repl1").withGracePeriod(0).delete().size() == 1;
     assertTrue(deleted);
 
-    deleted = client.apps().statefulSets().withName("repl2").delete().size() == 1;
+    deleted = client.apps().statefulSets().withName("repl2").withGracePeriod(0).delete().size() == 1;
     assertFalse(deleted);
 
-    deleted = client.apps().statefulSets().inNamespace("ns1").withName("repl2").delete().size() == 1;
+    deleted = client.apps().statefulSets().inNamespace("ns1").withName("repl2").withGracePeriod(0).delete().size() == 1;
     assertTrue(deleted);
   }
 
@@ -413,30 +412,29 @@ public class StatefulSetTest {
         .withName("rs1")
         .endMetadata()
         .withRevision(1L)
-        .withNewStatefulSetData()
-        .withNewSpec()
-        .withReplicas(0)
-        .withNewSelector()
-        .addToMatchLabels("app", "nginx")
-        .endSelector()
-        .withNewTemplate()
-        .withNewMetadata()
-        .addToAnnotations("kubectl.kubernetes.io/restartedAt", "2020-06-08T11:52:50.022")
-        .addToAnnotations("app", "rs1")
-        .addToLabels("app", "nginx")
-        .endMetadata()
-        .withNewSpec()
-        .addNewContainer()
-        .withName("nginx")
-        .withImage("nginx:perl")
-        .addNewPort()
-        .withContainerPort(80)
-        .endPort()
-        .endContainer()
-        .endSpec()
-        .endTemplate()
-        .endSpec()
-        .endStatefulSetData()
+        .withData(new StatefulSetBuilder().withNewSpec()
+            .withReplicas(0)
+            .withNewSelector()
+            .addToMatchLabels("app", "nginx")
+            .endSelector()
+            .withNewTemplate()
+            .withNewMetadata()
+            .addToAnnotations("kubectl.kubernetes.io/restartedAt", "2020-06-08T11:52:50.022")
+            .addToAnnotations("app", "rs1")
+            .addToLabels("app", "nginx")
+            .endMetadata()
+            .withNewSpec()
+            .addNewContainer()
+            .withName("nginx")
+            .withImage("nginx:perl")
+            .addNewPort()
+            .withContainerPort(80)
+            .endPort()
+            .endContainer()
+            .endSpec()
+            .endTemplate()
+            .endSpec()
+            .build())
         .build();
     ControllerRevision controllerRevision2 = new ControllerRevisionBuilder()
         .withNewMetadata()
@@ -444,30 +442,30 @@ public class StatefulSetTest {
         .withName("rs2")
         .endMetadata()
         .withRevision(2L)
-        .withNewStatefulSetData()
-        .withNewSpec()
-        .withReplicas(1)
-        .withNewSelector()
-        .addToMatchLabels("app", "nginx")
-        .endSelector()
-        .withNewTemplate()
-        .withNewMetadata()
-        .addToAnnotations("kubectl.kubernetes.io/restartedAt", "2020-06-08T11:52:50.022")
-        .addToAnnotations("app", "rs2")
-        .addToLabels("app", "nginx")
-        .endMetadata()
-        .withNewSpec()
-        .addNewContainer()
-        .withName("nginx")
-        .withImage("nginx:1.19")
-        .addNewPort()
-        .withContainerPort(80)
-        .endPort()
-        .endContainer()
-        .endSpec()
-        .endTemplate()
-        .endSpec()
-        .endStatefulSetData()
+        .withData(new StatefulSetBuilder()
+            .withNewSpec()
+            .withReplicas(1)
+            .withNewSelector()
+            .addToMatchLabels("app", "nginx")
+            .endSelector()
+            .withNewTemplate()
+            .withNewMetadata()
+            .addToAnnotations("kubectl.kubernetes.io/restartedAt", "2020-06-08T11:52:50.022")
+            .addToAnnotations("app", "rs2")
+            .addToLabels("app", "nginx")
+            .endMetadata()
+            .withNewSpec()
+            .addNewContainer()
+            .withName("nginx")
+            .withImage("nginx:1.19")
+            .addNewPort()
+            .withContainerPort(80)
+            .endPort()
+            .endContainer()
+            .endSpec()
+            .endTemplate()
+            .endSpec()
+            .build())
         .build();
 
     server.expect()

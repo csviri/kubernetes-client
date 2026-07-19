@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client;
 
 import io.fabric8.kubernetes.api.model.APIGroup;
 import io.fabric8.kubernetes.api.model.APIGroupList;
 import io.fabric8.kubernetes.api.model.APIResourceList;
+import io.fabric8.kubernetes.api.model.APIVersions;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.KubernetesResourceList;
@@ -31,17 +31,6 @@ import java.io.Closeable;
 import java.net.URL;
 
 public interface Client extends Closeable {
-
-  /**
-   * Checks if the client can be adapted to an other client type and if that target client is supported.
-   *
-   * @param type The target client class.
-   * @param <C> The target client type.
-   * @return Returns true if a working {@link io.fabric8.kubernetes.client.extension.ExtensionAdapter} is found.
-   * @deprecated if the client can test for support, then use adapt(type).isSupported() instead.
-   */
-  @Deprecated
-  <C extends Client> Boolean isAdaptable(Class<C> type);
 
   /**
    * Checks the Kubernetes server for support for the given KubernetesResource type.
@@ -108,6 +97,15 @@ public interface Client extends Closeable {
 
   @Override
   void close();
+
+  /**
+   * Get the available APIversions. APIVersions lists the versions that are available,
+   * to allow clients to discover the API at /api, which is the root path of the
+   * legacy v1 API.
+   *
+   * @return the {@link APIVersions} object
+   */
+  APIVersions getAPIVersions();
 
   /**
    * Returns the api groups. This does not include the core/legacy v1 apiVersion.

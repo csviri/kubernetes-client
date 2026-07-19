@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,10 +15,10 @@
  */
 package io.fabric8.kubernetes.client.mock;
 
+import io.fabric8.kubernetes.api.model.DefaultKubernetesResourceList;
 import io.fabric8.kubernetes.api.model.DeletionPropagation;
 import io.fabric8.kubernetes.api.model.KubernetesResourceList;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
-import io.fabric8.kubernetes.client.CustomResourceList;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.MixedOperation;
 import io.fabric8.kubernetes.client.dsl.Resource;
@@ -27,17 +27,16 @@ import io.fabric8.kubernetes.client.mock.crd.PodSetSpec;
 import io.fabric8.kubernetes.client.mock.crd.PodSetStatus;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
-import okhttp3.mockwebserver.RecordedRequest;
+import io.fabric8.mockwebserver.http.RecordedRequest;
 import org.junit.jupiter.api.Test;
 
 import java.net.HttpURLConnection;
-import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnableKubernetesMockClient
+@EnableKubernetesMockClient(https = false)
 class TypedCustomResourceApiTest {
 
   KubernetesMockServer server;
@@ -58,8 +57,8 @@ class TypedCustomResourceApiTest {
 
   @Test
   void list() {
-    KubernetesResourceList<PodSet> podSetList = new CustomResourceList<>();
-    ((CustomResourceList<PodSet>) podSetList).setItems(Collections.singletonList(getPodSet()));
+    KubernetesResourceList<PodSet> podSetList = new DefaultKubernetesResourceList<>();
+    podSetList.getItems().add(getPodSet());
     server.expect().get().withPath("/apis/demo.k8s.io/v1alpha1/namespaces/test/podsets").andReturn(200, podSetList).once();
     podSetClient = client.resources(PodSet.class);
 
@@ -92,7 +91,7 @@ class TypedCustomResourceApiTest {
 
     podSetClient = client.resources(PodSet.class);
 
-    boolean isDeleted = podSetClient.inNamespace("test").withName("example-podset").delete().size() == 1;
+    boolean isDeleted = podSetClient.inNamespace("test").withName("example-podset").withGracePeriod(0).delete().size() == 1;
     assertTrue(isDeleted);
   }
 

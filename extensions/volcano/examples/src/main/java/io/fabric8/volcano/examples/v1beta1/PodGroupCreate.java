@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,11 +15,11 @@
  */
 package io.fabric8.volcano.examples.v1beta1;
 
+import io.fabric8.volcano.api.model.scheduling.v1beta1.PodGroup;
+import io.fabric8.volcano.api.model.scheduling.v1beta1.PodGroupList;
 import io.fabric8.volcano.client.DefaultVolcanoClient;
 import io.fabric8.volcano.client.NamespacedVolcanoClient;
 import io.fabric8.volcano.examples.Utils;
-import io.fabric8.volcano.scheduling.v1beta1.PodGroup;
-import io.fabric8.volcano.scheduling.v1beta1.PodGroupList;
 
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;

@@ -1,8 +1,9 @@
 
 package io.fabric8.kubernetes.api.model.extensions;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,7 +11,11 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
 import io.fabric8.kubernetes.api.model.LocalObjectReference;
@@ -19,27 +24,25 @@ import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
-import io.fabric8.kubernetes.api.model.TypedLocalObjectReference;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * IngressBackend describes all endpoints for a given service and port.
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
-    "resource",
     "serviceName",
     "servicePort"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -50,74 +53,82 @@ import lombok.experimental.Accessors;
     @BuildableReference(Container.class),
     @BuildableReference(PodTemplateSpec.class),
     @BuildableReference(ResourceRequirements.class),
-    @BuildableReference(io.fabric8.kubernetes.api.model.IntOrString.class),
+    @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class IngressBackend implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class IngressBackend implements Editable<IngressBackendBuilder>, KubernetesResource
 {
 
-    @JsonProperty("resource")
-    private TypedLocalObjectReference resource;
     @JsonProperty("serviceName")
     private String serviceName;
     @JsonProperty("servicePort")
-    private io.fabric8.kubernetes.api.model.IntOrString servicePort;
+    private IntOrString servicePort;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public IngressBackend() {
     }
 
-    /**
-     * 
-     * @param resource
-     * @param servicePort
-     * @param serviceName
-     */
-    public IngressBackend(TypedLocalObjectReference resource, String serviceName, io.fabric8.kubernetes.api.model.IntOrString servicePort) {
+    public IngressBackend(String serviceName, IntOrString servicePort) {
         super();
-        this.resource = resource;
         this.serviceName = serviceName;
         this.servicePort = servicePort;
     }
 
-    @JsonProperty("resource")
-    public TypedLocalObjectReference getResource() {
-        return resource;
-    }
-
-    @JsonProperty("resource")
-    public void setResource(TypedLocalObjectReference resource) {
-        this.resource = resource;
-    }
-
+    /**
+     * Specifies the name of the referenced service.
+     */
     @JsonProperty("serviceName")
     public String getServiceName() {
         return serviceName;
     }
 
+    /**
+     * Specifies the name of the referenced service.
+     */
     @JsonProperty("serviceName")
     public void setServiceName(String serviceName) {
         this.serviceName = serviceName;
     }
 
+    /**
+     * IngressBackend describes all endpoints for a given service and port.
+     */
     @JsonProperty("servicePort")
-    public io.fabric8.kubernetes.api.model.IntOrString getServicePort() {
+    public IntOrString getServicePort() {
         return servicePort;
     }
 
+    /**
+     * IngressBackend describes all endpoints for a given service and port.
+     */
     @JsonProperty("servicePort")
-    public void setServicePort(io.fabric8.kubernetes.api.model.IntOrString servicePort) {
+    public void setServicePort(IntOrString servicePort) {
         this.servicePort = servicePort;
     }
 
+    @JsonIgnore
+    public IngressBackendBuilder edit() {
+        return new IngressBackendBuilder(this);
+    }
+
+    @JsonIgnore
+    public IngressBackendBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -125,6 +136,10 @@ public class IngressBackend implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

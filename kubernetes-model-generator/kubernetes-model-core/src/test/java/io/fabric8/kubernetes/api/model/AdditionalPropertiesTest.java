@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.api.model;
 
 import org.junit.jupiter.api.Test;
@@ -24,7 +23,7 @@ import java.util.Map;
 class AdditionalPropertiesTest {
 
   @Test
-  void podBuilderDirectTest() throws Exception {
+  void podBuilderDirectTest() {
     // given new method due to setter
     PodBuilder builder = new PodBuilder().withNewMetadata().addToAdditionalProperties("x", "y").endMetadata();
 
@@ -35,7 +34,7 @@ class AdditionalPropertiesTest {
   }
 
   @Test
-  void podBuilderIndirectTest() throws Exception {
+  void podBuilderIndirectTest() {
     // given new method due to setter
     ObjectMeta meta = new ObjectMeta();
     meta.setAdditionalProperty("x", "y");

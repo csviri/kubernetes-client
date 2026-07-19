@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.openshift.client.server.mock;
 
 import io.fabric8.kubernetes.api.builder.TypedVisitor;
@@ -24,6 +23,8 @@ import io.fabric8.kubernetes.api.model.ListMeta;
 import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.PodListBuilder;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.kubernetes.client.utils.InputStreamPumper;
 import io.fabric8.kubernetes.client.utils.Utils;
 import io.fabric8.openshift.api.model.DeploymentConfig;
@@ -50,10 +51,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class DeploymentConfigTest {
 
-  OpenShiftMockServer server;
+  KubernetesMockServer server;
   OpenShiftClient client;
 
   @Test
@@ -165,7 +166,7 @@ class DeploymentConfigTest {
     server.expect().withPath("/apis/apps.openshift.io/v1/namespaces/test/deploymentconfigs/dc1").andReturn(200, dc1).times(2);
     server.expect().withPath("/apis/apps.openshift.io/v1/namespaces/ns1/deploymentconfigs/dc2").andReturn(200, dc2).times(5);
 
-    boolean deleted = client.deploymentConfigs().withName("dc1").delete().size() == 1;
+    boolean deleted = client.deploymentConfigs().withName("dc1").withGracePeriod(0).delete().size() == 1;
     deleted = client.deploymentConfigs().withName("dc2").delete().size() == 1;
     assertFalse(deleted);
 

@@ -1,8 +1,9 @@
 
 package io.fabric8.knative.eventing.v1beta1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,6 +11,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.knative.duck.v1.KReference;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -27,18 +30,15 @@ import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "broker",
     "description",
+    "reference",
     "schema",
     "schemaData",
     "source",
@@ -46,7 +46,6 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -66,13 +65,16 @@ import lombok.experimental.Accessors;
     @BuildableReference(Volume.class),
     @BuildableReference(VolumeMount.class)
 })
-public class EventTypeSpec implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class EventTypeSpec implements Editable<EventTypeSpecBuilder>, KubernetesResource
 {
 
     @JsonProperty("broker")
     private String broker;
     @JsonProperty("description")
     private String description;
+    @JsonProperty("reference")
+    private KReference reference;
     @JsonProperty("schema")
     private String schema;
     @JsonProperty("schemaData")
@@ -82,52 +84,65 @@ public class EventTypeSpec implements KubernetesResource
     @JsonProperty("type")
     private String type;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public EventTypeSpec() {
     }
 
-    /**
-     * 
-     * @param schema
-     * @param schemaData
-     * @param description
-     * @param source
-     * @param broker
-     * @param type
-     */
-    public EventTypeSpec(String broker, String description, String schema, String schemaData, String source, String type) {
+    public EventTypeSpec(String broker, String description, KReference reference, String schema, String schemaData, String source, String type) {
         super();
         this.broker = broker;
         this.description = description;
+        this.reference = reference;
         this.schema = schema;
         this.schemaData = schemaData;
         this.source = source;
         this.type = type;
     }
 
+    /**
+     * Broker refers to the Broker that can provide the EventType.
+     */
     @JsonProperty("broker")
     public String getBroker() {
         return broker;
     }
 
+    /**
+     * Broker refers to the Broker that can provide the EventType.
+     */
     @JsonProperty("broker")
     public void setBroker(String broker) {
         this.broker = broker;
     }
 
+    /**
+     * Description is an optional field used to describe the EventType, in any meaningful way.
+     */
     @JsonProperty("description")
     public String getDescription() {
         return description;
     }
 
+    /**
+     * Description is an optional field used to describe the EventType, in any meaningful way.
+     */
     @JsonProperty("description")
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    @JsonProperty("reference")
+    public KReference getReference() {
+        return reference;
+    }
+
+    @JsonProperty("reference")
+    public void setReference(KReference reference) {
+        this.reference = reference;
     }
 
     @JsonProperty("schema")
@@ -140,11 +155,17 @@ public class EventTypeSpec implements KubernetesResource
         this.schema = schema;
     }
 
+    /**
+     * SchemaData allows the CloudEvents schema to be stored directly in the EventType. Content is dependent on the encoding. Optional attribute. The contents are not validated or manipulated by the system.
+     */
     @JsonProperty("schemaData")
     public String getSchemaData() {
         return schemaData;
     }
 
+    /**
+     * SchemaData allows the CloudEvents schema to be stored directly in the EventType. Content is dependent on the encoding. Optional attribute. The contents are not validated or manipulated by the system.
+     */
     @JsonProperty("schemaData")
     public void setSchemaData(String schemaData) {
         this.schemaData = schemaData;
@@ -160,17 +181,34 @@ public class EventTypeSpec implements KubernetesResource
         this.source = source;
     }
 
+    /**
+     * Type represents the CloudEvents type. It is authoritative.
+     */
     @JsonProperty("type")
     public String getType() {
         return type;
     }
 
+    /**
+     * Type represents the CloudEvents type. It is authoritative.
+     */
     @JsonProperty("type")
     public void setType(String type) {
         this.type = type;
     }
 
+    @JsonIgnore
+    public EventTypeSpecBuilder edit() {
+        return new EventTypeSpecBuilder(this);
+    }
+
+    @JsonIgnore
+    public EventTypeSpecBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -178,6 +216,10 @@ public class EventTypeSpec implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

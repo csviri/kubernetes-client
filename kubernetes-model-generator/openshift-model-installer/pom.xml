@@ -23,12 +23,13 @@
   <parent>
     <groupId>io.fabric8</groupId>
     <artifactId>kubernetes-model-generator</artifactId>
-    <version>6.8-SNAPSHOT</version>
+    <version>999-SNAPSHOT</version>
   </parent>
 
   <artifactId>openshift-model-installer</artifactId>
   <packaging>bundle</packaging>
-  <name>Fabric8 :: OpenShift Installer Model</name>
+  <name>Fabric8 :: OpenShift Model :: Installer</name>
+  <description>DEPRECATED: This module is deprecated and will be removed in a future release. Please migrate away from using this module and its models.</description>
 
   <properties>
     <clone-kube>true</clone-kube>
@@ -48,35 +49,13 @@
     </dependency>
     <dependency>
       <groupId>io.fabric8</groupId>
-      <artifactId>kubernetes-model-common</artifactId>
+      <artifactId>openshift-model-config</artifactId>
     </dependency>
     <dependency>
       <groupId>io.fabric8</groupId>
-      <artifactId>kubernetes-model-admissionregistration</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.assertj</groupId>
-      <artifactId>assertj-core</artifactId>
-      <scope>test</scope>
+      <artifactId>openshift-model-machine</artifactId>
     </dependency>
   </dependencies>
-
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>build-helper-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>attach-artifacts</id>
-            <configuration>
-              <skipAttach>false</skipAttach>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
 
   <profiles>
     <profile>
@@ -84,8 +63,58 @@
       <build>
         <plugins>
           <plugin>
-            <groupId>org.jsonschema2pojo</groupId>
-            <artifactId>jsonschema2pojo-maven-plugin</artifactId>
+            <groupId>io.fabric8</groupId>
+            <artifactId>openapi-model-generator-maven-plugin</artifactId>
+            <configuration >
+              <settings combine.self="append">
+                <schemas>
+                  <schema>${openapi.schema.openshift-generated}</schema>
+                </schemas>
+                <packageMappings combine.self="append">
+                  <com.github.openshift.installer.pkg.types.aws>io.fabric8.openshift.api.model.installer.aws.v1</com.github.openshift.installer.pkg.types.aws>
+                  <com.github.openshift.installer.pkg.types.baremetal>io.fabric8.openshift.api.model.installer.baremetal.v1</com.github.openshift.installer.pkg.types.baremetal>
+                  <com.github.openshift.installer.pkg.types.external>io.fabric8.openshift.api.model.installer.external.v1</com.github.openshift.installer.pkg.types.external>
+                  <com.github.openshift.installer.pkg.types.gcp>io.fabric8.openshift.api.model.installer.gcp.v1</com.github.openshift.installer.pkg.types.gcp>
+                  <com.github.openshift.installer.pkg.types.ibmcloud>io.fabric8.openshift.api.model.installer.ibmcloud.v1</com.github.openshift.installer.pkg.types.ibmcloud>
+                  <com.github.openshift.installer.pkg.types.none>io.fabric8.openshift.api.model.installer.none.v1</com.github.openshift.installer.pkg.types.none>
+                  <com.github.openshift.installer.pkg.types.nutanix>io.fabric8.openshift.api.model.installer.nutanix.v1</com.github.openshift.installer.pkg.types.nutanix>
+                  <com.github.openshift.installer.pkg.types.openstack>io.fabric8.openshift.api.model.installer.openstack.v1</com.github.openshift.installer.pkg.types.openstack>
+                  <com.github.openshift.installer.pkg.types.ovirt>io.fabric8.openshift.api.model.installer.ovirt.v1</com.github.openshift.installer.pkg.types.ovirt>
+                  <com.github.openshift.installer.pkg.types.powervc>io.fabric8.openshift.api.model.installer.powervc.v1</com.github.openshift.installer.pkg.types.powervc>
+                  <com.github.openshift.installer.pkg.types.powervs>io.fabric8.openshift.api.model.installer.powervs.v1</com.github.openshift.installer.pkg.types.powervs>
+                  <com.github.openshift.installer.pkg.types.vsphere>io.fabric8.openshift.api.model.installer.vsphere.v1</com.github.openshift.installer.pkg.types.vsphere>
+                </packageMappings>
+                <includeGenerationRegexes>
+                  <includeGenerationRegex>^io\.openshift\.install\..*$</includeGenerationRegex>
+                  <includeGenerationRegex>^com\.github\.openshift\.installer\..*$</includeGenerationRegex>
+                </includeGenerationRegexes>
+                <skipGenerationRegexes>
+                  <skipGenerationRegex>^io\.openshift\.cloudcredential\.v1\.ProviderCodec$</skipGenerationRegex>
+                  <skipGenerationRegex>^com\.github\.openshift\.installer\.types\.azure\.v1\..*$</skipGenerationRegex>
+                </skipGenerationRegexes>
+                <fieldNameMappings>
+                  <clusterNetworks>clusterNetworkList</clusterNetworks>
+                </fieldNameMappings>
+                <refToJavaTypeMappings>
+                  <property>
+                    <name>#/components/schemas/com.github.openshift.installer.pkg.ipnet.IPNet</name>
+                    <value>java.lang.String</value>
+                  </property>
+                  <property>
+                    <name>#/components/schemas/com.github.openshift.installer.pkg.types.azure.MachinePool</name>
+                    <value>java.lang.Object</value>
+                  </property>
+                  <property>
+                    <name>#/components/schemas/com.github.openshift.installer.pkg.types.azure.Platform</name>
+                    <value>java.lang.Object</value>
+                  </property>
+                  <property>
+                    <name>#/components/schemas/com.github.openshift.installer.pkg.types.azure.Metadata</name>
+                    <value>java.lang.Object</value>
+                  </property>
+                </refToJavaTypeMappings>
+              </settings>
+            </configuration>
           </plugin>
         </plugins>
       </build>

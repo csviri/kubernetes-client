@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes;
 
 import io.fabric8.junit.jupiter.api.RequireK8sSupport;
@@ -27,12 +26,12 @@ import io.fabric8.kubernetes.client.extended.leaderelection.resourcelock.LeaseLo
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static io.fabric8.kubernetes.client.utils.Utils.generateId;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -43,7 +42,7 @@ class LeaderIT {
 
   @Test
   void testLeadershipCycle() throws InterruptedException, ExecutionException, TimeoutException {
-    final String lockIdentity = UUID.randomUUID().toString();
+    final String lockIdentity = generateId().toString();
     CompletableFuture<Void> leading = new CompletableFuture<>();
     CompletableFuture<Void> stopped = new CompletableFuture<>();
     CompletableFuture<String> changed = new CompletableFuture<>();

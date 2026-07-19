@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,7 @@ package io.fabric8.kubernetes.client.utils;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.ConfigBuilder;
 import io.fabric8.kubernetes.client.KubernetesClientException;
+import io.fabric8.kubernetes.client.RestoreSystemProperties;
 import io.fabric8.kubernetes.client.http.HttpClient;
 import io.fabric8.kubernetes.client.http.HttpClient.Builder;
 import io.fabric8.kubernetes.client.http.Interceptor;
@@ -39,7 +40,9 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.List;
 import java.util.ServiceLoader;
@@ -60,15 +63,16 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
+@RestoreSystemProperties("kubernetes.backwardsCompatibilityInterceptor.disable")
 class HttpClientUtilsTest {
 
   @Test
-  void toProxyTypeTestUnknown() throws MalformedURLException {
+  void toProxyTypeTestUnknown() {
     assertThrows(MalformedURLException.class, () -> HttpClientUtils.toProxyType("unknown"));
   }
 
   @Test
-  void toProxyTypeTestNull() throws MalformedURLException {
+  void toProxyTypeTestNull() {
     assertThrows(MalformedURLException.class, () -> HttpClientUtils.toProxyType(null));
   }
 
@@ -86,6 +90,51 @@ class HttpClientUtilsTest {
 
     Mockito.verify(builder).proxyType(HttpClient.ProxyType.SOCKS5);
     Mockito.verify(builder).proxyAddress(new InetSocketAddress("192.168.0.1", 8080));
+  }
+
+  @Test
+  void testConfigureProxyAuth() throws Exception {
+    Config config = new ConfigBuilder().withMasterUrl("http://localhost").withHttpProxy("http://user:password@192.168.0.1:8080")
+        .build();
+    Builder builder = Mockito.mock(HttpClient.Builder.class, Mockito.RETURNS_SELF);
+
+    HttpClientUtils.configureProxy(config, builder);
+
+    Mockito.verify(builder).proxyType(HttpClient.ProxyType.HTTP);
+    Mockito.verify(builder).proxyAuthorization("Basic dXNlcjpwYXNzd29yZA==");
+  }
+
+  @Test
+  void testApplyCommonConfigurationWithTlsServerName() {
+    // Given
+    Config config = new ConfigBuilder()
+        .withMasterUrl("https://127.0.0.1:6443")
+        .withTlsServerName("api.example.cluster.local")
+        .withTrustCerts(true)
+        .build();
+    Builder builder = Mockito.mock(HttpClient.Builder.class, Mockito.RETURNS_SELF);
+
+    // When
+    HttpClientUtils.applyCommonConfiguration(config, builder, null);
+
+    // Then
+    Mockito.verify(builder).tlsServerName("api.example.cluster.local");
+  }
+
+  @Test
+  void testApplyCommonConfigurationWithoutTlsServerName() {
+    // Given
+    Config config = new ConfigBuilder()
+        .withMasterUrl("https://127.0.0.1:6443")
+        .withTrustCerts(true)
+        .build();
+    Builder builder = Mockito.mock(HttpClient.Builder.class, Mockito.RETURNS_SELF);
+
+    // When
+    HttpClientUtils.applyCommonConfiguration(config, builder, null);
+
+    // Then
+    Mockito.verify(builder, Mockito.never()).tlsServerName(Mockito.anyString());
   }
 
   @Test
@@ -110,20 +159,32 @@ class HttpClientUtilsTest {
     Config config = new ConfigBuilder().build();
     System.setProperty("kubernetes.backwardsCompatibilityInterceptor.disable", "true");
 
-    try {
-      // When
-      Collection<Interceptor> interceptorList = HttpClientUtils.createApplicableInterceptors(config, null).values();
+    // When
+    Collection<Interceptor> interceptorList = HttpClientUtils.createApplicableInterceptors(config, null).values();
 
-      // Then
-      assertThat(interceptorList)
-          .isNotNull()
-          .hasSize(3)
-          .noneMatch(i -> i instanceof BackwardsCompatibilityInterceptor)
-          .hasAtLeastOneElementOfType(ImpersonatorInterceptor.class)
-          .hasAtLeastOneElementOfType(TokenRefreshInterceptor.class);
-    } finally {
-      System.clearProperty("kubernetes.backwardsCompatibilityInterceptor.disable");
-    }
+    // Then
+    assertThat(interceptorList)
+        .isNotNull()
+        .hasSize(3)
+        .noneMatch(i -> i instanceof BackwardsCompatibilityInterceptor)
+        .hasAtLeastOneElementOfType(ImpersonatorInterceptor.class)
+        .hasAtLeastOneElementOfType(TokenRefreshInterceptor.class);
+  }
+
+  @ParameterizedTest
+  @MethodSource("basicCredentialsInput")
+  void testBasicCredentials(String username, String password, String authentication) {
+    String result = HttpClientUtils.basicCredentials(username, password);
+    assertThat(result).isEqualTo(authentication);
+    String decoded = new String(
+        Base64.getDecoder().decode(result.substring("Basic ".length())), StandardCharsets.UTF_8);
+    assertThat(decoded).isEqualTo(username + ":" + password);
+  }
+
+  static Stream<Arguments> basicCredentialsInput() {
+    return Stream.of(
+        arguments("username", "password", "Basic dXNlcm5hbWU6cGFzc3dvcmQ="),
+        arguments("username", "Þaßßword£", "Basic dXNlcm5hbWU6w55hw5/Dn3dvcmTCow=="));
   }
 
   @Nested
@@ -142,7 +203,7 @@ class HttpClientUtilsTest {
     @ParameterizedTest(name = "{index}: Master hostname ''{0}'' matched by No Proxy ''{1}'' ")
     @MethodSource("masterHostnameDoesMatchNoProxyInput")
     void masterHostnameDoesMatchNoProxy(String masterHostname, String[] noProxy)
-        throws MalformedURLException, URISyntaxException {
+        throws MalformedURLException {
       assertTrue(HttpClientUtils.isHostMatchedByNoProxy(masterHostname, noProxy));
     }
 
@@ -159,6 +220,7 @@ class HttpClientUtilsTest {
           arguments("192.168.1.110", new String[] { "192.168.1.0/24" }),
           arguments("192.168.1.110", new String[] { "http://192.168.1.0/24" }),
           arguments("192.168.1.110", new String[] { "192.0.0.0/8" }),
+          arguments("2620:52:0:9c:0:0:0:1", new String[] { "2620:52:0:9c::/64" }),
           arguments("192.168.1.110", new String[] { "http://192.0.0.0/8" }));
     }
 
@@ -217,6 +279,19 @@ class HttpClientUtilsTest {
       URI url = HttpClientUtils.getProxyUri(new URL("http://localhost"), config);
       // Then
       assertThat(url).isNull();
+    }
+
+    @Test
+    void whenIncompleteHttpProxyUrlProvided_shouldInferProtocol() throws MalformedURLException, URISyntaxException {
+      // Given
+      Config config = configBuilder.withHttpProxy("example.com:8080").build();
+      // When
+      URI url = HttpClientUtils.getProxyUri(new URL("http://localhost"), config);
+      // Then
+      assertThat(url)
+          .hasScheme("http")
+          .hasHost("example.com")
+          .hasPort(8080);
     }
   }
 

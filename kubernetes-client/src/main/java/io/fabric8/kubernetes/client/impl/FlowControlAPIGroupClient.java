@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,12 +16,18 @@
 package io.fabric8.kubernetes.client.impl;
 
 import io.fabric8.kubernetes.client.dsl.FlowControlAPIGroupDSL;
+import io.fabric8.kubernetes.client.dsl.V1FlowControlAPIGroupDSL;
 import io.fabric8.kubernetes.client.dsl.V1beta1FlowControlAPIGroupDSL;
 import io.fabric8.kubernetes.client.dsl.V1beta2FlowControlAPIGroupDSL;
 import io.fabric8.kubernetes.client.dsl.V1beta3FlowControlAPIGroupDSL;
 import io.fabric8.kubernetes.client.extension.ClientAdapter;
 
 public class FlowControlAPIGroupClient extends ClientAdapter<FlowControlAPIGroupClient> implements FlowControlAPIGroupDSL {
+
+  @Override
+  public V1FlowControlAPIGroupDSL v1() {
+    return adapt(V1FlowControlAPIGroupClient.class);
+  }
 
   @Override
   public V1beta1FlowControlAPIGroupDSL v1beta1() {

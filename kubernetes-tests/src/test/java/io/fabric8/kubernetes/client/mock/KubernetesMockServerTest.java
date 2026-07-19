@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.mock;
 
 import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
@@ -32,7 +31,6 @@ import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.kubernetes.model.annotation.Group;
 import io.fabric8.kubernetes.model.annotation.Version;
 import io.fabric8.openshift.api.model.Route;
-import io.fabric8.openshift.client.OpenShiftClient;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -41,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnableKubernetesMockClient(crud = true)
+@EnableKubernetesMockClient(crud = true, https = false)
 class KubernetesMockServerTest {
 
   KubernetesClient client;
@@ -63,12 +61,10 @@ class KubernetesMockServerTest {
   @Test
   void testOpenShiftSupport() {
     server.setUnsupported("openshift.io");
-    assertFalse(client.isAdaptable(OpenShiftClient.class));
-    assertFalse(client.adapt(OpenShiftClient.class).isSupported());
     assertFalse(client.supports(Route.class));
     assertTrue(client.supports(Pod.class));
     server.reset();
-    assertTrue(client.adapt(OpenShiftClient.class).isSupported());
+    assertTrue(client.supports(Route.class));
   }
 
   @Version("v1")

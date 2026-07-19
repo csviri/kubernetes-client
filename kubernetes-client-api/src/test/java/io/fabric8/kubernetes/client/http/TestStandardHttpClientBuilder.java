@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +15,11 @@
  */
 package io.fabric8.kubernetes.client.http;
 
+import java.util.Optional;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import javax.net.ssl.TrustManager;
 
 public class TestStandardHttpClientBuilder
     extends StandardHttpClientBuilder<TestStandardHttpClient, TestStandardHttpClientFactory, TestStandardHttpClientBuilder> {
@@ -30,7 +34,11 @@ public class TestStandardHttpClientBuilder
 
   @Override
   public TestStandardHttpClient build() {
-    final TestStandardHttpClient instance = new TestStandardHttpClient(this);
+    if (clientFactory.getMode() == TestStandardHttpClientFactory.Mode.SINGLETON && instances.size() == 1) {
+      return instances.peek();
+    }
+    final TestStandardHttpClient instance = new TestStandardHttpClient(this,
+        Optional.ofNullable(instances.peek()).map(TestStandardHttpClient::getClosed).orElse(new AtomicBoolean()));
     instances.add(instance);
     return instance;
   }
@@ -45,4 +53,7 @@ public class TestStandardHttpClientBuilder
     return (TestStandardHttpClientBuilder) super.tag(value);
   }
 
+  public final TrustManager[] getTrustManagers() {
+    return trustManagers;
+  }
 }

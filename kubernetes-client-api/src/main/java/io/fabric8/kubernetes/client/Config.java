@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,32 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client;
 
-import com.fasterxml.jackson.annotation.JsonAnyGetter;
-import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonCreator.Mode;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.fabric8.kubernetes.api.model.AuthInfo;
-import io.fabric8.kubernetes.api.model.AuthProviderConfig;
-import io.fabric8.kubernetes.api.model.Cluster;
-import io.fabric8.kubernetes.api.model.ConfigBuilder;
-import io.fabric8.kubernetes.api.model.Context;
-import io.fabric8.kubernetes.api.model.ExecConfig;
-import io.fabric8.kubernetes.api.model.ExecEnvVar;
-import io.fabric8.kubernetes.api.model.NamedContext;
 import io.fabric8.kubernetes.client.http.TlsVersion;
 import io.fabric8.kubernetes.client.internal.CertUtils;
 import io.fabric8.kubernetes.client.internal.KubeConfigUtils;
 import io.fabric8.kubernetes.client.internal.SSLUtils;
 import io.fabric8.kubernetes.client.readiness.Readiness;
 import io.fabric8.kubernetes.client.utils.IOHelpers;
-import io.fabric8.kubernetes.client.utils.Serialization;
 import io.fabric8.kubernetes.client.utils.Utils;
-import io.sundr.builder.annotations.Buildable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,10 +39,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -62,14 +52,15 @@ import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
+@SuppressWarnings({ "LombokGetterMayBeUsed", "LombokSetterMayBeUsed" })
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(allowGetters = true, allowSetters = true)
-public class Config {
+public class Config extends SundrioConfig {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(Config.class);
+  private static final Logger logger = LoggerFactory.getLogger(Config.class);
 
   /**
-   * Disables auto-configuration based on opinionated defaults in a {@link Config} object in the default constructor
+   * Disables autoconfiguration based on opinionated defaults in a {@link Config} object in the all arguments constructor
    */
   public static final String KUBERNETES_DISABLE_AUTO_CONFIG_SYSTEM_PROPERTY = "kubernetes.disable.autoConfig";
   public static final String KUBERNETES_MASTER_SYSTEM_PROPERTY = "kubernetes.master";
@@ -148,120 +139,26 @@ public class Config {
 
   public static final String HTTP_PROTOCOL_PREFIX = "http://";
   public static final String HTTPS_PROTOCOL_PREFIX = "https://";
+  public static final String SOCKS5_PROTOCOL_PREFIX = "socks5://";
 
-  private static final String ACCESS_TOKEN = "access-token";
-  private static final String ID_TOKEN = "id-token";
+  private static final int DEFAULT_WATCH_RECONNECT_INTERVAL = 1000;
+  private static final int DEFAULT_CONNECTION_TIMEOUT = 10 * 1000;
+  private static final String DEFAULT_CLIENT_KEY_PASSPHRASE = "changeit";
 
-  private boolean trustCerts;
-  private boolean disableHostnameVerification;
-  private String masterUrl = DEFAULT_MASTER_URL;
-  private String apiVersion = "v1";
-  private String namespace;
-  private boolean defaultNamespace = true;
-  private String caCertFile;
-  private String caCertData;
-  private String clientCertFile;
-  private String clientCertData;
-  private String clientKeyFile;
-  private String clientKeyData;
-  private String clientKeyAlgo = "RSA";
-  private String clientKeyPassphrase = "changeit";
-  private String trustStoreFile;
-  private String trustStorePassphrase;
-  private String keyStoreFile;
-  private String keyStorePassphrase;
-  private AuthProviderConfig authProvider;
-  private String username;
-  private String password;
-  private volatile String oauthToken;
-  @JsonIgnore
-  private volatile String autoOAuthToken;
-  private OAuthTokenProvider oauthTokenProvider;
-  private long websocketPingInterval = DEFAULT_WEBSOCKET_PING_INTERVAL;
-  private int connectionTimeout = 10 * 1000;
-  private int maxConcurrentRequests = DEFAULT_MAX_CONCURRENT_REQUESTS;
-  private int maxConcurrentRequestsPerHost = DEFAULT_MAX_CONCURRENT_REQUESTS_PER_HOST;
+  private RequestConfig requestConfig = new RequestConfig(null, null, null, null, null, null, null, null);
 
-  private RequestConfig requestConfig = new RequestConfig();
-
-  private List<NamedContext> contexts = new ArrayList<>();
-  private NamedContext currentContext = null;
-
-  /**
-   * fields not used but needed for builder generation.
-   */
-  private int watchReconnectInterval = 1000;
-  private int watchReconnectLimit = -1;
-  private int uploadRequestTimeout = DEFAULT_UPLOAD_REQUEST_TIMEOUT;
-  private int requestRetryBackoffLimit;
-  private int requestRetryBackoffInterval;
-  private int requestTimeout = DEFAULT_REQUEST_TIMEOUT;
-  private long scaleTimeout = DEFAULT_SCALE_TIMEOUT;
-  private int loggingInterval = DEFAULT_LOGGING_INTERVAL;
-  private String impersonateUsername;
-
-  /**
-   * @deprecated use impersonateGroups instead
-   */
-  @Deprecated
-  private String impersonateGroup;
-  private String[] impersonateGroups;
-  private Map<String, List<String>> impersonateExtras;
-  /**
-   * end of fields not used but needed for builder generation.
-   */
-
-  private boolean http2Disable;
-  private String httpProxy;
-  private String httpsProxy;
-  private String proxyUsername;
-  private String proxyPassword;
-  private String[] noProxy;
-  private String userAgent = "fabric8-kubernetes-client/" + Version.clientVersion();
-  private TlsVersion[] tlsVersions = new TlsVersion[] { TlsVersion.TLS_1_3, TlsVersion.TLS_1_2 };
-
-  /**
-   * @deprecated Use Kubernetes Status directly for extracting error messages.
-   */
-  @Deprecated
-  private Map<Integer, String> errorMessages = new HashMap<>();
-
-  /**
-   * custom headers
-   */
-  private Map<String, String> customHeaders = null;
-
-  private boolean autoConfigure;
-
-  private File file;
-
-  @JsonIgnore
-  protected Map<String, Object> additionalProperties = new HashMap<String, Object>();
-
-  /**
-   * @deprecated use {@link #autoConfigure(String)} or {@link ConfigBuilder} instead
-   */
-  @Deprecated
-  public Config() {
-    this(!disableAutoConfig());
-  }
-
-  private static boolean disableAutoConfig() {
+  protected static boolean disableAutoConfig() {
     return Utils.getSystemPropertyOrEnvVar(KUBERNETES_DISABLE_AUTO_CONFIG_SYSTEM_PROPERTY, false);
-  }
-
-  private Config(boolean autoConfigure) {
-    if (autoConfigure) {
-      autoConfigure(this, null);
-    }
   }
 
   /**
    * Create an empty {@link Config} class without any automatic configuration
-   * (i.e. reading system properties/environment variables to load defaults.)
+   * (i.e. reading system properties/environment variables to set values).
+   * <p>
+   * The configuration does include the Kubernetes Client default values for timeouts, etc.
+   * <p>
    * You can also reuse this object to build your own {@link Config} object
    * without any auto configuration like this:
-   *
    *
    * <pre>{@code
    * Config configFromBuilder = new ConfigBuilder(Config.empty())
@@ -269,38 +166,41 @@ public class Config {
    *                               .build();
    * }</pre>
    *
-   * @return a Config object without any automatic configuration
+   * @return a Config object without any automatic configuration.
    */
   public static Config empty() {
     return new Config(false);
   }
 
   /**
-   * Does auto detection with some opinionated defaults.
+   * Does auto-detection with some opinionated defaults.
    *
    * @param context if null will use current-context
    * @return Config object
    */
   public static Config autoConfigure(String context) {
-    Config config = new Config(false);
-    return autoConfigure(config, context);
+    final Config config = new Config(false);
+    autoConfigure(config, context);
+    return config;
   }
 
-  private static Config autoConfigure(Config config, String context) {
-    if (!tryKubeConfig(config, context)) {
+  private static void autoConfigure(Config config, String context) {
+    final var kubeConfigFiles = findKubeConfigFiles();
+    if (!kubeConfigFiles.isEmpty()) {
+      final var kubeconfigs = kubeConfigFiles.stream()
+          .map(KubeConfigUtils::parseConfig)
+          .toArray(io.fabric8.kubernetes.api.model.Config[]::new);
+      KubeConfigUtils.merge(config, context, kubeconfigs);
+    } else {
       tryServiceAccount(config);
       tryNamespaceFromPath(config);
     }
     postAutoConfigure(config);
-    config.autoConfigure = true;
-    return config;
+    config.setAutoConfigure(true);
   }
 
   private static void postAutoConfigure(Config config) {
     configFromSysPropsOrEnvVars(config);
-
-    config.masterUrl = ensureHttps(config.masterUrl, config);
-    config.masterUrl = ensureEndsWithSlash(config.masterUrl);
   }
 
   private static String ensureEndsWithSlash(String masterUrl) {
@@ -318,89 +218,220 @@ public class Config {
     return masterUrl;
   }
 
-  @Deprecated
-  public Config(String masterUrl, String apiVersion, String namespace, boolean trustCerts, boolean disableHostnameVerification,
-      String caCertFile, String caCertData, String clientCertFile, String clientCertData, String clientKeyFile,
-      String clientKeyData, String clientKeyAlgo, String clientKeyPassphrase, String username, String password,
-      String oauthToken, String autoOAuthToken, int watchReconnectInterval, int watchReconnectLimit, int connectionTimeout,
-      int requestTimeout,
-      long rollingTimeout, long scaleTimeout, int loggingInterval, int maxConcurrentRequests, int maxConcurrentRequestsPerHost,
-      String httpProxy, String httpsProxy, String[] noProxy, Map<Integer, String> errorMessages, String userAgent,
-      TlsVersion[] tlsVersions, long websocketPingInterval, String proxyUsername, String proxyPassword,
-      String trustStoreFile, String trustStorePassphrase, String keyStoreFile, String keyStorePassphrase,
-      String impersonateUsername, String[] impersonateGroups, Map<String, List<String>> impersonateExtras) {
-    this(masterUrl, apiVersion, namespace, trustCerts, disableHostnameVerification, caCertFile, caCertData, clientCertFile,
-        clientCertData, clientKeyFile, clientKeyData, clientKeyAlgo, clientKeyPassphrase, username, password, oauthToken,
-        autoOAuthToken,
-        watchReconnectInterval, watchReconnectLimit, connectionTimeout, requestTimeout, scaleTimeout,
-        loggingInterval, maxConcurrentRequests, maxConcurrentRequestsPerHost, false, httpProxy, httpsProxy, noProxy,
-        errorMessages, userAgent, tlsVersions, websocketPingInterval, proxyUsername, proxyPassword,
-        trustStoreFile, trustStorePassphrase, keyStoreFile, keyStorePassphrase, impersonateUsername, impersonateGroups,
-        impersonateExtras, null, null, DEFAULT_REQUEST_RETRY_BACKOFFLIMIT, DEFAULT_REQUEST_RETRY_BACKOFFINTERVAL,
-        DEFAULT_UPLOAD_REQUEST_TIMEOUT);
+  protected Config(boolean autoConfigure) {
+    this(new SundrioConfigBuilder().withAutoConfigure(autoConfigure).build(), true);
   }
 
-  @Buildable(builderPackage = "io.fabric8.kubernetes.api.builder", editableEnabled = false)
-  public Config(String masterUrl, String apiVersion, String namespace, boolean trustCerts, boolean disableHostnameVerification,
-      String caCertFile, String caCertData, String clientCertFile, String clientCertData, String clientKeyFile,
-      String clientKeyData, String clientKeyAlgo, String clientKeyPassphrase, String username, String password,
-      String oauthToken, String autoOAuthToken, int watchReconnectInterval, int watchReconnectLimit, int connectionTimeout,
-      int requestTimeout,
-      long scaleTimeout, int loggingInterval, int maxConcurrentRequests, int maxConcurrentRequestsPerHost,
-      boolean http2Disable, String httpProxy, String httpsProxy, String[] noProxy, Map<Integer, String> errorMessages,
-      String userAgent, TlsVersion[] tlsVersions, long websocketPingInterval, String proxyUsername,
-      String proxyPassword, String trustStoreFile, String trustStorePassphrase, String keyStoreFile, String keyStorePassphrase,
-      String impersonateUsername, String[] impersonateGroups, Map<String, List<String>> impersonateExtras,
-      OAuthTokenProvider oauthTokenProvider, Map<String, String> customHeaders, int requestRetryBackoffLimit,
-      int requestRetryBackoffInterval, int uploadRequestTimeout) {
-    this.apiVersion = apiVersion;
-    this.namespace = namespace;
-    this.trustCerts = trustCerts;
-    this.disableHostnameVerification = disableHostnameVerification;
-    this.caCertFile = caCertFile;
-    this.caCertData = caCertData;
-    this.clientCertFile = clientCertFile;
-    this.clientCertData = clientCertData;
-    this.clientKeyFile = clientKeyFile;
-    this.clientKeyData = clientKeyData;
-    this.clientKeyAlgo = clientKeyAlgo;
-    this.clientKeyPassphrase = clientKeyPassphrase;
-    this.username = username;
-    this.password = password;
-    this.oauthToken = oauthToken;
-    this.websocketPingInterval = websocketPingInterval;
-    this.connectionTimeout = connectionTimeout;
+  protected Config() {
+  }
 
-    this.requestConfig = new RequestConfig(watchReconnectLimit, watchReconnectInterval,
-        requestTimeout, scaleTimeout, loggingInterval,
-        requestRetryBackoffLimit, requestRetryBackoffInterval, uploadRequestTimeout);
-    this.requestConfig.setImpersonateUsername(impersonateUsername);
-    this.requestConfig.setImpersonateGroups(impersonateGroups);
-    this.requestConfig.setImpersonateExtras(impersonateExtras);
+  /**
+   * Please use {@link ConfigBuilder} or static factory methods to create new instances.
+   * <p>
+   * All arguments constructor (only for serialization purposes).
+   * 
+   * @param config delegate configuration for deserialization.
+   */
+  @JsonCreator(mode = Mode.DELEGATING)
+  public Config(SundrioConfig config) {
+    this(config, true);
+  }
 
-    this.http2Disable = http2Disable;
-    this.httpProxy = httpProxy;
-    this.httpsProxy = httpsProxy;
-    this.noProxy = noProxy;
-    this.proxyUsername = proxyUsername;
-    this.proxyPassword = proxyPassword;
-    this.errorMessages = errorMessages;
-    this.userAgent = userAgent;
-    this.tlsVersions = tlsVersions;
-    this.trustStoreFile = trustStoreFile;
-    this.trustStorePassphrase = trustStorePassphrase;
-    this.keyStoreFile = keyStoreFile;
-    this.keyStorePassphrase = keyStorePassphrase;
-    this.oauthTokenProvider = oauthTokenProvider;
-    this.customHeaders = customHeaders;
+  /*
+   * The Builder is generated in SundrioConfig, if new fields need to be added here, please make sure to add them there too.
+   */
+  @SuppressWarnings("java:S6437") // DEFAULT_CLIENT_KEY_PASSPHRASE is the JVM cacerts default ("changeit"), not a credential
+  protected Config(SundrioConfig config, Boolean shouldSetDefaultValues) {
+    if (Boolean.TRUE.equals(shouldSetDefaultValues)) {
+      this.setMasterUrl(DEFAULT_MASTER_URL);
+      this.setApiVersion("v1");
+      this.setDefaultNamespace(true);
+      this.setTrustCerts(false);
+      this.setDisableHostnameVerification(false);
+      this.setOnlyHttpWatches(false);
+      this.setHttp2Disable(false);
+      this.setClientKeyAlgo("RSA");
+      this.setClientKeyPassphrase(DEFAULT_CLIENT_KEY_PASSPHRASE);
+      this.setWebsocketPingInterval(DEFAULT_WEBSOCKET_PING_INTERVAL);
+      this.setConnectionTimeout(DEFAULT_CONNECTION_TIMEOUT);
+      this.setMaxConcurrentRequests(DEFAULT_MAX_CONCURRENT_REQUESTS);
+      this.setMaxConcurrentRequestsPerHost(DEFAULT_MAX_CONCURRENT_REQUESTS_PER_HOST);
+      this.setContexts(new ArrayList<>());
+      this.setWatchReconnectInterval(DEFAULT_WATCH_RECONNECT_INTERVAL);
+      this.setWatchReconnectLimit(-1);
+      this.setUploadRequestTimeout(DEFAULT_UPLOAD_REQUEST_TIMEOUT);
+      this.setRequestRetryBackoffInterval(DEFAULT_REQUEST_RETRY_BACKOFFINTERVAL);
+      this.setRequestRetryBackoffLimit(DEFAULT_REQUEST_RETRY_BACKOFFLIMIT);
+      this.setRequestTimeout(DEFAULT_REQUEST_TIMEOUT);
+      this.setScaleTimeout(DEFAULT_SCALE_TIMEOUT);
+      this.setLoggingInterval(DEFAULT_LOGGING_INTERVAL);
+      this.setUserAgent("fabric8-kubernetes-client/" + Version.clientVersion());
+      this.setTlsVersions(new TlsVersion[] { TlsVersion.TLS_1_3, TlsVersion.TLS_1_2 });
+    }
 
-    //We need to keep this after ssl configuration & masterUrl
-    //We set the masterUrl because it's needed by ensureHttps
-    this.masterUrl = masterUrl;
-    this.masterUrl = ensureEndsWithSlash(ensureHttps(masterUrl, this));
-    this.maxConcurrentRequests = maxConcurrentRequests;
-    this.maxConcurrentRequestsPerHost = maxConcurrentRequestsPerHost;
-    this.autoOAuthToken = autoOAuthToken;
+    if (Boolean.TRUE.equals(config.getAutoConfigure())) {
+      autoConfigure(this, null);
+    }
+    if (Utils.isNotNullOrEmpty(config.getApiVersion())) {
+      this.setApiVersion(config.getApiVersion());
+    }
+    if (Utils.isNotNullOrEmpty(config.getMasterUrl())) {
+      this.setMasterUrl(config.getMasterUrl());
+    }
+    if (Utils.isNotNullOrEmpty(config.getNamespace())) {
+      this.setNamespace(config.getNamespace());
+    }
+    if (Boolean.TRUE.equals(config.getTrustCerts())) {
+      this.setTrustCerts(true);
+    }
+    if (Boolean.TRUE.equals(config.getDisableHostnameVerification())) {
+      this.setDisableHostnameVerification(true);
+    }
+    if (Utils.isNotNullOrEmpty(config.getCaCertFile())) {
+      this.setCaCertFile(config.getCaCertFile());
+    }
+    if (Utils.isNotNullOrEmpty(config.getCaCertData())) {
+      this.setCaCertData(config.getCaCertData());
+    }
+    if (Utils.isNotNullOrEmpty(config.getClientCertFile())) {
+      this.setClientCertFile(config.getClientCertFile());
+    }
+    if (Utils.isNotNullOrEmpty(config.getClientCertData())) {
+      this.setClientCertData(config.getClientCertData());
+    }
+    if (Utils.isNotNullOrEmpty(config.getClientKeyFile())) {
+      this.setClientKeyFile(config.getClientKeyFile());
+    }
+    if (Utils.isNotNullOrEmpty(config.getClientKeyData())) {
+      this.setClientKeyData(config.getClientKeyData());
+    }
+    if (Utils.isNotNullOrEmpty(config.getClientKeyAlgo())) {
+      this.setClientKeyAlgo(config.getClientKeyAlgo());
+    }
+    if (Utils.isNotNullOrEmpty(config.getClientKeyPassphrase())) {
+      this.setClientKeyPassphrase(config.getClientKeyPassphrase());
+    }
+    if (Utils.isNotNullOrEmpty(config.getUsername())) {
+      this.setUsername(config.getUsername());
+    }
+    if (Utils.isNotNullOrEmpty(config.getPassword())) {
+      this.setPassword(config.getPassword());
+    }
+    if (Utils.isNotNullOrEmpty(config.getOauthToken())) {
+      this.setOauthToken(config.getOauthToken());
+    }
+    if (Utils.isNotNullOrEmpty(config.getTlsServerName())) {
+      this.setTlsServerName(config.getTlsServerName());
+    }
+    if (config.getWebsocketPingInterval() != null) {
+      this.setWebsocketPingInterval(config.getWebsocketPingInterval());
+    }
+    if (config.getConnectionTimeout() != null) {
+      this.setConnectionTimeout(config.getConnectionTimeout());
+    }
+    if (config.getWatchReconnectLimit() != null) {
+      setWatchReconnectLimit(config.getWatchReconnectLimit());
+    }
+    if (config.getWatchReconnectInterval() != null) {
+      setWatchReconnectInterval(config.getWatchReconnectInterval());
+    }
+    if (config.getRequestTimeout() != null) {
+      setRequestTimeout(config.getRequestTimeout());
+    }
+    if (config.getScaleTimeout() != null) {
+      setScaleTimeout(config.getScaleTimeout());
+    }
+    if (config.getLoggingInterval() != null) {
+      setLoggingInterval(config.getLoggingInterval());
+    }
+    if (config.getRequestRetryBackoffLimit() != null) {
+      setRequestRetryBackoffLimit(config.getRequestRetryBackoffLimit());
+    }
+    if (config.getRequestRetryBackoffInterval() != null) {
+      setRequestRetryBackoffInterval(config.getRequestRetryBackoffInterval());
+    }
+    if (config.getUploadRequestTimeout() != null) {
+      setUploadRequestTimeout(config.getUploadRequestTimeout());
+    }
+    if (Utils.isNotNullOrEmpty(config.getImpersonateUsername())) {
+      setImpersonateUsername(config.getImpersonateUsername());
+    }
+    if (Utils.isNotNullOrEmpty(config.getImpersonateGroups())) {
+      setImpersonateGroups(config.getImpersonateGroups());
+    }
+    if (Utils.isNotNullOrEmpty(config.getImpersonateExtras())) {
+      setImpersonateExtras(config.getImpersonateExtras());
+    }
+    if (config.getHttp2Disable() != null) {
+      this.setHttp2Disable(config.getHttp2Disable());
+    }
+    if (Utils.isNotNullOrEmpty(config.getHttpProxy())) {
+      this.setHttpProxy(config.getHttpProxy());
+    }
+    if (Utils.isNotNullOrEmpty(config.getHttpsProxy())) {
+      this.setHttpsProxy(config.getHttpsProxy());
+    }
+    if (Utils.isNotNullOrEmpty(config.getNoProxy())) {
+      this.setNoProxy(config.getNoProxy());
+    }
+    if (Utils.isNotNullOrEmpty(config.getProxyUsername())) {
+      this.setProxyUsername(config.getProxyUsername());
+    }
+    if (Utils.isNotNullOrEmpty(config.getProxyPassword())) {
+      this.setProxyPassword(config.getProxyPassword());
+    }
+    if (Utils.isNotNullOrEmpty(config.getUserAgent())) {
+      this.setUserAgent(config.getUserAgent());
+    }
+    if (config.getTlsVersions() != null && config.getTlsVersions().length > 0) {
+      this.setTlsVersions(config.getTlsVersions());
+    }
+    if (Utils.isNotNullOrEmpty(config.getTrustStoreFile())) {
+      this.setTrustStoreFile(config.getTrustStoreFile());
+    }
+    if (Utils.isNotNullOrEmpty(config.getTrustStorePassphrase())) {
+      this.setTrustStorePassphrase(config.getTrustStorePassphrase());
+    }
+    if (Utils.isNotNullOrEmpty(config.getKeyStoreFile())) {
+      this.setKeyStoreFile(config.getKeyStoreFile());
+    }
+    if (Utils.isNotNullOrEmpty(config.getKeyStorePassphrase())) {
+      this.setKeyStorePassphrase(config.getKeyStorePassphrase());
+    }
+    if (config.getMaxConcurrentRequests() != null) {
+      this.setMaxConcurrentRequests(config.getMaxConcurrentRequests());
+    }
+    if (config.getMaxConcurrentRequestsPerHost() != null) {
+      this.setMaxConcurrentRequestsPerHost(config.getMaxConcurrentRequestsPerHost());
+    }
+    if (Utils.isNotNullOrEmpty(config.getAutoOAuthToken())) {
+      this.setAutoOAuthToken(config.getAutoOAuthToken());
+    }
+    if (config.getContexts() != null && !config.getContexts().isEmpty()) {
+      this.setContexts(config.getContexts());
+    }
+    if (Utils.isNotNull(config.getCurrentContext())) {
+      this.setCurrentContext(config.getCurrentContext());
+    }
+    if (Utils.isNotNullOrEmpty(config.getMasterUrl())) {
+      setMasterUrl(config.getMasterUrl());
+    }
+    this.setAutoConfigure(config.getAutoConfigure());
+    this.setOauthTokenProvider(config.getOauthTokenProvider());
+    this.setCustomHeaders(config.getCustomHeaders());
+    if (config.getOnlyHttpWatches() != null) {
+      this.setOnlyHttpWatches(config.getOnlyHttpWatches());
+    }
+    this.setAuthProvider(config.getAuthProvider());
+    if (config.getAdditionalProperties() != null) {
+      this.setAdditionalProperties(new LinkedHashMap<String, Object>(config.getAdditionalProperties()));
+    }
+    if (config.getDefaultNamespace() != null) {
+      this.setDefaultNamespace(config.getDefaultNamespace());
+    }
+    if (config.getWatchList() != null) {
+      this.setWatchList(config.getWatchList());
+    }
   }
 
   public static void configFromSysPropsOrEnvVars(Config config) {
@@ -424,7 +455,7 @@ public class Config {
         Utils.getSystemPropertyOrEnvVar(KUBERNETES_CLIENT_KEY_DATA_SYSTEM_PROPERTY, config.getClientKeyData()));
     config.setClientKeyAlgo(getKeyAlgorithm(config.getClientKeyFile(), config.getClientKeyData()));
     config.setClientKeyPassphrase(Utils.getSystemPropertyOrEnvVar(KUBERNETES_CLIENT_KEY_PASSPHRASE_SYSTEM_PROPERTY,
-        new String(config.getClientKeyPassphrase())));
+        config.getClientKeyPassphrase()));
     config.setUserAgent(Utils.getSystemPropertyOrEnvVar(KUBERNETES_USER_AGENT, config.getUserAgent()));
 
     config.setTrustStorePassphrase(
@@ -444,7 +475,7 @@ public class Config {
 
     String configuredImpersonateGroups = Utils.getSystemPropertyOrEnvVar(KUBERNETES_IMPERSONATE_GROUP, Arrays
         .stream(Optional.ofNullable(config.getImpersonateGroups()).orElse(new String[0])).collect(Collectors.joining(",")));
-    if (configuredImpersonateGroups != null) {
+    if (Utils.isNotNullOrEmpty(configuredImpersonateGroups)) {
       config.setImpersonateGroups(configuredImpersonateGroups.split(","));
     }
 
@@ -502,11 +533,17 @@ public class Config {
 
     config.setHttp2Disable(Utils.getSystemPropertyOrEnvVar(KUBERNETES_HTTP2_DISABLE, config.isHttp2Disable()));
 
-    config.setHttpProxy(Utils.getSystemPropertyOrEnvVar(KUBERNETES_ALL_PROXY, config.getHttpProxy()));
-    config.setHttpsProxy(Utils.getSystemPropertyOrEnvVar(KUBERNETES_ALL_PROXY, config.getHttpsProxy()));
-
-    config.setHttpsProxy(Utils.getSystemPropertyOrEnvVar(KUBERNETES_HTTPS_PROXY, config.getHttpsProxy()));
-    config.setHttpProxy(Utils.getSystemPropertyOrEnvVar(KUBERNETES_HTTP_PROXY, config.getHttpProxy()));
+    // Only set http(s) proxy fields if they're not set. This is done in order to align behavior of
+    // KubernetesClient with kubectl / client-go . Please see https://github.com/fabric8io/kubernetes-client/issues/6150
+    // Precedence is given to proxy-url read from kubeconfig .
+    if (Utils.isNullOrEmpty(config.getHttpProxy())) {
+      config.setHttpProxy(Utils.getSystemPropertyOrEnvVar(KUBERNETES_ALL_PROXY, config.getHttpProxy()));
+      config.setHttpProxy(Utils.getSystemPropertyOrEnvVar(KUBERNETES_HTTP_PROXY, config.getHttpProxy()));
+    }
+    if (Utils.isNullOrEmpty(config.getHttpsProxy())) {
+      config.setHttpsProxy(Utils.getSystemPropertyOrEnvVar(KUBERNETES_ALL_PROXY, config.getHttpsProxy()));
+      config.setHttpsProxy(Utils.getSystemPropertyOrEnvVar(KUBERNETES_HTTPS_PROXY, config.getHttpsProxy()));
+    }
 
     config.setProxyUsername(Utils.getSystemPropertyOrEnvVar(KUBERNETES_PROXY_USERNAME, config.getProxyUsername()));
     config.setProxyPassword(Utils.getSystemPropertyOrEnvVar(KUBERNETES_PROXY_PASSWORD, config.getProxyPassword()));
@@ -528,7 +565,7 @@ public class Config {
   }
 
   private static boolean tryServiceAccount(Config config) {
-    LOGGER.debug("Trying to configure client from service account...");
+    logger.debug("Trying to configure client from service account...");
     String masterHost = Utils.getSystemPropertyOrEnvVar(KUBERNETES_SERVICE_HOST_PROPERTY, (String) null);
     String masterPort = Utils.getSystemPropertyOrEnvVar(KUBERNETES_SERVICE_PORT_PROPERTY, (String) null);
     String caCertPath = Utils.getSystemPropertyOrEnvVar(KUBERNETES_CA_CERTIFICATE_FILE_SYSTEM_PROPERTY,
@@ -536,16 +573,16 @@ public class Config {
 
     if (masterHost != null && masterPort != null) {
       String hostPort = joinHostPort(masterHost, masterPort);
-      LOGGER.debug("Found service account host and port: {}", hostPort);
+      logger.debug("Found service account host and port: {}", hostPort);
       config.setMasterUrl("https://" + hostPort);
     }
     if (Utils.getSystemPropertyOrEnvVar(KUBERNETES_AUTH_TRYSERVICEACCOUNT_SYSTEM_PROPERTY, true)) {
       boolean serviceAccountCaCertExists = Files.isRegularFile(new File(caCertPath).toPath());
       if (serviceAccountCaCertExists) {
-        LOGGER.debug("Found service account ca cert at: [{}}].", caCertPath);
+        logger.debug("Found service account ca cert at: [{}}].", caCertPath);
         config.setCaCertFile(caCertPath);
       } else {
-        LOGGER.debug("Did not find service account ca cert at: [{}}].", caCertPath);
+        logger.debug("Did not find service account ca cert at: [{}}].", caCertPath);
       }
 
       File saTokenPathFile = findServiceAccountTokenFile();
@@ -553,12 +590,12 @@ public class Config {
         String saTokenPathLocation = saTokenPathFile.getAbsolutePath();
         try {
           String serviceTokenCandidate = new String(Files.readAllBytes(saTokenPathFile.toPath()));
-          LOGGER.debug("Found service account token at: [{}].", saTokenPathLocation);
+          logger.debug("Found service account token at: [{}].", saTokenPathLocation);
           config.setAutoOAuthToken(serviceTokenCandidate);
           return true;
         } catch (IOException e) {
           // No service account token available...
-          LOGGER.warn("Error reading service account token from: [{}]. Ignoring.", saTokenPathLocation);
+          logger.warn("Error reading service account token from: [{}]. Ignoring.", saTokenPathLocation);
         }
       }
     }
@@ -576,7 +613,7 @@ public class Config {
       saTokenPathFile = new File(KUBERNETES_SERVICE_ACCOUNT_TOKEN_PATH);
       if (!saTokenPathFile.exists()) {
         saTokenPathFile = null;
-        LOGGER.debug("Could not find the service account token at the default location: [{}]. Ignoring.",
+        logger.debug("Could not find the service account token at the default location: [{}]. Ignoring.",
             KUBERNETES_SERVICE_ACCOUNT_TOKEN_PATH);
       }
     }
@@ -592,33 +629,43 @@ public class Config {
     return host + ":" + port;
   }
 
-  private static String absolutify(File relativeTo, String filename) {
-    if (filename == null) {
-      return null;
-    }
-
-    File file = new File(filename);
-    if (file.isAbsolute()) {
-      return file.getAbsolutePath();
-    }
-
-    return new File(relativeTo.getParentFile(), filename).getAbsolutePath();
+  public static Config fromKubeconfig(String kubeconfigContents) {
+    return fromKubeconfig(null, KubeConfigUtils.parseConfigFromString(kubeconfigContents));
   }
 
-  public static Config fromKubeconfig(String kubeconfigContents) {
-    return fromKubeconfig(null, kubeconfigContents, null);
+  public static Config fromKubeconfig(File kubeconfigFile) {
+    return fromKubeconfig(null, kubeconfigFile);
+  }
+
+  public static Config fromKubeconfig(String context, File kubeconfig) {
+    return fromKubeconfig(context, KubeConfigUtils.parseConfig(kubeconfig));
+  }
+
+  private static Config fromKubeconfig(String context, io.fabric8.kubernetes.api.model.Config... kubeconfigs) {
+    final Config ret = Config.empty();
+    KubeConfigUtils.merge(ret, context, kubeconfigs);
+    return ret;
   }
 
   // Note: kubeconfigPath is optional (see note on loadFromKubeConfig)
+  /**
+   * @deprecated use {@link #fromKubeconfig(File)} instead
+   */
+  @Deprecated(since = "7.0.0", forRemoval = true)
   public static Config fromKubeconfig(String context, String kubeconfigContents, String kubeconfigPath) {
     // we allow passing context along here, since downstream accepts it
     Config config = new Config(false);
-    if (kubeconfigPath != null) {
-      config.file = new File(kubeconfigPath);
-    }
-    if (!loadFromKubeconfig(config, context, kubeconfigContents)) {
+    if (Utils.isNullOrEmpty(kubeconfigContents)) {
       throw new KubernetesClientException("Could not create Config from kubeconfig");
     }
+    final io.fabric8.kubernetes.api.model.Config kubeconfig;
+    if (kubeconfigPath != null) {
+      // TODO: temp workaround until the method is removed (marked for removal in 7.0.0)
+      kubeconfig = KubeConfigUtils.parseConfig(new File(kubeconfigPath));
+    } else {
+      kubeconfig = KubeConfigUtils.parseConfigFromString(kubeconfigContents);
+    }
+    KubeConfigUtils.merge(config, context, kubeconfig);
     if (!disableAutoConfig()) {
       postAutoConfigure(config);
     }
@@ -629,230 +676,64 @@ public class Config {
    * Refresh the config from file / env sources.
    * Any values that the user have programmatically set will be lost.
    *
-   * @return
+   * @return this Config instance with the refreshed values (if applicable)
    */
   public Config refresh() {
-    final String currentContextName = this.getCurrentContext() != null ? this.getCurrentContext().getName() : null;
-    if (this.oauthToken != null && !this.oauthToken.isEmpty()) {
+    final String currentContextName = getCurrentContext() != null ? getCurrentContext().getName() : null;
+    if (Utils.isNotNullOrEmpty(getOauthToken())) {
       return this;
     }
-    if (this.autoConfigure) {
+    if (Boolean.TRUE.equals(getAutoConfigure())) {
       return Config.autoConfigure(currentContextName);
     }
-    if (this.file != null) {
-      String kubeconfigContents = getKubeconfigContents(this.file);
-      if (kubeconfigContents == null) {
-        return this; // getKubeconfigContents will have logged an exception
+    // Only possible if the Config was created using Config.fromKubeconfig, otherwise autoConfigure would have been called
+    if (getFile() != null) {
+      if (loadKubeConfigContents(getFile()) == null) {
+        return this; // loadKubeConfigContents will have logged an exception
       }
-      return Config.fromKubeconfig(currentContextName, kubeconfigContents, this.file.getPath());
+      final var refreshedConfig = Config.fromKubeconfig(currentContextName, getFile());
+      if (!disableAutoConfig()) {
+        postAutoConfigure(refreshedConfig);
+      }
+      return refreshedConfig;
     }
-    // nothing to refresh - the kubeconfig was directly supplied
+    // nothing to refresh - the Config values were directly supplied
     return this;
   }
 
-  private static boolean tryKubeConfig(Config config, String context) {
-    LOGGER.debug("Trying to configure client from Kubernetes config...");
+  private static Collection<File> findKubeConfigFiles() {
+    logger.debug("Trying to configure client from Kubernetes config...");
     if (!Utils.getSystemPropertyOrEnvVar(KUBERNETES_AUTH_TRYKUBECONFIG_SYSTEM_PROPERTY, true)) {
-      return false;
+      return Collections.emptyList();
     }
-    File kubeConfigFile = new File(getKubeconfigFilename());
-    if (!kubeConfigFile.isFile()) {
-      LOGGER.debug("Did not find Kubernetes config at: [{}]. Ignoring.", kubeConfigFile.getPath());
-      return false;
-    }
-    LOGGER.debug("Found for Kubernetes config at: [{}].", kubeConfigFile.getPath());
-    String kubeconfigContents = getKubeconfigContents(kubeConfigFile);
-    if (kubeconfigContents == null) {
-      return false;
-    }
-    config.file = new File(kubeConfigFile.getPath());
-    return loadFromKubeconfig(config, context, kubeconfigContents);
+    return getKubeconfigFilenames().stream()
+        .map(File::new)
+        .filter(f -> {
+          if (!f.isFile()) {
+            logger.debug("Did not find Kubernetes config at: [{}]. Ignoring.", f.getPath());
+            return false;
+          }
+          return true;
+        })
+        .filter(f -> Utils.isNotNullOrEmpty(loadKubeConfigContents(f)))
+        .collect(Collectors.toList());
   }
 
-  public static String getKubeconfigFilename() {
-    String fileName = Utils.getSystemPropertyOrEnvVar(KUBERNETES_KUBECONFIG_FILE,
+  public static Collection<String> getKubeconfigFilenames() {
+    final var valueOrDefault = Utils.getSystemPropertyOrEnvVar(KUBERNETES_KUBECONFIG_FILE,
         new File(getHomeDir(), ".kube" + File.separator + "config").toString());
-
     // if system property/env var contains multiple files take the first one based on the environment
     // we are running in (eg. : for Linux, ; for Windows)
-    String[] fileNames = fileName.split(File.pathSeparator);
-
-    if (fileNames.length > 1) {
-      LOGGER.warn(
-          "Found multiple Kubernetes config files [{}], using the first one: [{}]. If not desired file, please change it by doing `export KUBECONFIG=/path/to/kubeconfig` on Unix systems or `$Env:KUBECONFIG=/path/to/kubeconfig` on Windows.",
-          fileNames, fileNames[0]);
-      fileName = fileNames[0];
-    }
-    return fileName;
+    return Arrays.asList(valueOrDefault.split(File.pathSeparator));
   }
 
-  private static String getKubeconfigContents(File kubeConfigFile) {
-    String kubeconfigContents = null;
+  private static String loadKubeConfigContents(File kubeConfigFile) {
     try (FileReader reader = new FileReader(kubeConfigFile)) {
-      kubeconfigContents = IOHelpers.readFully(reader);
+      return IOHelpers.readFully(reader);
     } catch (IOException e) {
-      LOGGER.error("Could not load Kubernetes config file from {}", kubeConfigFile.getPath(), e);
+      logger.error("Could not load Kubernetes config file from {}", kubeConfigFile.getPath(), e);
       return null;
     }
-    return kubeconfigContents;
-  }
-
-  // Note: kubeconfigPath is optional
-  // It is only used to rewrite relative tls asset paths inside kubeconfig when a file is passed, and in the case that
-  // the kubeconfig references some assets via relative paths.
-  private static boolean loadFromKubeconfig(Config config, String context, String kubeconfigContents) {
-    try {
-      io.fabric8.kubernetes.api.model.Config kubeConfig = KubeConfigUtils.parseConfigFromString(kubeconfigContents);
-      config.setContexts(kubeConfig.getContexts());
-      Context currentContext = setCurrentContext(context, config, kubeConfig);
-      Cluster currentCluster = KubeConfigUtils.getCluster(kubeConfig, currentContext);
-      if (currentContext != null) {
-        config.setNamespace(currentContext.getNamespace());
-      }
-      if (currentCluster != null) {
-        config.setMasterUrl(currentCluster.getServer());
-        config.setTrustCerts(currentCluster.getInsecureSkipTlsVerify() != null && currentCluster.getInsecureSkipTlsVerify());
-        config.setDisableHostnameVerification(
-            currentCluster.getInsecureSkipTlsVerify() != null && currentCluster.getInsecureSkipTlsVerify());
-        config.setCaCertData(currentCluster.getCertificateAuthorityData());
-        AuthInfo currentAuthInfo = KubeConfigUtils.getUserAuthInfo(kubeConfig, currentContext);
-        if (currentAuthInfo != null) {
-          // rewrite tls asset paths if needed
-          String caCertFile = currentCluster.getCertificateAuthority();
-          String clientCertFile = currentAuthInfo.getClientCertificate();
-          String clientKeyFile = currentAuthInfo.getClientKey();
-          File configFile = config.file;
-          if (configFile != null) {
-            caCertFile = absolutify(configFile, currentCluster.getCertificateAuthority());
-            clientCertFile = absolutify(configFile, currentAuthInfo.getClientCertificate());
-            clientKeyFile = absolutify(configFile, currentAuthInfo.getClientKey());
-          }
-          config.setCaCertFile(caCertFile);
-          config.setClientCertFile(clientCertFile);
-          config.setClientCertData(currentAuthInfo.getClientCertificateData());
-          config.setClientKeyFile(clientKeyFile);
-          config.setClientKeyData(currentAuthInfo.getClientKeyData());
-          config.setClientKeyAlgo(getKeyAlgorithm(config.getClientKeyFile(), config.getClientKeyData()));
-          config.setAutoOAuthToken(currentAuthInfo.getToken());
-          config.setUsername(currentAuthInfo.getUsername());
-          config.setPassword(currentAuthInfo.getPassword());
-
-          if (Utils.isNullOrEmpty(config.getAutoOAuthToken()) && currentAuthInfo.getAuthProvider() != null) {
-            if (currentAuthInfo.getAuthProvider().getConfig() != null) {
-              config.setAuthProvider(currentAuthInfo.getAuthProvider());
-              if (!Utils.isNullOrEmpty(currentAuthInfo.getAuthProvider().getConfig().get(ACCESS_TOKEN))) {
-                // GKE token
-                config.setAutoOAuthToken(currentAuthInfo.getAuthProvider().getConfig().get(ACCESS_TOKEN));
-              } else if (!Utils.isNullOrEmpty(currentAuthInfo.getAuthProvider().getConfig().get(ID_TOKEN))) {
-                // OpenID Connect token
-                config.setAutoOAuthToken(currentAuthInfo.getAuthProvider().getConfig().get(ID_TOKEN));
-              }
-            }
-          } else if (config.getOauthTokenProvider() == null) { // https://kubernetes.io/docs/reference/access-authn-authz/authentication/#client-go-credential-plugins
-            ExecConfig exec = currentAuthInfo.getExec();
-            if (exec != null) {
-              ExecCredential ec = getExecCredentialFromExecConfig(exec, configFile);
-              if (ec != null && ec.status != null && ec.status.token != null) {
-                config.setAutoOAuthToken(ec.status.token);
-              } else {
-                LOGGER.warn("No token returned");
-              }
-            }
-          }
-        }
-        return true;
-      }
-    } catch (Exception e) {
-      throw KubernetesClientException.launderThrowable("Failed to parse the kubeconfig.", e);
-    }
-
-    return false;
-  }
-
-  protected static ExecCredential getExecCredentialFromExecConfig(ExecConfig exec, File configFile)
-      throws IOException, InterruptedException {
-    String apiVersion = exec.getApiVersion();
-    List<ExecEnvVar> env = exec.getEnv();
-    // TODO check behavior of tty & stdin
-    ProcessBuilder pb = new ProcessBuilder(
-        getAuthenticatorCommandFromExecConfig(exec, configFile, Utils.getSystemPathVariable()));
-    pb.redirectErrorStream(true);
-    if (env != null) {
-      Map<String, String> environment = pb.environment();
-      env.forEach(var -> environment.put(var.getName(), var.getValue()));
-    }
-    Process p = pb.start();
-    String output;
-    try (InputStream is = p.getInputStream()) {
-      output = IOHelpers.readFully(is);
-    }
-    if (p.waitFor() != 0) {
-      LOGGER.warn(output);
-    }
-    ExecCredential ec = Serialization.unmarshal(output, ExecCredential.class);
-    if (!apiVersion.equals(ec.apiVersion)) {
-      LOGGER.warn("Wrong apiVersion {} vs. {}", ec.apiVersion, apiVersion);
-    } else {
-      return ec;
-    }
-    return null;
-  }
-
-  protected static List<String> getAuthenticatorCommandFromExecConfig(ExecConfig exec, File configFile,
-      String systemPathValue) {
-    String command = exec.getCommand();
-    if (command.contains(File.separator) && !command.startsWith(File.separator) && configFile != null) {
-      // Appears to be a relative path; normalize. Spec is vague about how to detect this situation.
-      command = Paths.get(configFile.getAbsolutePath()).resolveSibling(command).normalize().toString();
-    }
-    List<String> argv = new ArrayList<>(Utils.getCommandPlatformPrefix());
-    command = getCommandWithFullyQualifiedPath(command, systemPathValue);
-
-    command = shellQuote(command);
-
-    List<String> args = exec.getArgs();
-    if (args != null && !args.isEmpty()) {
-      command += " " + args
-          .stream()
-          .map(Config::shellQuote)
-          .collect(Collectors.joining(" "));
-    }
-    argv.add(command);
-    return argv;
-  }
-
-  private static String shellQuote(String value) {
-    if (value.contains(" ") || value.contains("\"") || value.contains("'")) {
-      return "\"" + value.replace("\"", "\\\"") + "\"";
-    }
-    return value;
-  }
-
-  protected static String getCommandWithFullyQualifiedPath(String command, String pathValue) {
-    String[] pathParts = pathValue.split(File.pathSeparator);
-
-    // Iterate through path in order to find executable file
-    for (String pathPart : pathParts) {
-      File commandFile = new File(pathPart + File.separator + command);
-      if (commandFile.exists()) {
-        return commandFile.getAbsolutePath();
-      }
-    }
-
-    return command;
-  }
-
-  private static Context setCurrentContext(String context, Config config, io.fabric8.kubernetes.api.model.Config kubeConfig) {
-    if (context != null) {
-      kubeConfig.setCurrentContext(context);
-    }
-    Context currentContext = null;
-    NamedContext currentNamedContext = KubeConfigUtils.getCurrentContext(kubeConfig);
-    if (currentNamedContext != null) {
-      config.setCurrentContext(currentNamedContext);
-      currentContext = currentNamedContext.getContext();
-    }
-    return currentContext;
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)
@@ -870,25 +751,27 @@ public class Config {
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class ExecCredentialStatus {
     public String token;
-    // TODO clientCertificateData, clientKeyData, expirationTimestamp
+    public String clientCertificateData;
+    public String clientKeyData;
+    // TODO expirationTimestamp
   }
 
   private static boolean tryNamespaceFromPath(Config config) {
-    LOGGER.debug("Trying to configure client namespace from Kubernetes service account namespace path...");
+    logger.debug("Trying to configure client namespace from Kubernetes service account namespace path...");
     if (Utils.getSystemPropertyOrEnvVar(KUBERNETES_TRYNAMESPACE_PATH_SYSTEM_PROPERTY, true)) {
       String serviceAccountNamespace = Utils.getSystemPropertyOrEnvVar(KUBERNETES_NAMESPACE_FILE, KUBERNETES_NAMESPACE_PATH);
       boolean serviceAccountNamespaceExists = Files.isRegularFile(new File(serviceAccountNamespace).toPath());
       if (serviceAccountNamespaceExists) {
-        LOGGER.debug("Found service account namespace at: [{}].", serviceAccountNamespace);
+        logger.debug("Found service account namespace at: [{}].", serviceAccountNamespace);
         try {
           String namespace = new String(Files.readAllBytes(new File(serviceAccountNamespace).toPath()));
           config.setNamespace(namespace.replace(System.lineSeparator(), ""));
           return true;
         } catch (IOException e) {
-          LOGGER.error("Error reading service account namespace from: [" + serviceAccountNamespace + "].", e);
+          logger.error("Error reading service account namespace from: [" + serviceAccountNamespace + "].", e);
         }
       } else {
-        LOGGER.debug("Did not find service account namespace at: [{}]. Ignoring.", serviceAccountNamespace);
+        logger.debug("Did not find service account namespace at: [{}]. Ignoring.", serviceAccountNamespace);
       }
     }
     return false;
@@ -937,9 +820,9 @@ public class Config {
       String line, algorithm = null;
 
       while ((line = bufferedReader.readLine()) != null) {
-        if (line.contains("BEGIN EC PRIVATE KEY"))
+        if (line.contains("BEGIN EC PRIVATE KEY")) {
           algorithm = "EC";
-        else if (line.contains("BEGIN RSA PRIVATE KEY")) {
+        } else if (line.contains("BEGIN RSA PRIVATE KEY")) {
           algorithm = "RSA";
         }
       }
@@ -960,489 +843,210 @@ public class Config {
         return getKeyAlgorithm(keyInputStream);
       }
     } catch (IOException exception) {
-      LOGGER.debug("Failure in determining private key algorithm type, defaulting to RSA {}", exception.getMessage());
+      logger.debug("Failure in determining private key algorithm type, defaulting to RSA {}", exception.getMessage());
     }
     return null;
   }
 
-  @JsonProperty("oauthToken")
-  public String getOauthToken() {
-    return oauthToken;
-  }
-
-  public void setOauthToken(String oauthToken) {
-    this.oauthToken = oauthToken;
-  }
-
-  @JsonProperty("password")
-  public String getPassword() {
-    return password;
-  }
-
-  public void setPassword(String password) {
-    this.password = password;
-  }
-
-  @JsonProperty("username")
-  public String getUsername() {
-    return username;
-  }
-
-  public void setUsername(String username) {
-    this.username = username;
-  }
-
+  @Override
   @JsonProperty("impersonateUsername")
   public String getImpersonateUsername() {
     return getRequestConfig().getImpersonateUsername();
   }
 
+  @Override
   public void setImpersonateUsername(String impersonateUsername) {
     this.requestConfig.setImpersonateUsername(impersonateUsername);
   }
 
+  @Override
   @JsonProperty("impersonateGroups")
   public String[] getImpersonateGroups() {
     return getRequestConfig().getImpersonateGroups();
   }
 
+  @Override
   public void setImpersonateGroups(String... impersonateGroup) {
     this.requestConfig.setImpersonateGroups(impersonateGroup);
   }
 
+  @Override
   @JsonProperty("impersonateExtras")
   public Map<String, List<String>> getImpersonateExtras() {
     return getRequestConfig().getImpersonateExtras();
   }
 
+  @Override
   public void setImpersonateExtras(Map<String, List<String>> impersonateExtras) {
     this.requestConfig.setImpersonateExtras(impersonateExtras);
   }
 
-  @JsonProperty("clientKeyPassphrase")
-  public String getClientKeyPassphrase() {
-    return clientKeyPassphrase;
-  }
-
-  public void setClientKeyPassphrase(String clientKeyPassphrase) {
-    this.clientKeyPassphrase = clientKeyPassphrase;
-  }
-
-  @JsonProperty("clientKeyAlgo")
-  public String getClientKeyAlgo() {
-    return clientKeyAlgo;
-  }
-
-  public void setClientKeyAlgo(String clientKeyAlgo) {
-    this.clientKeyAlgo = clientKeyAlgo;
-  }
-
-  @JsonProperty("clientKeyData")
-  public String getClientKeyData() {
-    return clientKeyData;
-  }
-
-  public void setClientKeyData(String clientKeyData) {
-    this.clientKeyData = clientKeyData;
-  }
-
-  @JsonProperty("clientKeyFile")
-  public String getClientKeyFile() {
-    return clientKeyFile;
-  }
-
-  public void setClientKeyFile(String clientKeyFile) {
-    this.clientKeyFile = clientKeyFile;
-  }
-
-  @JsonProperty("clientCertData")
-  public String getClientCertData() {
-    return clientCertData;
-  }
-
-  public void setClientCertData(String clientCertData) {
-    this.clientCertData = clientCertData;
-  }
-
-  @JsonProperty("clientCertFile")
-  public String getClientCertFile() {
-    return clientCertFile;
-  }
-
-  public void setClientCertFile(String clientCertFile) {
-    this.clientCertFile = clientCertFile;
-  }
-
-  @JsonProperty("caCertData")
-  public String getCaCertData() {
-    return caCertData;
-  }
-
-  public void setCaCertData(String caCertData) {
-    this.caCertData = caCertData;
-  }
-
-  @JsonProperty("caCertFile")
-  public String getCaCertFile() {
-    return caCertFile;
-  }
-
-  public void setCaCertFile(String caCertFile) {
-    this.caCertFile = caCertFile;
-  }
-
-  @JsonProperty("apiVersion")
-  public String getApiVersion() {
-    return apiVersion;
-  }
-
-  public void setApiVersion(String apiVersion) {
-    this.apiVersion = apiVersion;
-  }
-
-  @JsonProperty("masterUrl")
-  public String getMasterUrl() {
-    return masterUrl;
-  }
-
+  @Override
   public void setMasterUrl(String masterUrl) {
     //We set the masterUrl because it's needed by ensureHttps
-    this.masterUrl = masterUrl;
-    this.masterUrl = ensureEndsWithSlash(ensureHttps(masterUrl, this));
+    super.setMasterUrl(masterUrl);
+    super.setMasterUrl(ensureEndsWithSlash(ensureHttps(masterUrl, this)));
   }
 
   @JsonProperty("trustCerts")
   public boolean isTrustCerts() {
-    return trustCerts;
+    return Optional.ofNullable(getTrustCerts()).orElse(false);
   }
 
   public void setTrustCerts(boolean trustCerts) {
-    this.trustCerts = trustCerts;
+    this.setTrustCerts(Boolean.valueOf(trustCerts));
   }
 
   @JsonProperty("disableHostnameVerification")
   public boolean isDisableHostnameVerification() {
-    return disableHostnameVerification;
+    return Optional.ofNullable(getDisableHostnameVerification()).orElse(false);
   }
 
   public void setDisableHostnameVerification(boolean disableHostnameVerification) {
-    this.disableHostnameVerification = disableHostnameVerification;
+    this.setDisableHostnameVerification(Boolean.valueOf(disableHostnameVerification));
   }
 
+  @Override
   @JsonProperty("watchReconnectInterval")
-  public int getWatchReconnectInterval() {
+  public Integer getWatchReconnectInterval() {
     return requestConfig.getWatchReconnectInterval();
   }
 
-  public void setWatchReconnectInterval(int watchReconnectInterval) {
+  @Override
+  public void setWatchReconnectInterval(Integer watchReconnectInterval) {
     this.requestConfig.setWatchReconnectInterval(watchReconnectInterval);
   }
 
+  @Override
   @JsonProperty("watchReconnectLimit")
-  public int getWatchReconnectLimit() {
+  public Integer getWatchReconnectLimit() {
     return getRequestConfig().getWatchReconnectLimit();
   }
 
-  public void setWatchReconnectLimit(int watchReconnectLimit) {
+  @Override
+  public void setWatchReconnectLimit(Integer watchReconnectLimit) {
     this.requestConfig.setWatchReconnectLimit(watchReconnectLimit);
-  }
-
-  /**
-   * @deprecated Use Kubernetes status messages directly
-   * @return map of error codes to message mappings
-   */
-  @Deprecated
-  @JsonProperty("errorMessages")
-  public Map<Integer, String> getErrorMessages() {
-    return errorMessages;
-  }
-
-  public void setErrorMessages(Map<Integer, String> errorMessages) {
-    this.errorMessages = errorMessages;
   }
 
   public static ConfigBuilder builder() {
     return new ConfigBuilder();
   }
 
-  @JsonProperty("connectionTimeout")
-  public int getConnectionTimeout() {
-    return connectionTimeout;
-  }
-
-  public void setConnectionTimeout(int connectionTimeout) {
-    this.connectionTimeout = connectionTimeout;
-  }
-
+  @Override
   @JsonProperty("uploadRequestTimeout")
-  public int getUploadRequestTimeout() {
+  public Integer getUploadRequestTimeout() {
     return getRequestConfig().getUploadRequestTimeout();
   }
 
-  public void setUploadRequestTimeout(int requestTimeout) {
+  @Override
+  public void setUploadRequestTimeout(Integer requestTimeout) {
     this.requestConfig.setUploadRequestTimeout(requestTimeout);
   }
 
+  @Override
   @JsonProperty("requestTimeout")
-  public int getRequestTimeout() {
+  public Integer getRequestTimeout() {
     return getRequestConfig().getRequestTimeout();
   }
 
-  public void setRequestTimeout(int requestTimeout) {
+  @Override
+  public void setRequestTimeout(Integer requestTimeout) {
     this.requestConfig.setRequestTimeout(requestTimeout);
   }
 
+  @Override
   @JsonProperty("requestRetryBackoffLimit")
-  public int getRequestRetryBackoffLimit() {
+  public Integer getRequestRetryBackoffLimit() {
     return getRequestConfig().getRequestRetryBackoffLimit();
   }
 
-  public void setRequestRetryBackoffLimit(int requestRetryBackoffLimit) {
+  @Override
+  public void setRequestRetryBackoffLimit(Integer requestRetryBackoffLimit) {
     requestConfig.setRequestRetryBackoffLimit(requestRetryBackoffLimit);
   }
 
+  @Override
   @JsonProperty("requestRetryBackoffInterval")
-  public int getRequestRetryBackoffInterval() {
+  public Integer getRequestRetryBackoffInterval() {
     return getRequestConfig().getRequestRetryBackoffInterval();
   }
 
-  public void setRequestRetryBackoffInterval(int requestRetryBackoffInterval) {
+  @Override
+  public void setRequestRetryBackoffInterval(Integer requestRetryBackoffInterval) {
     requestConfig.setRequestRetryBackoffInterval(requestRetryBackoffInterval);
   }
 
+  @Override
   @JsonProperty("scaleTimeout")
-  public long getScaleTimeout() {
+  public Long getScaleTimeout() {
     return getRequestConfig().getScaleTimeout();
   }
 
-  public void setScaleTimeout(long scaleTimeout) {
+  @Override
+  public void setScaleTimeout(Long scaleTimeout) {
     this.requestConfig.setScaleTimeout(scaleTimeout);
   }
 
+  @Override
   @JsonProperty("loggingInterval")
-  public int getLoggingInterval() {
+  public Integer getLoggingInterval() {
     return getRequestConfig().getLoggingInterval();
   }
 
-  public void setLoggingInterval(int loggingInterval) {
+  @Override
+  public void setLoggingInterval(Integer loggingInterval) {
     this.requestConfig.setLoggingInterval(loggingInterval);
   }
 
   @JsonProperty("http2Disable")
   public boolean isHttp2Disable() {
-    return http2Disable;
-  }
-
-  public void setHttp2Disable(boolean http2Disable) {
-    this.http2Disable = http2Disable;
-  }
-
-  public void setHttpProxy(String httpProxy) {
-    this.httpProxy = httpProxy;
-  }
-
-  @JsonProperty("httpProxy")
-  public String getHttpProxy() {
-    return httpProxy;
-  }
-
-  public void setHttpsProxy(String httpsProxy) {
-    this.httpsProxy = httpsProxy;
-  }
-
-  @JsonProperty("httpsProxy")
-  public String getHttpsProxy() {
-    return httpsProxy;
-  }
-
-  public void setNoProxy(String[] noProxy) {
-    this.noProxy = noProxy;
-  }
-
-  @JsonProperty("noProxy")
-  public String[] getNoProxy() {
-    return noProxy;
-  }
-
-  @JsonProperty("namespace")
-  public String getNamespace() {
-    return namespace;
-  }
-
-  public void setNamespace(String namespace) {
-    this.namespace = namespace;
+    return Optional.ofNullable(getHttp2Disable()).orElse(false);
   }
 
   @JsonProperty("defaultNamespace")
   public boolean isDefaultNamespace() {
-    return defaultNamespace;
+    return Optional.ofNullable(getDefaultNamespace()).orElse(true);
   }
 
   public void setDefaultNamespace(boolean defaultNamespace) {
-    this.defaultNamespace = defaultNamespace;
-  }
-
-  @JsonProperty("userAgent")
-  public String getUserAgent() {
-    return userAgent;
-  }
-
-  public void setUserAgent(String userAgent) {
-    this.userAgent = userAgent;
-  }
-
-  @JsonProperty("tlsVersions")
-  public TlsVersion[] getTlsVersions() {
-    return tlsVersions;
-  }
-
-  public void setTlsVersions(TlsVersion[] tlsVersions) {
-    this.tlsVersions = tlsVersions;
-  }
-
-  @JsonProperty("websocketPingInterval")
-  public long getWebsocketPingInterval() {
-    return websocketPingInterval;
-  }
-
-  public void setWebsocketPingInterval(long websocketPingInterval) {
-    this.websocketPingInterval = websocketPingInterval;
-  }
-
-  public int getMaxConcurrentRequests() {
-    return maxConcurrentRequests;
-  }
-
-  public void setMaxConcurrentRequests(int maxConcurrentRequests) {
-    this.maxConcurrentRequests = maxConcurrentRequests;
-  }
-
-  public int getMaxConcurrentRequestsPerHost() {
-    return maxConcurrentRequestsPerHost;
-  }
-
-  public void setMaxConcurrentRequestsPerHost(int maxConcurrentRequestsPerHost) {
-    this.maxConcurrentRequestsPerHost = maxConcurrentRequestsPerHost;
-  }
-
-  @JsonProperty("proxyUsername")
-  public String getProxyUsername() {
-    return proxyUsername;
-  }
-
-  public void setProxyUsername(String proxyUsername) {
-    this.proxyUsername = proxyUsername;
-  }
-
-  @JsonProperty("proxyPassword")
-  public String getProxyPassword() {
-    return proxyPassword;
-  }
-
-  public void setProxyPassword(String proxyPassword) {
-    this.proxyPassword = proxyPassword;
+    this.setDefaultNamespace(Boolean.valueOf(defaultNamespace));
   }
 
   public RequestConfig getRequestConfig() {
     return this.requestConfig;
   }
 
-  public void setTrustStorePassphrase(String trustStorePassphrase) {
-    this.trustStorePassphrase = trustStorePassphrase;
-  }
-
-  @JsonProperty("trustStorePassphrase")
-  public String getTrustStorePassphrase() {
-    return trustStorePassphrase;
-  }
-
-  public void setKeyStorePassphrase(String keyStorePassphrase) {
-    this.keyStorePassphrase = keyStorePassphrase;
-  }
-
-  @JsonProperty("keyStorePassphrase")
-  public String getKeyStorePassphrase() {
-    return keyStorePassphrase;
-  }
-
-  public void setTrustStoreFile(String trustStoreFile) {
-    this.trustStoreFile = trustStoreFile;
-  }
-
-  @JsonProperty("trustStoreFile")
-  public String getTrustStoreFile() {
-    return trustStoreFile;
-  }
-
-  public void setKeyStoreFile(String keyStoreFile) {
-    this.keyStoreFile = keyStoreFile;
-  }
-
-  @JsonProperty("keyStoreFile")
-  public String getKeyStoreFile() {
-    return keyStoreFile;
-  }
-
-  @JsonIgnore
-  public OAuthTokenProvider getOauthTokenProvider() {
-    return this.oauthTokenProvider;
-  }
-
-  public void setOauthTokenProvider(OAuthTokenProvider oauthTokenProvider) {
-    this.oauthTokenProvider = oauthTokenProvider;
-  }
-
-  @JsonProperty("customHeaders")
-  public Map<String, String> getCustomHeaders() {
-    return customHeaders;
-  }
-
-  public void setCustomHeaders(Map<String, String> customHeaders) {
-    this.customHeaders = customHeaders;
-  }
-
-  public boolean getAutoConfigure() {
-    return autoConfigure;
-  }
-
   /**
-   * Returns all the {@link NamedContext}s that exist in the kube config
+   * Returns the path to the file that contains the context from which this configuration was loaded from.
+   * <p>
+   * Returns {@code null} if no file was used.
    *
-   * @return all the contexts
-   *
-   * @see NamedContext
-   */
-  public List<NamedContext> getContexts() {
-    return contexts;
-  }
-
-  public void setContexts(List<NamedContext> contexts) {
-    this.contexts = contexts;
-  }
-
-  /**
-   * Returns the current context that's defined in the kube config. Returns {@code null} if there's none
-   *
-   * @return the current context
-   *
-   * @see NamedContext
-   */
-  public NamedContext getCurrentContext() {
-    return currentContext;
-  }
-
-  public void setCurrentContext(NamedContext context) {
-    this.currentContext = context;
-  }
-
-  /**
-   *
-   * Returns the path to the file that this configuration was loaded from. Returns {@code null} if no file was used.
-   *
-   * @return the path to the kubeConfig file
+   * @return the path to the kubeconfig file.
    */
   public File getFile() {
-    return file;
+    return KubeConfigUtils.getFileWithNamedContext(getCurrentContext());
+  }
+
+  /**
+   * Returns the path to the file that contains the cluster information from which this configuration was loaded from.
+   * <p>
+   * Returns {@code null} if no file was used.
+   *
+   * @return the path to the kubeconfig file.
+   */
+  public File getFileWithCluster() {
+    return KubeConfigUtils.getFileWithNamedCluster(getCurrentContext());
+  }
+
+  /**
+   * Returns the path to the file that contains the user information from which this configuration was loaded from.
+   * <p>
+   * Returns {@code null} if no file was used.
+   *
+   * @return the path to the kubeconfig file.
+   */
+  public File getFileWithAuthInfo() {
+    return KubeConfigUtils.getFileWithNamedAuthInfo(getCurrentContext());
   }
 
   @JsonIgnore
@@ -1450,38 +1054,16 @@ public class Config {
     return Readiness.getInstance();
   }
 
-  public void setAuthProvider(AuthProviderConfig authProvider) {
-    this.authProvider = authProvider;
+  public boolean isOnlyHttpWatches() {
+    return Optional.ofNullable(getOnlyHttpWatches()).orElse(false);
   }
 
-  public AuthProviderConfig getAuthProvider() {
-    return authProvider;
+  public void setOnlyHttpWatches(boolean onlyHttpWatches) {
+    this.setOnlyHttpWatches(Boolean.valueOf(onlyHttpWatches));
   }
 
-  @JsonAnyGetter
-  public Map<String, Object> getAdditionalProperties() {
-    return this.additionalProperties;
-  }
-
-  @JsonAnySetter
-  public void setAdditionalProperty(String name, Object value) {
-    this.additionalProperties.put(name, value);
-  }
-
-  public void setFile(File file) {
-    this.file = file;
-  }
-
-  public void setAutoConfigure(boolean autoConfigure) {
-    this.autoConfigure = autoConfigure;
-  }
-
-  public String getAutoOAuthToken() {
-    return autoOAuthToken;
-  }
-
-  public void setAutoOAuthToken(String autoOAuthToken) {
-    this.autoOAuthToken = autoOAuthToken;
+  public boolean isWatchList() {
+    return Optional.ofNullable(getWatchList()).orElse(false);
   }
 
 }

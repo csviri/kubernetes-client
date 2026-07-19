@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,17 +18,15 @@ package io.fabric8.kubernetes.client.mock;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.VersionInfo;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMixedDispatcher;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.kubernetes.client.utils.Serialization;
 import io.fabric8.mockwebserver.Context;
+import io.fabric8.mockwebserver.MockWebServer;
 import io.fabric8.mockwebserver.ServerRequest;
 import io.fabric8.mockwebserver.ServerResponse;
-import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,16 +36,11 @@ import java.util.Map;
 import java.util.Queue;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class MixedCrudTest {
 
   private KubernetesMockServer server;
   private KubernetesClient client;
-
-  @BeforeAll
-  static void beforeAll() {
-  }
 
   @BeforeEach
   void setUp() {
@@ -61,15 +54,6 @@ class MixedCrudTest {
   void tearDown() {
     client.close();
     server.destroy();
-  }
-
-  @Test
-  @DisplayName("client.getKubernetesVersion, with no expectations, should throw Exception")
-  void versionWithNoExpectationsShouldFail() {
-    // When
-    final RuntimeException exception = assertThrows(RuntimeException.class, client::getKubernetesVersion);
-    // Then
-    assertThat(exception).isNotNull().isInstanceOf(KubernetesClientException.class);
   }
 
   @Test

@@ -23,12 +23,12 @@
   <parent>
     <groupId>io.fabric8</groupId>
     <artifactId>kubernetes-model-generator</artifactId>
-    <version>6.8-SNAPSHOT</version>
+    <version>999-SNAPSHOT</version>
   </parent>
 
   <artifactId>openshift-model-config</artifactId>
   <packaging>bundle</packaging>
-  <name>Fabric8 :: OpenShift Config Model</name>
+  <name>Fabric8 :: OpenShift Model :: Config</name>
 
   <properties>
     <clone-kube>true</clone-kube>
@@ -43,32 +43,7 @@
       <groupId>io.fabric8</groupId>
       <artifactId>kubernetes-model-core</artifactId>
     </dependency>
-    <dependency>
-      <groupId>io.fabric8</groupId>
-      <artifactId>kubernetes-model-common</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.fabric8</groupId>
-      <artifactId>kubernetes-model-admissionregistration</artifactId>
-    </dependency>
   </dependencies>
-
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>build-helper-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>attach-artifacts</id>
-            <configuration>
-              <skipAttach>false</skipAttach>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
 
   <profiles>
     <profile>
@@ -76,8 +51,29 @@
       <build>
         <plugins>
           <plugin>
-            <groupId>org.jsonschema2pojo</groupId>
-            <artifactId>jsonschema2pojo-maven-plugin</artifactId>
+            <groupId>io.fabric8</groupId>
+            <artifactId>openapi-model-generator-maven-plugin</artifactId>
+            <configuration >
+              <settings combine.self="append">
+                <schemas>
+                  <schema>${openapi.schema.openshift-generated}</schema>
+                </schemas>
+                <packageMappings combine.self="append">
+                  <io.openshift.config>io.fabric8.openshift.api.model.config</io.openshift.config>
+                </packageMappings>
+                <includeGenerationRegexes>
+                  <includeGenerationRegex>^io\.openshift\.config\..*$</includeGenerationRegex>
+                </includeGenerationRegexes>
+                <skipGenerationRegexes>
+                  <skipGenerationRegex>^io\.openshift\.config\.v1alpha1\..*$</skipGenerationRegex>
+                  <skipGenerationRegex>^io\.openshift\.config\.kubecontrolplane\..*$</skipGenerationRegex>
+                  <skipGenerationRegex>^io\.openshift\.config\.legacy\..*$</skipGenerationRegex>
+                  <skipGenerationRegex>^io\.openshift\.config\.openshiftcontrolplane\..*$</skipGenerationRegex>
+                  <skipGenerationRegex>^io\.openshift\.config\.osin\..*$</skipGenerationRegex>
+                  <skipGenerationRegex>^io\.openshift\.config\.servicecertsigner\..*$</skipGenerationRegex>
+                </skipGenerationRegexes>
+              </settings>
+            </configuration>
           </plugin>
         </plugins>
       </build>

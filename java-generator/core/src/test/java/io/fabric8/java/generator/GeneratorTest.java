@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,7 @@ package io.fabric8.java.generator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.PackageDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.EnumDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
@@ -30,11 +31,17 @@ import io.fabric8.java.generator.nodes.*;
 import io.fabric8.kubernetes.api.model.apiextensions.v1.JSONSchemaProps;
 import io.fabric8.kubernetes.api.model.apiextensions.v1.JSONSchemaPropsOrBool;
 import io.fabric8.kubernetes.client.utils.Serialization;
+import org.assertj.core.api.InstanceOfAssertFactories;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
 
 import static io.fabric8.java.generator.CRGeneratorRunner.groupToPackage;
+import static io.fabric8.java.generator.nodes.Keywords.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.junit.jupiter.api.Assertions.*;
 
 class GeneratorTest {
@@ -55,14 +62,14 @@ class GeneratorTest {
     // Arrange
     JCRObject cro = new JCRObject(
         "v1alpha1",
-        "t",
+        "Type",
         "g",
         "v",
         "Namespaced",
-        "Spec",
-        "Status",
-        true,
-        true,
+        Collections.emptyMap(),
+        Collections.emptyList(),
+        false,
+        "",
         true,
         true,
         "t",
@@ -73,10 +80,13 @@ class GeneratorTest {
     GeneratorResult res = cro.generateJava();
 
     // Assert
-    assertEquals(1, res.getTopLevelClasses().size());
-    assertEquals("t", res.getTopLevelClasses().get(0).getName());
-    assertEquals("v1alpha1",
-        res.getTopLevelClasses().get(0).getPackageDeclaration().get().getNameAsString());
+    assertThat(res.getTopLevelClasses())
+        .singleElement()
+        .hasFieldOrPropertyWithValue("name", "Type")
+        .extracting(GeneratorResult.ClassResult::getPackageDeclaration)
+        .asInstanceOf(InstanceOfAssertFactories.optional(PackageDeclaration.class))
+        .get()
+        .hasFieldOrPropertyWithValue("nameAsString", "v1alpha1");
   }
 
   @Test
@@ -84,14 +94,14 @@ class GeneratorTest {
     // Arrange
     JCRObject cro = new JCRObject(
         null,
-        "t",
+        "Type",
         "g",
         "v",
         "Namespaced",
-        "Spec",
-        "Status",
-        true,
-        true,
+        Collections.emptyMap(),
+        Collections.emptyList(),
+        false,
+        "",
         true,
         true,
         "t",
@@ -103,7 +113,7 @@ class GeneratorTest {
 
     // Assert
     assertEquals("io.fabric8.kubernetes.api.model.Namespaced", res.getTopLevelClasses().get(0)
-        .getClassByName("t").get().getImplementedTypes().get(0).getNameWithScope());
+        .getClassByName("Type").get().getImplementedTypes().get(0).getNameWithScope());
   }
 
   @Test
@@ -111,14 +121,14 @@ class GeneratorTest {
     // Arrange
     JCRObject cro = new JCRObject(
         null,
-        "t",
+        "Type",
         "g",
         "v",
         "Cluster",
-        "Spec",
-        "Status",
-        true,
-        true,
+        Collections.emptyMap(),
+        Collections.emptyList(),
+        false,
+        "",
         true,
         true,
         "t",
@@ -129,7 +139,7 @@ class GeneratorTest {
     GeneratorResult res = cro.generateJava();
 
     // Assert
-    assertTrue(res.getTopLevelClasses().get(0).getClassByName("t").get().getImplementedTypes().isEmpty());
+    assertTrue(res.getTopLevelClasses().get(0).getClassByName("Type").get().getImplementedTypes().isEmpty());
   }
 
   @Test
@@ -137,14 +147,14 @@ class GeneratorTest {
     // Arrange
     JCRObject cro = new JCRObject(
         null,
-        "t",
+        "Type",
         "g",
         "v",
         "Namespaced",
-        "Spec",
-        "Status",
-        true,
-        true,
+        Collections.emptyMap(),
+        Collections.emptyList(),
+        false,
+        "",
         true,
         true,
         "t",
@@ -156,7 +166,7 @@ class GeneratorTest {
 
     // Assert
     assertEquals(1, res.getTopLevelClasses().size());
-    assertEquals("t", res.getTopLevelClasses().get(0).getName());
+    assertEquals("Type", res.getTopLevelClasses().get(0).getName());
   }
 
   @Test
@@ -438,7 +448,9 @@ class GeneratorTest {
     enumValues.add(new TextNode("baz"));
     props.put("e1", newEnum);
     JEnum enu = new JEnum(
+        "pkg",
         "t",
+        JAVA_LANG_STRING,
         enumValues,
         defaultConfig,
         null,
@@ -462,6 +474,124 @@ class GeneratorTest {
   }
 
   @Test
+  void testLongEnum() {
+    // Arrange
+    Map<String, JSONSchemaProps> props = new HashMap<>();
+    JSONSchemaProps newEnum = new JSONSchemaProps();
+    newEnum.setType("integer");
+    List<JsonNode> enumValues = new ArrayList<>();
+    enumValues.add(new TextNode("1"));
+    enumValues.add(new TextNode("2"));
+    enumValues.add(new TextNode("3"));
+    props.put("e1", newEnum);
+    JEnum enu = new JEnum(
+        "pkg",
+        "t",
+        JAVA_LANG_LONG,
+        enumValues,
+        defaultConfig,
+        null,
+        Boolean.FALSE,
+        null);
+
+    // Act
+    GeneratorResult res = enu.generateJava();
+
+    // Assert
+    assertEquals("T", enu.getType());
+    assertEquals(1, res.getInnerClasses().size());
+    assertEquals("T", res.getInnerClasses().get(0).getName());
+
+    Optional<EnumDeclaration> en = res.getInnerClasses().get(0).getEnumByName("T");
+    assertTrue(en.isPresent());
+    assertEquals(3, en.get().getEntries().size());
+    assertEquals("V__1", en.get().getEntries().get(0).getName().asString());
+    assertEquals("V__2", en.get().getEntries().get(1).getName().asString());
+    assertEquals("V__3", en.get().getEntries().get(2).getName().asString());
+    assertEquals("1L", en.get().getEntries().get(0).getArgument(0).toString());
+    assertEquals("2L", en.get().getEntries().get(1).getArgument(0).toString());
+    assertEquals("3L", en.get().getEntries().get(2).getArgument(0).toString());
+  }
+
+  @Test
+  void testIntEnum() {
+    // Arrange
+    Map<String, JSONSchemaProps> props = new HashMap<>();
+    JSONSchemaProps newEnum = new JSONSchemaProps();
+    newEnum.setType("integer");
+    newEnum.setFormat("int32");
+    List<JsonNode> enumValues = new ArrayList<>();
+    enumValues.add(new TextNode("1"));
+    enumValues.add(new TextNode("2"));
+    enumValues.add(new TextNode("3"));
+    props.put("e1", newEnum);
+    JEnum enu = new JEnum(
+        "pkg",
+        "t",
+        JAVA_LANG_INTEGER,
+        enumValues,
+        defaultConfig,
+        null,
+        Boolean.FALSE,
+        null);
+
+    // Act
+    GeneratorResult res = enu.generateJava();
+
+    // Assert
+    assertEquals("T", enu.getType());
+    assertEquals(1, res.getInnerClasses().size());
+    assertEquals("T", res.getInnerClasses().get(0).getName());
+
+    Optional<EnumDeclaration> en = res.getInnerClasses().get(0).getEnumByName("T");
+    assertTrue(en.isPresent());
+    assertEquals(3, en.get().getEntries().size());
+    assertEquals("V__1", en.get().getEntries().get(0).getName().asString());
+    assertEquals("V__2", en.get().getEntries().get(1).getName().asString());
+    assertEquals("V__3", en.get().getEntries().get(2).getName().asString());
+    assertEquals("1", en.get().getEntries().get(0).getArgument(0).toString());
+    assertEquals("2", en.get().getEntries().get(1).getArgument(0).toString());
+    assertEquals("3", en.get().getEntries().get(2).getArgument(0).toString());
+  }
+
+  @Test
+  void testBooleanEnum() {
+    // Arrange
+    Map<String, JSONSchemaProps> props = new HashMap<>();
+    JSONSchemaProps newEnum = new JSONSchemaProps();
+    newEnum.setType("boolean");
+    List<JsonNode> enumValues = new ArrayList<>();
+    enumValues.add(new TextNode("true"));
+    enumValues.add(new TextNode("false"));
+    props.put("e1", newEnum);
+    JEnum enu = new JEnum(
+        "pkg",
+        "t",
+        JAVA_PRIMITIVE_BOOLEAN,
+        enumValues,
+        defaultConfig,
+        null,
+        Boolean.FALSE,
+        null);
+
+    // Act
+    GeneratorResult res = enu.generateJava();
+
+    // Assert
+    assertEquals("T", enu.getType());
+    assertEquals(1, res.getInnerClasses().size());
+    assertEquals("T", res.getInnerClasses().get(0).getName());
+
+    Optional<EnumDeclaration> en = res.getInnerClasses().get(0).getEnumByName("T");
+    assertTrue(en.isPresent());
+    assertEquals(2, en.get().getEntries().size());
+    assertEquals("TRUE", en.get().getEntries().get(0).getName().asString());
+    assertEquals("FALSE", en.get().getEntries().get(1).getName().asString());
+    assertEquals("true", en.get().getEntries().get(0).getArgument(0).toString());
+    assertEquals("false", en.get().getEntries().get(1).getArgument(0).toString());
+  }
+
+  @Test
   void testNotUppercaseEnum() {
     // Arrange
     CompilationUnit cu = new CompilationUnit();
@@ -474,7 +604,9 @@ class GeneratorTest {
     enumValues.add(new TextNode("baz"));
     props.put("e1", newEnum);
     JEnum enu = new JEnum(
+        "pkg",
         "t",
+        JAVA_LANG_STRING,
         enumValues,
         new Config(false, null, null, new HashMap<>()),
         null,
@@ -495,6 +627,32 @@ class GeneratorTest {
     assertEquals("foo", en.get().getEntries().get(0).getName().asString());
     assertEquals("bar", en.get().getEntries().get(1).getName().asString());
     assertEquals("baz", en.get().getEntries().get(2).getName().asString());
+  }
+
+  @Test
+  void testEnumDeprecatedConstructor() {
+    // Arrange
+    JSONSchemaProps newEnum = new JSONSchemaProps();
+    newEnum.setType("string");
+    JEnum enu = new JEnum(
+        "t",
+        JAVA_LANG_STRING,
+        List.of(),
+        defaultConfig,
+        null,
+        Boolean.FALSE,
+        null);
+
+    // Act
+    GeneratorResult res = enu.generateJava();
+
+    // Assert
+    assertEquals("T", enu.getType());
+    assertEquals(1, res.getInnerClasses().size());
+    assertEquals("T", res.getInnerClasses().get(0).getName());
+
+    Optional<EnumDeclaration> en = res.getInnerClasses().get(0).getEnumByName("T");
+    assertTrue(en.isPresent());
   }
 
   @Test
@@ -597,6 +755,33 @@ class GeneratorTest {
         null,
         true,
         defaultConfig,
+        null,
+        Boolean.FALSE,
+        null);
+
+    // Act
+    GeneratorResult res = obj.generateJava();
+
+    // Assert
+    assertEquals(1, res.getTopLevelClasses().size());
+    assertEquals("T", res.getTopLevelClasses().get(0).getName());
+
+    Optional<ClassOrInterfaceDeclaration> clzT = res.getTopLevelClasses().get(0).getClassByName("T");
+    assertTrue(clzT.isPresent());
+    assertTrue(clzT.get().getFieldByName("additionalProperties").isPresent());
+  }
+
+  @Test
+  void testConfigToGeneratePreservedUnknownFields() {
+    // Arrange
+    Config config = new Config(null, null, null, true, new HashMap<>(), new ArrayList<>(), null, null, null);
+    JObject obj = new JObject(
+        null,
+        "t",
+        null,
+        null,
+        false,
+        config,
         null,
         Boolean.FALSE,
         null);
@@ -726,58 +911,94 @@ class GeneratorTest {
         actualO1Field.getElementType().asString());
   }
 
-  @Test
-  void testClassNamesDisambiguationWithPackageNesting() {
-    // Arrange
-    Map<String, JSONSchemaProps> props = new HashMap<>();
-    JSONSchemaProps newObj1 = new JSONSchemaProps();
-    JSONSchemaProps newObj2 = new JSONSchemaProps();
-    newObj1.setType("object");
-    newObj2.setType("object");
-    Map<String, JSONSchemaProps> obj2Props = new HashMap<>();
-    obj2Props.put("o1", newObj1);
-    obj2Props.put("o2", newObj1);
-    obj2Props.put("o3", newObj1);
-    newObj2.setProperties(obj2Props);
-    props.put("o1", newObj1);
-    props.put("o2", newObj2);
-    JObject obj = new JObject("v1alpha1", "t", props, null, false, defaultConfig, null, Boolean.FALSE, null);
+  @Nested
+  class ClassNameDisambiguationWithPackageNesting {
 
-    // Act
-    GeneratorResult res = obj.generateJava();
+    private GeneratorResult result;
 
-    // Assert
-    assertEquals(6, res.getTopLevelClasses().size());
-    // The order here is not important
-    assertEquals("O1", res.getTopLevelClasses().get(0).getName());
-    assertEquals("O1", res.getTopLevelClasses().get(1).getName());
-    assertEquals("O2", res.getTopLevelClasses().get(2).getName());
-    assertEquals("O3", res.getTopLevelClasses().get(3).getName());
-    assertEquals("O2", res.getTopLevelClasses().get(4).getName());
-    assertEquals("T", res.getTopLevelClasses().get(5).getName());
+    @BeforeEach
+    void classWithNestedClassesAndProperties() {
+      Map<String, JSONSchemaProps> props = new HashMap<>();
+      JSONSchemaProps newObj1 = new JSONSchemaProps();
+      JSONSchemaProps newObj2 = new JSONSchemaProps();
+      newObj1.setType("object");
+      newObj2.setType("object");
+      Map<String, JSONSchemaProps> obj2Props = new HashMap<>();
+      obj2Props.put("o1", newObj1);
+      obj2Props.put("o2", newObj1);
+      obj2Props.put("o3", newObj1);
+      newObj2.setProperties(obj2Props);
+      props.put("o1", newObj1);
+      props.put("o2", newObj2);
+      result = new JObject("v1alpha1", "t", props, null, false, defaultConfig, null, Boolean.FALSE, null)
+          .generateJava();
+    }
 
-    GeneratorResult.ClassResult cuT = res.getTopLevelClasses().get(5);
-    Optional<ClassOrInterfaceDeclaration> clzT = cuT.getClassByName("T");
-    assertTrue(clzT.isPresent());
-    assertEquals(2, clzT.get().getFields().size());
-    assertTrue(clzT.get().getFieldByName("o1").isPresent());
-    assertEquals("v1alpha1", cuT.getPackageDeclaration().get().getNameAsString());
-    assertEquals(
-        "v1alpha1.t.O1", clzT.get().getFieldByName("o1").get().getElementType().toString());
-    GeneratorResult.ClassResult cuO1 = res.getTopLevelClasses().get(0);
-    Optional<ClassOrInterfaceDeclaration> clzO1 = cuO1.getClassByName("O1");
-    assertTrue(clzO1.isPresent());
-    assertEquals("v1alpha1.t", cuO1.getPackageDeclaration().get().getNameAsString());
-    GeneratorResult.ClassResult cuO2 = res.getTopLevelClasses().get(4);
-    Optional<ClassOrInterfaceDeclaration> clzO2 = cuO2.getClassByName("O2");
-    assertTrue(clzO2.isPresent());
-    assertTrue(clzO2.get().getFieldByName("o1").isPresent());
-    assertEquals("v1alpha1.t", cuO2.getPackageDeclaration().get().getNameAsString());
-    assertEquals(
-        "v1alpha1.t.o2.O1",
-        clzO2.get().getFieldByName("o1").get().getElementType().toString());
-    assertTrue(clzO2.get().getFieldByName("o2").isPresent());
-    assertTrue(clzO2.get().getFieldByName("o3").isPresent());
+    @Test
+    void generatesMultipleClassesInNestedPackages() {
+      assertThat(result.getTopLevelClasses())
+          .hasSize(6)
+          .extracting(
+              // Class Name
+              GeneratorResult.ClassResult::getName,
+              // Package
+              cr -> cr.getPackageDeclaration().map(PackageDeclaration::getName).map(Objects::toString).orElse(null))
+          // The order here is not important
+          .containsExactly(
+              tuple("O1", "v1alpha1.t"),
+              tuple("O1", "v1alpha1.t.o2"),
+              tuple("O2", "v1alpha1.t.o2"),
+              tuple("O3", "v1alpha1.t.o2"),
+              tuple("O2", "v1alpha1.t"),
+              tuple("T", "v1alpha1"));
+    }
+
+    @Test
+    void generatesMainClassWithFields() {
+      assertThat(result.getTopLevelClasses())
+          .last()
+          .hasFieldOrPropertyWithValue("name", "T")
+          .extracting(c -> c.getClassByName("T"))
+          .asInstanceOf(InstanceOfAssertFactories.optional(ClassOrInterfaceDeclaration.class)).get()
+          .extracting(ClassOrInterfaceDeclaration::getFields)
+          .asInstanceOf(InstanceOfAssertFactories.list(FieldDeclaration.class))
+          .extracting(
+              fd -> fd.getElementType().asString(),
+              fd -> fd.getVariable(0).getName().asString())
+          .containsExactly(
+              tuple("v1alpha1.t.O1", "o1"),
+              tuple("v1alpha1.t.O2", "o2"));
+    }
+
+    @Test
+    void generatesNestedClass1WithEmptyFields() {
+      assertThat(result.getTopLevelClasses())
+          .first()
+          .hasFieldOrPropertyWithValue("name", "O1")
+          .extracting(c -> c.getClassByName("O1"))
+          .asInstanceOf(InstanceOfAssertFactories.optional(ClassOrInterfaceDeclaration.class)).get()
+          .extracting(ClassOrInterfaceDeclaration::getFields)
+          .asInstanceOf(InstanceOfAssertFactories.list(FieldDeclaration.class))
+          .isEmpty();
+    }
+
+    @Test
+    void generatesNestedClass2WithFields() {
+      assertThat(result.getTopLevelClasses())
+          .element(4)
+          .hasFieldOrPropertyWithValue("name", "O2")
+          .extracting(c -> c.getClassByName("O2"))
+          .asInstanceOf(InstanceOfAssertFactories.optional(ClassOrInterfaceDeclaration.class)).get()
+          .extracting(ClassOrInterfaceDeclaration::getFields)
+          .asInstanceOf(InstanceOfAssertFactories.list(FieldDeclaration.class))
+          .extracting(
+              fd -> fd.getElementType().asString(),
+              fd -> fd.getVariable(0).getName().asString())
+          .containsExactly(
+              tuple("v1alpha1.t.o2.O1", "o1"),
+              tuple("v1alpha1.t.o2.O2", "o2"),
+              tuple("v1alpha1.t.o2.O3", "o3"));
+    }
   }
 
   @Test
@@ -872,5 +1093,148 @@ class GeneratorTest {
       JObject obj = new JObject(null, "t", props, null, false, defaultConfig, null, Boolean.FALSE, null);
     },
         "An exception is expected to be thrown when an object contains one duplicated field that is not marked as deprecated");
+  }
+
+  @Test
+  void testFieldDescriptionWithHtmlTagsIsEscapedInJavadoc() {
+    // Arrange
+    Map<String, JSONSchemaProps> props = new HashMap<>();
+    JSONSchemaProps field = new JSONSchemaProps();
+    field.setType("string");
+    field.setDescription("Use <foo> or <bar> as placeholder values");
+    props.put("myField", field);
+
+    JObject obj = new JObject(null, "t", props, null, false, defaultConfig, null, Boolean.FALSE, null);
+
+    // Act
+    GeneratorResult res = obj.generateJava();
+
+    // Assert
+    Optional<ClassOrInterfaceDeclaration> clzT = res.getTopLevelClasses().get(0).getClassByName("T");
+    assertTrue(clzT.isPresent());
+    FieldDeclaration fieldDecl = clzT.get().getFieldByName("myField").get();
+    String javadoc = fieldDecl.getJavadocComment().get().getContent();
+    assertThat(javadoc).contains("&lt;foo&gt;");
+    assertThat(javadoc).contains("&lt;bar&gt;");
+    assertThat(javadoc).doesNotContain("<foo>");
+    assertThat(javadoc).doesNotContain("<bar>");
+  }
+
+  @Test
+  void testFieldDescriptionWithAmpersandIsEscapedInJavadoc() {
+    // Arrange
+    Map<String, JSONSchemaProps> props = new HashMap<>();
+    JSONSchemaProps field = new JSONSchemaProps();
+    field.setType("string");
+    field.setDescription("Use A & B together");
+    props.put("myField", field);
+
+    JObject obj = new JObject(null, "t", props, null, false, defaultConfig, null, Boolean.FALSE, null);
+
+    // Act
+    GeneratorResult res = obj.generateJava();
+
+    // Assert
+    Optional<ClassOrInterfaceDeclaration> clzT = res.getTopLevelClasses().get(0).getClassByName("T");
+    assertTrue(clzT.isPresent());
+    FieldDeclaration fieldDecl = clzT.get().getFieldByName("myField").get();
+    String javadoc = fieldDecl.getJavadocComment().get().getContent();
+    assertThat(javadoc).contains("&amp;");
+    assertThat(javadoc).doesNotContain(" & ");
+  }
+
+  @Test
+  void testFieldDescriptionWithUnicodeEscapeIsNeutralized() {
+    // Arrange
+    Map<String, JSONSchemaProps> props = new HashMap<>();
+    JSONSchemaProps field = new JSONSchemaProps();
+    field.setType("string");
+    field.setDescription("Use HKEY\\Path & keep \\t but block \\u002a/");
+    props.put("myField", field);
+
+    JObject obj = new JObject(null, "t", props, null, false, defaultConfig, null, Boolean.FALSE, null);
+
+    // Act
+    GeneratorResult res = obj.generateJava();
+
+    // Assert
+    Optional<ClassOrInterfaceDeclaration> clzT = res.getTopLevelClasses().get(0).getClassByName("T");
+    assertTrue(clzT.isPresent());
+    FieldDeclaration fieldDecl = clzT.get().getFieldByName("myField").get();
+    String javadoc = fieldDecl.getJavadocComment().get().getContent();
+    assertThat(javadoc).contains("HKEY\\Path");
+    assertThat(javadoc).contains("&amp;");
+    assertThat(javadoc).contains("\\t");
+    assertThat(javadoc).contains("&#92;u002a/");
+    assertThat(javadoc).doesNotContain("&amp;#92;");
+  }
+
+  @Test
+  void testFieldDescriptionWithCommentTerminatorIsEscapedInJavadoc() {
+    // Arrange
+    Map<String, JSONSchemaProps> props = new HashMap<>();
+    JSONSchemaProps field = new JSONSchemaProps();
+    field.setType("string");
+    field.setDescription("Ends with */ and more text");
+    props.put("myField", field);
+
+    JObject obj = new JObject(null, "t", props, null, false, defaultConfig, null, Boolean.FALSE, null);
+
+    // Act
+    GeneratorResult res = obj.generateJava();
+
+    // Assert
+    Optional<ClassOrInterfaceDeclaration> clzT = res.getTopLevelClasses().get(0).getClassByName("T");
+    assertTrue(clzT.isPresent());
+    FieldDeclaration fieldDecl = clzT.get().getFieldByName("myField").get();
+    String javadoc = fieldDecl.getJavadocComment().get().getContent();
+    assertThat(javadoc).doesNotContain("*/");
+  }
+
+  @Test
+  void testExistingJavaTypeObject() {
+    // Arrange
+    Config config = Config.builder()
+        .existingJavaTypes(Collections.singletonMap("v1alpha1.T", "org.test.ExistingJavaType")).build();
+    JObject obj = new JObject(
+        "v1alpha1",
+        "T",
+        null,
+        null,
+        false,
+        config,
+        null,
+        Boolean.FALSE,
+        null);
+
+    // Act
+    GeneratorResult res = obj.generateJava();
+
+    // Assert
+    assertEquals("org.test.ExistingJavaType", obj.getType());
+    assertEquals(0, res.getTopLevelClasses().size());
+  }
+
+  @Test
+  void testExistingJavaTypeEnum() {
+    // Arrange
+    Config config = Config.builder()
+        .existingJavaTypes(Collections.singletonMap("v1alpha1.E", "org.test.ExistingJavaEnum")).build();
+    JEnum obj = new JEnum(
+        "v1alpha1",
+        "E",
+        JAVA_LANG_STRING,
+        List.of(),
+        config,
+        null,
+        Boolean.FALSE,
+        null);
+
+    // Act
+    GeneratorResult res = obj.generateJava();
+
+    // Assert
+    assertEquals("org.test.ExistingJavaEnum", obj.getType());
+    assertEquals(0, res.getTopLevelClasses().size());
   }
 }

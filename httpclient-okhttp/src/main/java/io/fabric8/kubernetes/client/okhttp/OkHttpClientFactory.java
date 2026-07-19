@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.okhttp;
 
 import io.fabric8.kubernetes.client.Config;
@@ -27,11 +26,6 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 public class OkHttpClientFactory implements HttpClient.Factory {
-
-  @Override
-  public int priority() {
-    return -1;
-  }
 
   /**
    * Subclasses may use this to apply a base configuration to the builder
@@ -62,6 +56,7 @@ public class OkHttpClientFactory implements HttpClient.Factory {
    * @return returns an HTTP client builder
    */
   @Override
+  @SuppressWarnings("java:S5527") // hostname verification is disabled only when the user explicitly opts in via trustCerts or disableHostnameVerification
   public OkHttpClientBuilderImpl newBuilder(Config config) {
     try {
       OkHttpClientBuilderImpl builderWrapper = newBuilder();

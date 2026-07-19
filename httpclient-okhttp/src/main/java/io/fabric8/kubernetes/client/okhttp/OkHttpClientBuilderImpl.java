@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.okhttp;
 
 import io.fabric8.kubernetes.client.KubernetesClientException;
@@ -24,17 +23,23 @@ import okhttp3.Authenticator;
 import okhttp3.ConnectionSpec;
 import okhttp3.OkHttpClient;
 import okhttp3.Protocol;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.Proxy;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
 import static okhttp3.ConnectionSpec.CLEARTEXT;
 
 class OkHttpClientBuilderImpl
     extends StandardHttpClientBuilder<OkHttpClientImpl, OkHttpClientFactory, OkHttpClientBuilderImpl> {
+
+  private static final Logger logger = LoggerFactory.getLogger(OkHttpClientBuilderImpl.class);
 
   private final okhttp3.OkHttpClient.Builder builder;
 
@@ -56,16 +61,34 @@ class OkHttpClientBuilderImpl
   }
 
   public OkHttpClientImpl initialBuild(okhttp3.OkHttpClient.Builder builder) {
+    // Warn if tlsServerName is configured but not supported
+    if (tlsServerName != null && !tlsServerName.isEmpty()) {
+      logger.warn(
+          "tlsServerName '{}' is configured but not supported by OkHttp client. Consider using Jetty HTTP client for SNI support.",
+          tlsServerName);
+    }
+
     // configure the main properties
     if (connectTimeout != null) {
       builder.connectTimeout(this.connectTimeout);
     }
     if (sslContext != null) {
       X509TrustManager trustManager = null;
-      if (trustManagers != null && trustManagers.length == 1) {
-        trustManager = (X509TrustManager) trustManagers[0];
+      if (trustManagers != null) {
+        for (TrustManager tm : trustManagers) {
+          if (tm instanceof X509TrustManager) {
+            trustManager = (X509TrustManager) tm;
+            break;
+          }
+        }
       }
-      builder.sslSocketFactory(sslContext.getSocketFactory(), trustManager);
+      if (trustManager != null) {
+        builder.sslSocketFactory(sslContext.getSocketFactory(), trustManager);
+      } else {
+        logger.warn("sslContext is configured but no X509TrustManager was found in trustManagers ({}); "
+            + "SSL socket factory not applied, OkHttp will use its default trust configuration",
+            trustManagers == null ? "null" : "length=" + trustManagers.length);
+      }
     }
     if (followRedirects) {
       builder.followRedirects(true).followSslRedirects(true);
@@ -119,7 +142,7 @@ class OkHttpClientBuilderImpl
 
     OkHttpClient client = builder.build();
 
-    return new OkHttpClientImpl(client, this);
+    return new OkHttpClientImpl(client, this, new AtomicBoolean());
   }
 
   @Override

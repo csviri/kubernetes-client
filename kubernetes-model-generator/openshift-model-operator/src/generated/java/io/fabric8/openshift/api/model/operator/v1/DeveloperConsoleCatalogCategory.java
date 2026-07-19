@@ -2,9 +2,10 @@
 package io.fabric8.openshift.api.model.operator.v1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -12,7 +13,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
@@ -22,19 +26,20 @@ import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * DeveloperConsoleCatalogCategory for the developer console catalog.
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "id",
     "label",
     "subcategories",
@@ -42,7 +47,6 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -56,9 +60,14 @@ import lombok.experimental.Accessors;
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class DeveloperConsoleCatalogCategory implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class DeveloperConsoleCatalogCategory implements Editable<DeveloperConsoleCatalogCategoryBuilder>, KubernetesResource
 {
 
     @JsonProperty("id")
@@ -67,27 +76,19 @@ public class DeveloperConsoleCatalogCategory implements KubernetesResource
     private String label;
     @JsonProperty("subcategories")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<DeveloperConsoleCatalogCategoryMeta> subcategories = new ArrayList<DeveloperConsoleCatalogCategoryMeta>();
+    private List<DeveloperConsoleCatalogCategoryMeta> subcategories = new ArrayList<>();
     @JsonProperty("tags")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<String> tags = new ArrayList<String>();
+    private List<String> tags = new ArrayList<>();
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public DeveloperConsoleCatalogCategory() {
     }
 
-    /**
-     * 
-     * @param id
-     * @param label
-     * @param subcategories
-     * @param tags
-     */
     public DeveloperConsoleCatalogCategory(String id, String label, List<DeveloperConsoleCatalogCategoryMeta> subcategories, List<String> tags) {
         super();
         this.id = id;
@@ -96,47 +97,84 @@ public class DeveloperConsoleCatalogCategory implements KubernetesResource
         this.tags = tags;
     }
 
+    /**
+     * id is an identifier used in the URL to enable deep linking in console. ID is required and must have 1-32 URL safe (A-Z, a-z, 0-9, - and _) characters.
+     */
     @JsonProperty("id")
     public String getId() {
         return id;
     }
 
+    /**
+     * id is an identifier used in the URL to enable deep linking in console. ID is required and must have 1-32 URL safe (A-Z, a-z, 0-9, - and _) characters.
+     */
     @JsonProperty("id")
     public void setId(String id) {
         this.id = id;
     }
 
+    /**
+     * label defines a category display label. It is required and must have 1-64 characters.
+     */
     @JsonProperty("label")
     public String getLabel() {
         return label;
     }
 
+    /**
+     * label defines a category display label. It is required and must have 1-64 characters.
+     */
     @JsonProperty("label")
     public void setLabel(String label) {
         this.label = label;
     }
 
+    /**
+     * subcategories defines a list of child categories.
+     */
     @JsonProperty("subcategories")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<DeveloperConsoleCatalogCategoryMeta> getSubcategories() {
         return subcategories;
     }
 
+    /**
+     * subcategories defines a list of child categories.
+     */
     @JsonProperty("subcategories")
     public void setSubcategories(List<DeveloperConsoleCatalogCategoryMeta> subcategories) {
         this.subcategories = subcategories;
     }
 
+    /**
+     * tags is a list of strings that will match the category. A selected category show all items which has at least one overlapping tag between category and item.
+     */
     @JsonProperty("tags")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<String> getTags() {
         return tags;
     }
 
+    /**
+     * tags is a list of strings that will match the category. A selected category show all items which has at least one overlapping tag between category and item.
+     */
     @JsonProperty("tags")
     public void setTags(List<String> tags) {
         this.tags = tags;
     }
 
+    @JsonIgnore
+    public DeveloperConsoleCatalogCategoryBuilder edit() {
+        return new DeveloperConsoleCatalogCategoryBuilder(this);
+    }
+
+    @JsonIgnore
+    public DeveloperConsoleCatalogCategoryBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -144,6 +182,10 @@ public class DeveloperConsoleCatalogCategory implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

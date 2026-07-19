@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,14 +23,16 @@ import io.fabric8.kubernetes.client.utils.Serialization;
 import io.fabric8.kubernetes.client.utils.Utils;
 import io.fabric8.mockwebserver.crud.Attribute;
 import io.fabric8.mockwebserver.crud.AttributeSet;
-import okhttp3.mockwebserver.MockResponse;
+import io.fabric8.mockwebserver.http.MockResponse;
 
 import java.net.HttpURLConnection;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
+import static io.fabric8.kubernetes.client.utils.Utils.generateId;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 
 public class PostHandler implements KubernetesCrudDispatcherHandler {
@@ -67,7 +69,7 @@ public class PostHandler implements KubernetesCrudDispatcherHandler {
   }
 
   private void initMetadata(HasMetadata resource, String path) throws KubernetesCrudDispatcherException {
-    final UUID uuid = UUID.randomUUID();
+    final UUID uuid = generateId();
     if (Utils.isNullOrEmpty(resource.getMetadata().getName())) {
       resource.getMetadata().setName(resource.getMetadata().getGenerateName() + "-" + uuid);
     }
@@ -83,7 +85,8 @@ public class PostHandler implements KubernetesCrudDispatcherHandler {
     }
     resource.getMetadata().setNamespace(pathNamespace);
     resource.getMetadata().setUid(uuid.toString());
-    resource.getMetadata().setCreationTimestamp(ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
+    resource.getMetadata().setCreationTimestamp(
+        ZonedDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.SECONDS).format(DateTimeFormatter.ISO_INSTANT));
     resource.getMetadata().setResourceVersion(String.valueOf(persistence.requestResourceVersion()));
     resource.getMetadata().setGeneration(1L);
   }

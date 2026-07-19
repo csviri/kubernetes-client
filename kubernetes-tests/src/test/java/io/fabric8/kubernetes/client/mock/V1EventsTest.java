@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,10 +29,10 @@ import java.net.HttpURLConnection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EnableKubernetesMockClient
+@EnableKubernetesMockClient(https = false)
 class V1EventsTest {
   private KubernetesClient client;
-  private KubernetesMockServer server;
+  KubernetesMockServer server;
 
   @Test
   void testList() {
@@ -78,7 +78,8 @@ class V1EventsTest {
         .once();
 
     // When
-    boolean isDeleted = client.events().v1().events().inNamespace("default").withName("e1").delete().size() == 1;
+    boolean isDeleted = client.events().v1().events().inNamespace("default").withName("e1").withGracePeriod(0).delete()
+        .size() == 1;
 
     // Then
     assertThat(isDeleted).isTrue();

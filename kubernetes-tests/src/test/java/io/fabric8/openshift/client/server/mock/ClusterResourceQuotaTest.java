@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,8 @@ package io.fabric8.openshift.client.server.mock;
 
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceQuotaSpecBuilder;
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.openshift.api.model.ClusterResourceQuota;
 import io.fabric8.openshift.api.model.ClusterResourceQuotaBuilder;
 import io.fabric8.openshift.api.model.ClusterResourceQuotaList;
@@ -32,10 +34,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class ClusterResourceQuotaTest {
 
-  OpenShiftMockServer server;
+  KubernetesMockServer server;
   OpenShiftClient client;
 
   @Test
@@ -98,7 +100,7 @@ class ClusterResourceQuotaTest {
         .once();
 
     // When
-    boolean deleted = client.quotas().clusterResourceQuotas().withName("foo").delete().size() == 1;
+    boolean deleted = client.quotas().clusterResourceQuotas().withName("foo").withGracePeriod(0).delete().size() == 1;
 
     // Then
     assertTrue(deleted);

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,8 +31,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+
+import static io.fabric8.kubernetes.client.utils.Utils.generateId;
 
 public class NamespaceExtension implements HasKubernetesClient, BeforeAllCallback, BeforeEachCallback, AfterAllCallback {
 
@@ -81,7 +82,7 @@ public class NamespaceExtension implements HasKubernetesClient, BeforeAllCallbac
     final Namespace namespace = client
         .resource(new NamespaceBuilder()
             .withNewMetadata()
-            .withName(UUID.randomUUID().toString())
+            .withName(generateId().toString())
             .addToLabels("app", "fabric8-kubernetes-client-test")
             .endMetadata()
             .build())

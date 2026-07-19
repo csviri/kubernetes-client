@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,14 +17,14 @@ package io.fabric8.tekton.api.examples;
 
 import io.fabric8.tekton.client.DefaultTektonClient;
 import io.fabric8.tekton.client.TektonClient;
-import io.fabric8.tekton.pipeline.v1.StepBuilder;
-import io.fabric8.tekton.pipeline.v1.Task;
-import io.fabric8.tekton.pipeline.v1.TaskBuilder;
-import io.fabric8.tekton.pipeline.v1.TaskRun;
-import io.fabric8.tekton.pipeline.v1.TaskRunBuilder;
-import io.fabric8.tekton.pipeline.v1.TaskRunList;
+import io.fabric8.tekton.v1.StepBuilder;
+import io.fabric8.tekton.v1.Task;
+import io.fabric8.tekton.v1.TaskBuilder;
+import io.fabric8.tekton.v1.TaskRun;
+import io.fabric8.tekton.v1.TaskRunBuilder;
+import io.fabric8.tekton.v1.TaskRunList;
 
-import java.util.UUID;
+import static io.fabric8.kubernetes.client.utils.Utils.generateId;
 
 public class TaskRunCreate {
   public static void main(String[] args) {
@@ -32,7 +32,7 @@ public class TaskRunCreate {
       String namespace = "default";
 
       Task task = new TaskBuilder()
-          .withNewMetadata().withName("hello-world-" + UUID.randomUUID()).endMetadata()
+          .withNewMetadata().withName("hello-world-" + generateId()).endMetadata()
           .withNewSpec()
           .withSteps(
               new StepBuilder()

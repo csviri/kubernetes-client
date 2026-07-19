@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,11 +21,10 @@ import io.fabric8.kubernetes.client.RequestConfig;
 import io.fabric8.kubernetes.client.WithRequestCallable;
 import io.fabric8.kubernetes.client.dsl.FunctionCallable;
 import io.fabric8.kubernetes.client.extension.ExtensionRootClientAdapter;
-import io.fabric8.kubernetes.client.extension.SupportTestingClient;
 import io.fabric8.verticalpodautoscaler.client.dsl.V1APIGroupDSL;
 
 public class DefaultVerticalPodAutoscalerClient extends ExtensionRootClientAdapter<DefaultVerticalPodAutoscalerClient>
-    implements NamespacedVerticalPodAutoscalerClient, SupportTestingClient {
+    implements NamespacedVerticalPodAutoscalerClient {
 
   public DefaultVerticalPodAutoscalerClient() {
     super();
@@ -52,11 +51,6 @@ public class DefaultVerticalPodAutoscalerClient extends ExtensionRootClientAdapt
   @Override
   public V1APIGroupDSL v1() {
     return adapt(V1APIGroupClient.class);
-  }
-
-  @Override
-  public boolean isSupported() {
-    return getClient().hasApiGroup(VerticalPodAutoscalerExtensionAdapter.API_GROUP, false);
   }
 
 }

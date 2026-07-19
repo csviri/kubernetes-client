@@ -2,10 +2,10 @@
 package io.fabric8.kubernetes.api.model.kustomize.v1beta1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -13,22 +13,36 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
+import io.fabric8.kubernetes.api.model.LabelSelector;
+import io.fabric8.kubernetes.api.model.LocalObjectReference;
+import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.api.model.ObjectReference;
+import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
+import io.fabric8.kubernetes.api.model.PodTemplateSpec;
+import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
+import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "additionalValuesFiles",
     "apiVersions",
+    "debug",
+    "devel",
     "includeCRDs",
+    "kubeVersion",
     "name",
     "nameTemplate",
     "namespace",
@@ -43,78 +57,84 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
 })
-@Buildable(editableEnabled = false, validationEnabled = false, generateBuilderPackage = true, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
-public class HelmChart implements KubernetesResource
+@Buildable(editableEnabled = false, validationEnabled = false, generateBuilderPackage = false, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder", refs = {
+    @BuildableReference(ObjectMeta.class),
+    @BuildableReference(LabelSelector.class),
+    @BuildableReference(Container.class),
+    @BuildableReference(PodTemplateSpec.class),
+    @BuildableReference(ResourceRequirements.class),
+    @BuildableReference(IntOrString.class),
+    @BuildableReference(ObjectReference.class),
+    @BuildableReference(LocalObjectReference.class),
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
+})
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class HelmChart implements Editable<HelmChartBuilder>, KubernetesResource
 {
 
     @JsonProperty("additionalValuesFiles")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<java.lang.String> additionalValuesFiles = new ArrayList<java.lang.String>();
+    private List<String> additionalValuesFiles = new ArrayList<>();
     @JsonProperty("apiVersions")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<java.lang.String> apiVersions = new ArrayList<java.lang.String>();
+    private List<String> apiVersions = new ArrayList<>();
+    @JsonProperty("debug")
+    private Boolean debug;
+    @JsonProperty("devel")
+    private Boolean devel;
     @JsonProperty("includeCRDs")
     private Boolean includeCRDs;
+    @JsonProperty("kubeVersion")
+    private String kubeVersion;
     @JsonProperty("name")
-    private java.lang.String name;
+    private String name;
     @JsonProperty("nameTemplate")
-    private java.lang.String nameTemplate;
+    private String nameTemplate;
     @JsonProperty("namespace")
-    private java.lang.String namespace;
+    private String namespace;
     @JsonProperty("releaseName")
-    private java.lang.String releaseName;
+    private String releaseName;
     @JsonProperty("repo")
-    private java.lang.String repo;
+    private String repo;
     @JsonProperty("skipHooks")
     private Boolean skipHooks;
     @JsonProperty("skipTests")
     private Boolean skipTests;
     @JsonProperty("valuesFile")
-    private java.lang.String valuesFile;
+    private String valuesFile;
     @JsonProperty("valuesInline")
+    @JsonDeserialize(using = io.fabric8.kubernetes.internal.KubernetesDeserializerForMap.class)
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private Map<String, Object> valuesInline = new LinkedHashMap<String, Object>();
+    private Map<String, Object> valuesInline = new LinkedHashMap<>();
     @JsonProperty("valuesMerge")
-    private java.lang.String valuesMerge;
+    private String valuesMerge;
     @JsonProperty("version")
-    private java.lang.String version;
+    private String version;
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public HelmChart() {
     }
 
-    /**
-     * 
-     * @param skipHooks
-     * @param releaseName
-     * @param repo
-     * @param version
-     * @param valuesFile
-     * @param nameTemplate
-     * @param valuesMerge
-     * @param apiVersions
-     * @param includeCRDs
-     * @param name
-     * @param namespace
-     * @param valuesInline
-     * @param skipTests
-     * @param additionalValuesFiles
-     */
-    public HelmChart(List<java.lang.String> additionalValuesFiles, List<java.lang.String> apiVersions, Boolean includeCRDs, java.lang.String name, java.lang.String nameTemplate, java.lang.String namespace, java.lang.String releaseName, java.lang.String repo, Boolean skipHooks, Boolean skipTests, java.lang.String valuesFile, Map<String, Object> valuesInline, java.lang.String valuesMerge, java.lang.String version) {
+    public HelmChart(List<String> additionalValuesFiles, List<String> apiVersions, Boolean debug, Boolean devel, Boolean includeCRDs, String kubeVersion, String name, String nameTemplate, String namespace, String releaseName, String repo, Boolean skipHooks, Boolean skipTests, String valuesFile, Map<String, Object> valuesInline, String valuesMerge, String version) {
         super();
         this.additionalValuesFiles = additionalValuesFiles;
         this.apiVersions = apiVersions;
+        this.debug = debug;
+        this.devel = devel;
         this.includeCRDs = includeCRDs;
+        this.kubeVersion = kubeVersion;
         this.name = name;
         this.nameTemplate = nameTemplate;
         this.namespace = namespace;
@@ -129,23 +149,45 @@ public class HelmChart implements KubernetesResource
     }
 
     @JsonProperty("additionalValuesFiles")
-    public List<java.lang.String> getAdditionalValuesFiles() {
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public List<String> getAdditionalValuesFiles() {
         return additionalValuesFiles;
     }
 
     @JsonProperty("additionalValuesFiles")
-    public void setAdditionalValuesFiles(List<java.lang.String> additionalValuesFiles) {
+    public void setAdditionalValuesFiles(List<String> additionalValuesFiles) {
         this.additionalValuesFiles = additionalValuesFiles;
     }
 
     @JsonProperty("apiVersions")
-    public List<java.lang.String> getApiVersions() {
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public List<String> getApiVersions() {
         return apiVersions;
     }
 
     @JsonProperty("apiVersions")
-    public void setApiVersions(List<java.lang.String> apiVersions) {
+    public void setApiVersions(List<String> apiVersions) {
         this.apiVersions = apiVersions;
+    }
+
+    @JsonProperty("debug")
+    public Boolean getDebug() {
+        return debug;
+    }
+
+    @JsonProperty("debug")
+    public void setDebug(Boolean debug) {
+        this.debug = debug;
+    }
+
+    @JsonProperty("devel")
+    public Boolean getDevel() {
+        return devel;
+    }
+
+    @JsonProperty("devel")
+    public void setDevel(Boolean devel) {
+        this.devel = devel;
     }
 
     @JsonProperty("includeCRDs")
@@ -158,53 +200,63 @@ public class HelmChart implements KubernetesResource
         this.includeCRDs = includeCRDs;
     }
 
+    @JsonProperty("kubeVersion")
+    public String getKubeVersion() {
+        return kubeVersion;
+    }
+
+    @JsonProperty("kubeVersion")
+    public void setKubeVersion(String kubeVersion) {
+        this.kubeVersion = kubeVersion;
+    }
+
     @JsonProperty("name")
-    public java.lang.String getName() {
+    public String getName() {
         return name;
     }
 
     @JsonProperty("name")
-    public void setName(java.lang.String name) {
+    public void setName(String name) {
         this.name = name;
     }
 
     @JsonProperty("nameTemplate")
-    public java.lang.String getNameTemplate() {
+    public String getNameTemplate() {
         return nameTemplate;
     }
 
     @JsonProperty("nameTemplate")
-    public void setNameTemplate(java.lang.String nameTemplate) {
+    public void setNameTemplate(String nameTemplate) {
         this.nameTemplate = nameTemplate;
     }
 
     @JsonProperty("namespace")
-    public java.lang.String getNamespace() {
+    public String getNamespace() {
         return namespace;
     }
 
     @JsonProperty("namespace")
-    public void setNamespace(java.lang.String namespace) {
+    public void setNamespace(String namespace) {
         this.namespace = namespace;
     }
 
     @JsonProperty("releaseName")
-    public java.lang.String getReleaseName() {
+    public String getReleaseName() {
         return releaseName;
     }
 
     @JsonProperty("releaseName")
-    public void setReleaseName(java.lang.String releaseName) {
+    public void setReleaseName(String releaseName) {
         this.releaseName = releaseName;
     }
 
     @JsonProperty("repo")
-    public java.lang.String getRepo() {
+    public String getRepo() {
         return repo;
     }
 
     @JsonProperty("repo")
-    public void setRepo(java.lang.String repo) {
+    public void setRepo(String repo) {
         this.repo = repo;
     }
 
@@ -229,53 +281,70 @@ public class HelmChart implements KubernetesResource
     }
 
     @JsonProperty("valuesFile")
-    public java.lang.String getValuesFile() {
+    public String getValuesFile() {
         return valuesFile;
     }
 
     @JsonProperty("valuesFile")
-    public void setValuesFile(java.lang.String valuesFile) {
+    public void setValuesFile(String valuesFile) {
         this.valuesFile = valuesFile;
     }
 
     @JsonProperty("valuesInline")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public Map<String, Object> getValuesInline() {
         return valuesInline;
     }
 
     @JsonProperty("valuesInline")
+    @JsonDeserialize(using = io.fabric8.kubernetes.internal.KubernetesDeserializerForMap.class)
     public void setValuesInline(Map<String, Object> valuesInline) {
         this.valuesInline = valuesInline;
     }
 
     @JsonProperty("valuesMerge")
-    public java.lang.String getValuesMerge() {
+    public String getValuesMerge() {
         return valuesMerge;
     }
 
     @JsonProperty("valuesMerge")
-    public void setValuesMerge(java.lang.String valuesMerge) {
+    public void setValuesMerge(String valuesMerge) {
         this.valuesMerge = valuesMerge;
     }
 
     @JsonProperty("version")
-    public java.lang.String getVersion() {
+    public String getVersion() {
         return version;
     }
 
     @JsonProperty("version")
-    public void setVersion(java.lang.String version) {
+    public void setVersion(String version) {
         this.version = version;
     }
 
+    @JsonIgnore
+    public HelmChartBuilder edit() {
+        return new HelmChartBuilder(this);
+    }
+
+    @JsonIgnore
+    public HelmChartBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
-    public Map<java.lang.String, Object> getAdditionalProperties() {
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 
     @JsonAnySetter
-    public void setAdditionalProperty(java.lang.String name, Object value) {
+    public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

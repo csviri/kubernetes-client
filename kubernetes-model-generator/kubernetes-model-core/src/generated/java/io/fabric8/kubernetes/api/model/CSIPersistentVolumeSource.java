@@ -1,9 +1,9 @@
 
 package io.fabric8.kubernetes.api.model;
 
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -11,18 +11,18 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.sundr.builder.annotations.Buildable;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * Represents storage that is managed by an external CSI volume driver
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "controllerExpandSecretRef",
     "controllerPublishSecretRef",
     "driver",
@@ -36,13 +36,13 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
 })
-@Buildable(editableEnabled = false, validationEnabled = false, generateBuilderPackage = true, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
-public class CSIPersistentVolumeSource implements KubernetesResource
+@Buildable(editableEnabled = false, validationEnabled = false, generateBuilderPackage = false, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class CSIPersistentVolumeSource implements Editable<CSIPersistentVolumeSourceBuilder>, KubernetesResource
 {
 
     @JsonProperty("controllerExpandSecretRef")
@@ -50,9 +50,9 @@ public class CSIPersistentVolumeSource implements KubernetesResource
     @JsonProperty("controllerPublishSecretRef")
     private SecretReference controllerPublishSecretRef;
     @JsonProperty("driver")
-    private java.lang.String driver;
+    private String driver;
     @JsonProperty("fsType")
-    private java.lang.String fsType;
+    private String fsType;
     @JsonProperty("nodeExpandSecretRef")
     private SecretReference nodeExpandSecretRef;
     @JsonProperty("nodePublishSecretRef")
@@ -63,33 +63,19 @@ public class CSIPersistentVolumeSource implements KubernetesResource
     private Boolean readOnly;
     @JsonProperty("volumeAttributes")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private Map<String, String> volumeAttributes = new LinkedHashMap<String, String>();
+    private Map<String, String> volumeAttributes = new LinkedHashMap<>();
     @JsonProperty("volumeHandle")
-    private java.lang.String volumeHandle;
+    private String volumeHandle;
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public CSIPersistentVolumeSource() {
     }
 
-    /**
-     * 
-     * @param controllerPublishSecretRef
-     * @param driver
-     * @param nodePublishSecretRef
-     * @param nodeStageSecretRef
-     * @param volumeHandle
-     * @param nodeExpandSecretRef
-     * @param readOnly
-     * @param controllerExpandSecretRef
-     * @param fsType
-     * @param volumeAttributes
-     */
-    public CSIPersistentVolumeSource(SecretReference controllerExpandSecretRef, SecretReference controllerPublishSecretRef, java.lang.String driver, java.lang.String fsType, SecretReference nodeExpandSecretRef, SecretReference nodePublishSecretRef, SecretReference nodeStageSecretRef, Boolean readOnly, Map<String, String> volumeAttributes, java.lang.String volumeHandle) {
+    public CSIPersistentVolumeSource(SecretReference controllerExpandSecretRef, SecretReference controllerPublishSecretRef, String driver, String fsType, SecretReference nodeExpandSecretRef, SecretReference nodePublishSecretRef, SecretReference nodeStageSecretRef, Boolean readOnly, Map<String, String> volumeAttributes, String volumeHandle) {
         super();
         this.controllerExpandSecretRef = controllerExpandSecretRef;
         this.controllerPublishSecretRef = controllerPublishSecretRef;
@@ -103,114 +89,190 @@ public class CSIPersistentVolumeSource implements KubernetesResource
         this.volumeHandle = volumeHandle;
     }
 
+    /**
+     * Represents storage that is managed by an external CSI volume driver
+     */
     @JsonProperty("controllerExpandSecretRef")
     public SecretReference getControllerExpandSecretRef() {
         return controllerExpandSecretRef;
     }
 
+    /**
+     * Represents storage that is managed by an external CSI volume driver
+     */
     @JsonProperty("controllerExpandSecretRef")
     public void setControllerExpandSecretRef(SecretReference controllerExpandSecretRef) {
         this.controllerExpandSecretRef = controllerExpandSecretRef;
     }
 
+    /**
+     * Represents storage that is managed by an external CSI volume driver
+     */
     @JsonProperty("controllerPublishSecretRef")
     public SecretReference getControllerPublishSecretRef() {
         return controllerPublishSecretRef;
     }
 
+    /**
+     * Represents storage that is managed by an external CSI volume driver
+     */
     @JsonProperty("controllerPublishSecretRef")
     public void setControllerPublishSecretRef(SecretReference controllerPublishSecretRef) {
         this.controllerPublishSecretRef = controllerPublishSecretRef;
     }
 
+    /**
+     * driver is the name of the driver to use for this volume. Required.
+     */
     @JsonProperty("driver")
-    public java.lang.String getDriver() {
+    public String getDriver() {
         return driver;
     }
 
+    /**
+     * driver is the name of the driver to use for this volume. Required.
+     */
     @JsonProperty("driver")
-    public void setDriver(java.lang.String driver) {
+    public void setDriver(String driver) {
         this.driver = driver;
     }
 
+    /**
+     * fsType to mount. Must be a filesystem type supported by the host operating system. Ex. "ext4", "xfs", "ntfs".
+     */
     @JsonProperty("fsType")
-    public java.lang.String getFsType() {
+    public String getFsType() {
         return fsType;
     }
 
+    /**
+     * fsType to mount. Must be a filesystem type supported by the host operating system. Ex. "ext4", "xfs", "ntfs".
+     */
     @JsonProperty("fsType")
-    public void setFsType(java.lang.String fsType) {
+    public void setFsType(String fsType) {
         this.fsType = fsType;
     }
 
+    /**
+     * Represents storage that is managed by an external CSI volume driver
+     */
     @JsonProperty("nodeExpandSecretRef")
     public SecretReference getNodeExpandSecretRef() {
         return nodeExpandSecretRef;
     }
 
+    /**
+     * Represents storage that is managed by an external CSI volume driver
+     */
     @JsonProperty("nodeExpandSecretRef")
     public void setNodeExpandSecretRef(SecretReference nodeExpandSecretRef) {
         this.nodeExpandSecretRef = nodeExpandSecretRef;
     }
 
+    /**
+     * Represents storage that is managed by an external CSI volume driver
+     */
     @JsonProperty("nodePublishSecretRef")
     public SecretReference getNodePublishSecretRef() {
         return nodePublishSecretRef;
     }
 
+    /**
+     * Represents storage that is managed by an external CSI volume driver
+     */
     @JsonProperty("nodePublishSecretRef")
     public void setNodePublishSecretRef(SecretReference nodePublishSecretRef) {
         this.nodePublishSecretRef = nodePublishSecretRef;
     }
 
+    /**
+     * Represents storage that is managed by an external CSI volume driver
+     */
     @JsonProperty("nodeStageSecretRef")
     public SecretReference getNodeStageSecretRef() {
         return nodeStageSecretRef;
     }
 
+    /**
+     * Represents storage that is managed by an external CSI volume driver
+     */
     @JsonProperty("nodeStageSecretRef")
     public void setNodeStageSecretRef(SecretReference nodeStageSecretRef) {
         this.nodeStageSecretRef = nodeStageSecretRef;
     }
 
+    /**
+     * readOnly value to pass to ControllerPublishVolumeRequest. Defaults to false (read/write).
+     */
     @JsonProperty("readOnly")
     public Boolean getReadOnly() {
         return readOnly;
     }
 
+    /**
+     * readOnly value to pass to ControllerPublishVolumeRequest. Defaults to false (read/write).
+     */
     @JsonProperty("readOnly")
     public void setReadOnly(Boolean readOnly) {
         this.readOnly = readOnly;
     }
 
+    /**
+     * volumeAttributes of the volume to publish.
+     */
     @JsonProperty("volumeAttributes")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public Map<String, String> getVolumeAttributes() {
         return volumeAttributes;
     }
 
+    /**
+     * volumeAttributes of the volume to publish.
+     */
     @JsonProperty("volumeAttributes")
     public void setVolumeAttributes(Map<String, String> volumeAttributes) {
         this.volumeAttributes = volumeAttributes;
     }
 
+    /**
+     * volumeHandle is the unique volume name returned by the CSI volume plugin’s CreateVolume to refer to the volume on all subsequent calls. Required.
+     */
     @JsonProperty("volumeHandle")
-    public java.lang.String getVolumeHandle() {
+    public String getVolumeHandle() {
         return volumeHandle;
     }
 
+    /**
+     * volumeHandle is the unique volume name returned by the CSI volume plugin’s CreateVolume to refer to the volume on all subsequent calls. Required.
+     */
     @JsonProperty("volumeHandle")
-    public void setVolumeHandle(java.lang.String volumeHandle) {
+    public void setVolumeHandle(String volumeHandle) {
         this.volumeHandle = volumeHandle;
     }
 
+    @JsonIgnore
+    public CSIPersistentVolumeSourceBuilder edit() {
+        return new CSIPersistentVolumeSourceBuilder(this);
+    }
+
+    @JsonIgnore
+    public CSIPersistentVolumeSourceBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
-    public Map<java.lang.String, Object> getAdditionalProperties() {
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 
     @JsonAnySetter
-    public void setAdditionalProperty(java.lang.String name, Object value) {
+    public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

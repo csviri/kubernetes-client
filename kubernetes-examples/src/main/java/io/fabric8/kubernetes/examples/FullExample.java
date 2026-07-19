@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -221,6 +221,9 @@ public class FullExample {
         client.namespaces().withName("thisisatest").delete();
         log("Deleted namespace");
       }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      logger.error(e.getMessage(), e);
     } catch (Exception e) {
       logger.error(e.getMessage(), e);
       Throwable[] suppressed = e.getSuppressed();

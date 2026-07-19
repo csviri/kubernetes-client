@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,54 +16,95 @@
 package io.fabric8.kubernetes.client.http;
 
 import io.fabric8.mockwebserver.DefaultMockServer;
-import okhttp3.Headers;
-import okhttp3.mockwebserver.RecordedRequest;
+import io.fabric8.mockwebserver.http.Headers;
+import io.fabric8.mockwebserver.http.RecordedRequest;
+import io.fabric8.mockwebserver.utils.ResponseProvider;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
-import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
+import static io.fabric8.kubernetes.client.utils.HttpClientUtils.basicCredentials;
 import static org.assertj.core.api.Assertions.assertThat;
 
+@SuppressWarnings("HttpUrlsUsage")
 public abstract class AbstractHttpClientProxyTest {
 
-  private static DefaultMockServer server;
+  private static DefaultMockServer proxyServer;
 
   @BeforeAll
   static void beforeAll() {
-    server = new DefaultMockServer(false);
-    server.start();
+    proxyServer = new DefaultMockServer(false);
+    proxyServer.start();
   }
 
   @AfterAll
   static void afterAll() {
-    server.shutdown();
+    proxyServer.shutdown();
   }
 
   protected abstract HttpClient.Factory getHttpClientFactory();
 
   @Test
-  @DisplayName("Proxied HttpClient adds required headers to the request")
-  protected void proxyConfigurationAddsRequiredHeaders() throws Exception {
+  @DisplayName("Proxied HttpClient with basic authorization adds required headers to the request")
+  protected void proxyConfigurationBasicAuthAddsRequiredHeaders() throws Exception {
+    proxyServer.expect().get().withPath("http://example.com/proxied").andReply(new ResponseProvider<Object>() {
+
+      @Override
+      public String getBody(RecordedRequest request) {
+        return "\n";
+      }
+
+      @Override
+      public void setHeaders(Headers headers) {
+      }
+
+      @Override
+      public int getStatusCode(RecordedRequest request) {
+        return request.getHeader(StandardHttpHeaders.PROXY_AUTHORIZATION) != null ? 200 : 407;
+      }
+
+      @Override
+      public Headers getHeaders() {
+        return new Headers.Builder().add("Proxy-Authenticate", "Basic").build();
+      }
+
+    }).always();
     // Given
     final HttpClient.Builder builder = getHttpClientFactory().newBuilder()
-        .proxyAddress(new InetSocketAddress("localhost", server.getPort()))
-        .proxyAuthorization("auth:cred");
+        .proxyAddress(new InetSocketAddress("localhost", proxyServer.getPort()))
+        .proxyAuthorization(basicCredentials("auth", "cred"));
     try (HttpClient client = builder.build()) {
       // When
-      client.sendAsync(client.newHttpRequestBuilder()
-          .uri(String.format("http://0.0.0.0:%s/not-found", server.getPort())).build(), String.class)
+      client.sendAsync(client.newHttpRequestBuilder().uri("http://example.com/proxied").build(), String.class)
           .get(10L, TimeUnit.SECONDS);
       // Then
-      assertThat(server.getLastRequest())
+      assertThat(proxyServer.getLastRequest())
           .extracting(RecordedRequest::getHeaders)
-          .extracting(Headers::toMultimap)
-          .hasFieldOrPropertyWithValue("Host", Collections.singletonList("0.0.0.0:" + server.getPort()))
-          .hasFieldOrPropertyWithValue("Proxy-Authorization", Collections.singletonList("auth:cred"));
+          .returns("example.com", h -> h.get("Host"))
+          .returns("Basic YXV0aDpjcmVk", h -> h.get("Proxy-Authorization"));
+    }
+  }
+
+  @Test
+  @DisplayName("Proxied HttpClient with other authorization adds required headers to the request")
+  protected void proxyConfigurationOtherAuthAddsRequiredHeaders() throws Exception {
+    // Given
+    final HttpClient.Builder builder = getHttpClientFactory().newBuilder()
+        .proxyAddress(new InetSocketAddress("localhost", proxyServer.getPort()))
+        .proxyAuthorization("Other kind of auth");
+    try (HttpClient client = builder.build()) {
+      // When
+      client.sendAsync(client.newHttpRequestBuilder().uri("http://example.com/proxied").build(), String.class)
+          .get(10L, TimeUnit.SECONDS);
+      // Then
+      assertThat(proxyServer.getLastRequest())
+          .extracting(RecordedRequest::getHeaders)
+          .returns("example.com", h -> h.get("Host"))
+          .returns("Other kind of auth", h -> h.get("Proxy-Authorization"));
     }
   }
 }

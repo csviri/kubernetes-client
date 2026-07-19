@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,20 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.extension;
 
 import io.fabric8.kubernetes.api.builder.Visitor;
 import io.fabric8.kubernetes.api.model.DeletionPropagation;
 import io.fabric8.kubernetes.api.model.ListOptions;
+import io.fabric8.kubernetes.api.model.PartialObjectMetadata;
 import io.fabric8.kubernetes.api.model.StatusDetails;
+import io.fabric8.kubernetes.api.model.Table;
 import io.fabric8.kubernetes.api.model.autoscaling.v1.Scale;
 import io.fabric8.kubernetes.client.GracePeriodConfigurable;
 import io.fabric8.kubernetes.client.PropagationPolicyConfigurable;
 import io.fabric8.kubernetes.client.ResourceNotFoundException;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
+import io.fabric8.kubernetes.client.dsl.CreateOrReplaceDeletable;
 import io.fabric8.kubernetes.client.dsl.Deletable;
+import io.fabric8.kubernetes.client.dsl.EditReplacePatchable;
 import io.fabric8.kubernetes.client.dsl.Gettable;
 import io.fabric8.kubernetes.client.dsl.Informable;
 import io.fabric8.kubernetes.client.dsl.NonDeletingOperation;
@@ -331,12 +334,12 @@ public class ResourceAdapter<T> implements Resource<T> {
   }
 
   @Override
-  public Deletable withTimeout(long timeout, TimeUnit unit) {
+  public CreateOrReplaceDeletable<T> withTimeout(long timeout, TimeUnit unit) {
     return resource.withTimeout(timeout, unit);
   }
 
   @Override
-  public Deletable withTimeoutInMillis(long timeoutInMillis) {
+  public CreateOrReplaceDeletable<T> withTimeoutInMillis(long timeoutInMillis) {
     return withTimeout(timeoutInMillis, TimeUnit.MILLISECONDS);
   }
 
@@ -370,4 +373,28 @@ public class ResourceAdapter<T> implements Resource<T> {
     return resource.scale(scale);
   }
 
+  @Override
+  public T createOr(Function<NonDeletingOperation<T>, T> conflictAction) {
+    return resource.createOr(conflictAction);
+  }
+
+  @Override
+  public NonDeletingOperation<T> unlock() {
+    return resource.unlock();
+  }
+
+  @Override
+  public EditReplacePatchable<T> subresource(String subresource) {
+    return resource.subresource(subresource);
+  }
+
+  @Override
+  public PartialObjectMetadata getAsPartialObjectMetadata() {
+    return resource.getAsPartialObjectMetadata();
+  }
+
+  @Override
+  public Table getAsTable() {
+    return resource.getAsTable();
+  }
 }

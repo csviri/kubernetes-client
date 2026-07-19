@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,17 +15,19 @@
  */
 package io.fabric8.it.dummy;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.example.v1.Dummy;
 import com.example.v1.DummySpec;
+import com.example.v1.dummyspec.Package;
+import com.example.v1.dummyspec.package_.Foo;
+import com.fasterxml.jackson.databind.JsonNode;
+import io.fabric8.java.generator.testing.KubernetesResourceDiff;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.client.utils.Serialization;
 import org.junit.jupiter.api.Test;
-import io.fabric8.java.generator.testing.KubernetesResourceDiff;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.Files;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,8 +37,7 @@ class TestEscapeCharacters {
   @Test
   void testDeserialization() {
     // Arrange
-    Dummy sample =
-      Serialization.unmarshal(getClass().getResourceAsStream("/sample.yaml"), Dummy.class);
+    Dummy sample = Serialization.unmarshal(getClass().getResourceAsStream("/sample.yaml"), Dummy.class);
 
     // Act
     DummySpec spec = sample.getSpec();
@@ -48,6 +49,7 @@ class TestEscapeCharacters {
     assertEquals("3", spec.getThree_quote());
     assertEquals("4", spec.getFour_doublequote());
     assertEquals("5", spec.getFive_slash());
+    assertEquals("6", spec.get_package().getFoo().getBar());
   }
 
   @Test
@@ -63,6 +65,11 @@ class TestEscapeCharacters {
     spec.setThree_quote("3");
     spec.setFour_doublequote("4");
     spec.setFive_slash("5");
+    Foo foo = new Foo();
+    foo.setBar("6");
+    Package pack = new Package();
+    pack.setFoo(foo);
+    spec.set_package(pack);
     sample.setSpec(spec);
     ObjectMeta om = new ObjectMeta();
     om.setName("sample");

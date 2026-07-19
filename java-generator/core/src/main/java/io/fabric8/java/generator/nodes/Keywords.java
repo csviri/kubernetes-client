@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -79,8 +79,11 @@ public class Keywords {
     JAVA_KEYWORDS.add("while");
   }
 
-  static final String JAVA_UTIL_MAP = "java.util.Map";
-  static final String JAVA_UTIL_LIST = "java.util.List";
-  static final String JAVA_LANG_STRING = "java.lang.String";
-  static final String ADDITIONAL_PROPERTIES = "additionalProperties";
+  public static final String JAVA_UTIL_MAP = "java.util.Map";
+  public static final String JAVA_UTIL_LIST = "java.util.List";
+  public static final String JAVA_LANG_STRING = "java.lang.String";
+  public static final String JAVA_LANG_LONG = "java.lang.Long";
+  public static final String JAVA_LANG_INTEGER = "java.lang.Integer";
+  public static final String JAVA_PRIMITIVE_BOOLEAN = "boolean";
+  public static final String ADDITIONAL_PROPERTIES = "additionalProperties";
 }

@@ -2,9 +2,10 @@
 package io.fabric8.openshift.api.model.miscellaneous.apiserver.v1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -12,8 +13,11 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Condition;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
@@ -23,19 +27,17 @@ import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "conditions",
     "currentHour",
     "last24h",
@@ -44,7 +46,6 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -58,39 +59,37 @@ import lombok.experimental.Accessors;
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class APIRequestCountStatus implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class APIRequestCountStatus implements Editable<APIRequestCountStatusBuilder>, KubernetesResource
 {
 
     @JsonProperty("conditions")
-    private List<Condition> conditions = new ArrayList<Condition>();
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<Condition> conditions = new ArrayList<>();
     @JsonProperty("currentHour")
     private PerResourceAPIRequestLog currentHour;
     @JsonProperty("last24h")
-    private List<PerResourceAPIRequestLog> last24h = new ArrayList<PerResourceAPIRequestLog>();
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<PerResourceAPIRequestLog> last24h = new ArrayList<>();
     @JsonProperty("removedInRelease")
     private String removedInRelease;
     @JsonProperty("requestCount")
     private Long requestCount;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public APIRequestCountStatus() {
     }
 
-    /**
-     * 
-     * @param last24h
-     * @param requestCount
-     * @param removedInRelease
-     * @param conditions
-     * @param currentHour
-     */
     public APIRequestCountStatus(List<Condition> conditions, PerResourceAPIRequestLog currentHour, List<PerResourceAPIRequestLog> last24h, String removedInRelease, Long requestCount) {
         super();
         this.conditions = conditions;
@@ -100,11 +99,18 @@ public class APIRequestCountStatus implements KubernetesResource
         this.requestCount = requestCount;
     }
 
+    /**
+     * conditions contains details of the current status of this API Resource.
+     */
     @JsonProperty("conditions")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<Condition> getConditions() {
         return conditions;
     }
 
+    /**
+     * conditions contains details of the current status of this API Resource.
+     */
     @JsonProperty("conditions")
     public void setConditions(List<Condition> conditions) {
         this.conditions = conditions;
@@ -120,37 +126,67 @@ public class APIRequestCountStatus implements KubernetesResource
         this.currentHour = currentHour;
     }
 
+    /**
+     * last24h contains request history for the last 24 hours, indexed by the hour, so 12:00AM-12:59 is in index 0, 6am-6:59am is index 6, etc. The index of the current hour is updated live and then duplicated into the requestsLastHour field.
+     */
     @JsonProperty("last24h")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<PerResourceAPIRequestLog> getLast24h() {
         return last24h;
     }
 
+    /**
+     * last24h contains request history for the last 24 hours, indexed by the hour, so 12:00AM-12:59 is in index 0, 6am-6:59am is index 6, etc. The index of the current hour is updated live and then duplicated into the requestsLastHour field.
+     */
     @JsonProperty("last24h")
     public void setLast24h(List<PerResourceAPIRequestLog> last24h) {
         this.last24h = last24h;
     }
 
+    /**
+     * removedInRelease is when the API will be removed.
+     */
     @JsonProperty("removedInRelease")
     public String getRemovedInRelease() {
         return removedInRelease;
     }
 
+    /**
+     * removedInRelease is when the API will be removed.
+     */
     @JsonProperty("removedInRelease")
     public void setRemovedInRelease(String removedInRelease) {
         this.removedInRelease = removedInRelease;
     }
 
+    /**
+     * requestCount is a sum of all requestCounts across all current hours, nodes, and users.
+     */
     @JsonProperty("requestCount")
     public Long getRequestCount() {
         return requestCount;
     }
 
+    /**
+     * requestCount is a sum of all requestCounts across all current hours, nodes, and users.
+     */
     @JsonProperty("requestCount")
     public void setRequestCount(Long requestCount) {
         this.requestCount = requestCount;
     }
 
+    @JsonIgnore
+    public APIRequestCountStatusBuilder edit() {
+        return new APIRequestCountStatusBuilder(this);
+    }
+
+    @JsonIgnore
+    public APIRequestCountStatusBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -158,6 +194,10 @@ public class APIRequestCountStatus implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

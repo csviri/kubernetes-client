@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,11 +17,12 @@ package io.fabric8.kubernetes.api.model;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.fabric8.kubernetes.api.builder.Editable;
+import io.fabric8.kubernetes.model.util.Helper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -43,7 +44,7 @@ class GenericKubernetesResourceTest {
   void deserializeWithEmptyShouldDeserializeEmpty() throws Exception {
     // When
     final GenericKubernetesResource result = objectMapper
-        .readValue(load("empty.json"), GenericKubernetesResource.class);
+        .readValue(Helper.loadJson("/generic-kubernetes-resource/empty.json"), GenericKubernetesResource.class);
     // Then
     assertThat(result).isEqualTo(new GenericKubernetesResource());
   }
@@ -52,10 +53,11 @@ class GenericKubernetesResourceTest {
   @DisplayName("deserialize, with config map structure, should deserialize like ConfigMap")
   void deserializeWithConfigMapStructureShouldDeserializeLikeConfigMap() throws Exception {
     // Given
-    final ConfigMap configMap = objectMapper.readValue(load("config-map.json"), ConfigMap.class);
+    final ConfigMap configMap = objectMapper.readValue(Helper.loadJson("/generic-kubernetes-resource/config-map.json"),
+        ConfigMap.class);
     // When
     final GenericKubernetesResource result = objectMapper
-        .readValue(load("config-map.json"), GenericKubernetesResource.class);
+        .readValue(Helper.loadJson("/generic-kubernetes-resource/config-map.json"), GenericKubernetesResource.class);
     // Then
     assertThat(result)
         .hasFieldOrPropertyWithValue("metadata.namespace", "default")
@@ -68,7 +70,7 @@ class GenericKubernetesResourceTest {
   void deserializeWithCustomResourceShouldDeserialize() throws Exception {
     // When
     final GenericKubernetesResource result = objectMapper
-        .readValue(load("custom-resource.json"), GenericKubernetesResource.class);
+        .readValue(Helper.loadJson("/generic-kubernetes-resource/custom-resource.json"), GenericKubernetesResource.class);
     // Then
     assertThat(result)
         .hasFieldOrPropertyWithValue("apiVersion", "the-cr.example.com/v1")
@@ -117,6 +119,78 @@ class GenericKubernetesResourceTest {
 
     assertThat(gkr)
         .isNotEqualTo(gkr1);
+  }
+
+  @Test
+  @DisplayName("implements Editable interface")
+  void implementsEditable() {
+    // Given
+    final GenericKubernetesResource gkr = new GenericKubernetesResource();
+    gkr.setApiVersion("example.com/v1");
+    gkr.setKind("MyResource");
+    gkr.setMetadata(new ObjectMetaBuilder().withName("test").withNamespace("ns1").build());
+    gkr.setAdditionalProperties(Collections.singletonMap("spec", Collections.singletonMap("field", "value")));
+
+    // When + Then
+    assertThat(gkr).isInstanceOf(Editable.class);
+  }
+
+  @Test
+  @DisplayName("edit should return builder with same state")
+  void editReturnsBuilderWithSameState() {
+    // Given
+    final GenericKubernetesResource gkr = new GenericKubernetesResource();
+    gkr.setApiVersion("example.com/v1");
+    gkr.setKind("MyResource");
+    gkr.setMetadata(new ObjectMetaBuilder().withName("test").withNamespace("ns1").build());
+
+    // When
+    final GenericKubernetesResource result = gkr.edit().build();
+
+    // Then
+    assertThat(result)
+        .hasFieldOrPropertyWithValue("apiVersion", "example.com/v1")
+        .hasFieldOrPropertyWithValue("Kind", "MyResource")
+        .hasFieldOrPropertyWithValue("metadata.name", "test")
+        .hasFieldOrPropertyWithValue("metadata.namespace", "ns1");
+  }
+
+  @Test
+  @DisplayName("edit should return builder that can modify metadata")
+  void editReturnsModifiableBuilder() {
+    // Given
+    final GenericKubernetesResource gkr = new GenericKubernetesResource();
+    gkr.setApiVersion("example.com/v1");
+    gkr.setKind("MyResource");
+    gkr.setMetadata(new ObjectMetaBuilder().withName("test").build());
+
+    // When
+    final GenericKubernetesResource result = gkr.edit()
+        .editMetadata().addToLabels("key", "value").endMetadata()
+        .build();
+
+    // Then
+    assertThat(result.getMetadata().getLabels()).containsEntry("key", "value");
+  }
+
+  @Test
+  @DisplayName("toBuilder should return same result as edit")
+  void toBuilderReturnsSameAsEdit() {
+    // Given
+    final GenericKubernetesResource gkr = new GenericKubernetesResource();
+    gkr.setApiVersion("example.com/v1");
+    gkr.setKind("MyResource");
+    gkr.setMetadata(new ObjectMetaBuilder().withName("test").build());
+
+    // When
+    final GenericKubernetesResource fromEdit = gkr.edit().build();
+    final GenericKubernetesResource fromToBuilder = gkr.toBuilder().build();
+
+    // Then
+    assertThat(fromEdit)
+        .hasFieldOrPropertyWithValue("apiVersion", fromToBuilder.getApiVersion())
+        .hasFieldOrPropertyWithValue("Kind", fromToBuilder.getKind())
+        .hasFieldOrPropertyWithValue("metadata.name", fromToBuilder.getMetadata().getName());
   }
 
   @Test
@@ -341,7 +415,8 @@ class GenericKubernetesResourceTest {
   void getWithComplexStructureShouldRetrieveQueried() throws Exception {
     // When
     final GenericKubernetesResource result = objectMapper
-        .readValue(load("complex-structure-resource.json"), GenericKubernetesResource.class);
+        .readValue(Helper.loadJson("/generic-kubernetes-resource/complex-structure-resource.json"),
+            GenericKubernetesResource.class);
     // Then
     assertThat(result)
         .hasFieldOrPropertyWithValue("kind", "SomeCustomResource")
@@ -355,20 +430,18 @@ class GenericKubernetesResourceTest {
         .returns(true, gkr -> gkr.get("status", "reconciled"));
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   @DisplayName("getAdditionalPropertiesNode, with complex-structure-resource, should return queried values")
   void getAdditionalPropertiesNodeWithComplexStructureShouldRetrieveQueried() throws Exception {
     // When
     final GenericKubernetesResource result = objectMapper
-        .readValue(load("complex-structure-resource.json"), GenericKubernetesResource.class);
+        .readValue(Helper.loadJson("/generic-kubernetes-resource/complex-structure-resource.json"),
+            GenericKubernetesResource.class);
     // Then
     assertThat(result)
         .extracting(GenericKubernetesResource::getAdditionalPropertiesNode)
         .returns("value", node -> node.get("spec").get("field").asText())
         .returns(2, node -> node.get("spec").get("nested").get("list").get(1).get("entry").asInt());
-  }
-
-  private static InputStream load(String resource) {
-    return GenericKubernetesResource.class.getResourceAsStream("/generic-kubernetes-resource/" + resource);
   }
 }

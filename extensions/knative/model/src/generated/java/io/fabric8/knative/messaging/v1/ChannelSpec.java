@@ -2,9 +2,10 @@
 package io.fabric8.knative.messaging.v1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -12,8 +13,9 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import io.fabric8.knative.internal.eventing.pkg.apis.duck.v1.DeliverySpec;
-import io.fabric8.knative.internal.eventing.pkg.apis.duck.v1.SubscriberSpec;
+import io.fabric8.knative.duck.v1.DeliverySpec;
+import io.fabric8.knative.duck.v1.SubscriberSpec;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -31,23 +33,21 @@ import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * ChannelSpec defines which subscribers have expressed interest in receiving events from this Channel. It also defines the ChannelTemplate to use in order to create the CRD Channel backing this Channel.
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "channelTemplate",
     "delivery",
     "subscribers"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -67,7 +67,8 @@ import lombok.experimental.Accessors;
     @BuildableReference(Volume.class),
     @BuildableReference(VolumeMount.class)
 })
-public class ChannelSpec implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class ChannelSpec implements Editable<ChannelSpecBuilder>, KubernetesResource
 {
 
     @JsonProperty("channelTemplate")
@@ -76,23 +77,16 @@ public class ChannelSpec implements KubernetesResource
     private DeliverySpec delivery;
     @JsonProperty("subscribers")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<SubscriberSpec> subscribers = new ArrayList<SubscriberSpec>();
+    private List<SubscriberSpec> subscribers = new ArrayList<>();
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public ChannelSpec() {
     }
 
-    /**
-     * 
-     * @param delivery
-     * @param subscribers
-     * @param channelTemplate
-     */
     public ChannelSpec(ChannelTemplateSpec channelTemplate, DeliverySpec delivery, List<SubscriberSpec> subscribers) {
         super();
         this.channelTemplate = channelTemplate;
@@ -100,37 +94,67 @@ public class ChannelSpec implements KubernetesResource
         this.subscribers = subscribers;
     }
 
+    /**
+     * ChannelSpec defines which subscribers have expressed interest in receiving events from this Channel. It also defines the ChannelTemplate to use in order to create the CRD Channel backing this Channel.
+     */
     @JsonProperty("channelTemplate")
     public ChannelTemplateSpec getChannelTemplate() {
         return channelTemplate;
     }
 
+    /**
+     * ChannelSpec defines which subscribers have expressed interest in receiving events from this Channel. It also defines the ChannelTemplate to use in order to create the CRD Channel backing this Channel.
+     */
     @JsonProperty("channelTemplate")
     public void setChannelTemplate(ChannelTemplateSpec channelTemplate) {
         this.channelTemplate = channelTemplate;
     }
 
+    /**
+     * ChannelSpec defines which subscribers have expressed interest in receiving events from this Channel. It also defines the ChannelTemplate to use in order to create the CRD Channel backing this Channel.
+     */
     @JsonProperty("delivery")
     public DeliverySpec getDelivery() {
         return delivery;
     }
 
+    /**
+     * ChannelSpec defines which subscribers have expressed interest in receiving events from this Channel. It also defines the ChannelTemplate to use in order to create the CRD Channel backing this Channel.
+     */
     @JsonProperty("delivery")
     public void setDelivery(DeliverySpec delivery) {
         this.delivery = delivery;
     }
 
+    /**
+     * This is the list of subscriptions for this subscribable.
+     */
     @JsonProperty("subscribers")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<SubscriberSpec> getSubscribers() {
         return subscribers;
     }
 
+    /**
+     * This is the list of subscriptions for this subscribable.
+     */
     @JsonProperty("subscribers")
     public void setSubscribers(List<SubscriberSpec> subscribers) {
         this.subscribers = subscribers;
     }
 
+    @JsonIgnore
+    public ChannelSpecBuilder edit() {
+        return new ChannelSpecBuilder(this);
+    }
+
+    @JsonIgnore
+    public ChannelSpecBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -138,6 +162,10 @@ public class ChannelSpec implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,17 +22,6 @@ import io.fabric8.kubernetes.client.NamespacedKubernetesClient;
 import io.fabric8.kubernetes.client.NamespacedKubernetesClientAdapter;
 import io.fabric8.kubernetes.client.OAuthTokenProvider;
 import io.fabric8.kubernetes.client.impl.KubernetesClientImpl;
-import io.fabric8.kubernetes.client.impl.ResourceHandler;
-import org.apache.felix.scr.annotations.Activate;
-import org.apache.felix.scr.annotations.Component;
-import org.apache.felix.scr.annotations.ConfigurationPolicy;
-import org.apache.felix.scr.annotations.Deactivate;
-import org.apache.felix.scr.annotations.Reference;
-import org.apache.felix.scr.annotations.ReferenceCardinality;
-import org.apache.felix.scr.annotations.ReferencePolicy;
-import org.apache.felix.scr.annotations.ReferencePolicyOption;
-import org.apache.felix.scr.annotations.References;
-import org.apache.felix.scr.annotations.Service;
 
 import java.util.Map;
 
@@ -62,12 +51,10 @@ import static io.fabric8.kubernetes.client.Config.KUBERNETES_WATCH_RECONNECT_INT
 import static io.fabric8.kubernetes.client.Config.KUBERNETES_WATCH_RECONNECT_LIMIT_SYSTEM_PROPERTY;
 import static io.fabric8.kubernetes.client.Config.KUBERNETES_WEBSOCKET_PING_INTERVAL_SYSTEM_PROPERTY;
 
-@Component(configurationPid = "io.fabric8.kubernetes.client", policy = ConfigurationPolicy.REQUIRE)
-@Service({ KubernetesClient.class, NamespacedKubernetesClient.class })
-@References({
-    @Reference(referenceInterface = ResourceHandler.class, cardinality = ReferenceCardinality.OPTIONAL_MULTIPLE, policy = ReferencePolicy.DYNAMIC, bind = "bindResourceHandler", unbind = "unbindResourceHandler"),
-    @Reference(referenceInterface = OAuthTokenProvider.class, cardinality = ReferenceCardinality.OPTIONAL_UNARY, policyOption = ReferencePolicyOption.GREEDY, bind = "bindOAuthTokenProvider", unbind = "unbindOAuthTokenProvider")
-})
+@org.osgi.service.component.annotations.Component(configurationPid = "io.fabric8.kubernetes.client", name = "io.fabric8.kubernetes.client.osgi.ManagedKubernetesClient", scope = org.osgi.service.component.annotations.ServiceScope.SINGLETON, service = {
+    KubernetesClient.class, NamespacedKubernetesClient.class }, reference = {
+        @org.osgi.service.component.annotations.Reference(name = "oAuthTokenProvider", service = OAuthTokenProvider.class, cardinality = org.osgi.service.component.annotations.ReferenceCardinality.OPTIONAL, policyOption = org.osgi.service.component.annotations.ReferencePolicyOption.GREEDY, bind = "bindOAuthTokenProvider", unbind = "unbindOAuthTokenProvider"),
+    }, configurationPolicy = org.osgi.service.component.annotations.ConfigurationPolicy.REQUIRE)
 public class ManagedKubernetesClient extends NamespacedKubernetesClientAdapter<KubernetesClientImpl> {
 
   public ManagedKubernetesClient() {
@@ -76,7 +63,7 @@ public class ManagedKubernetesClient extends NamespacedKubernetesClientAdapter<K
 
   private OAuthTokenProvider provider;
 
-  @Activate
+  @org.osgi.service.component.annotations.Activate
   public void activate(Map<String, Object> properties) {
     final ConfigBuilder builder = new ConfigBuilder();
 
@@ -166,25 +153,9 @@ public class ManagedKubernetesClient extends NamespacedKubernetesClientAdapter<K
     this.init(new KubernetesClientBuilder().withConfig(builder.build()).build());
   }
 
-  @Deactivate
+  @org.osgi.service.component.annotations.Deactivate
   public void deactivate() {
     this.close();
-  }
-
-  /**
-   * @deprecated ResourceHandlers to not need bound
-   */
-  @Deprecated
-  public void bindResourceHandler(ResourceHandler resourceHandler) {
-    // not used
-  }
-
-  /**
-   * @deprecated ResourceHandlers to not need bound
-   */
-  @Deprecated
-  public void unbindResourceHandler(ResourceHandler resourceHandler) {
-    // not used
   }
 
   public void bindOAuthTokenProvider(OAuthTokenProvider provider) {

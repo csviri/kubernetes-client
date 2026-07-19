@@ -30,22 +30,72 @@ jbang io.fabric8:java-generator-cli:<version>
 The Java generator Maven plugin can be used from your project `pom.xml` adding a section like:
 
 ```xml
-<plugin>
-  <groupId>io.fabric8</groupId>
-  <artifactId>java-generator-maven-plugin</artifactId>
-  <version>${kubernetes-client.version}</version>
-  <executions>
-    <execution>
-      <goals>
-        <goal>generate</goal>
-      </goals>
-    </execution>
-  </executions>
-  <configuration>
-    <source>src/main/resources/kubernetes</source>
-    ...
-  </configuration>
-</plugin>
+  <dependencies>
+    <dependency>
+      <groupId>io.fabric8</groupId>
+      <artifactId>kubernetes-client</artifactId>
+      <version>${kubernetes-client.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.fabric8</groupId>
+      <artifactId>generator-annotations</artifactId>
+      <version>${kubernetes-client.version}</version>
+    </dependency>
+
+    <!-- extraAnnotations requires these additional dependencies -->
+    <dependency>
+      <groupId>io.sundr</groupId>
+      <artifactId>builder-annotations</artifactId>
+      <version>${sundrio.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <version>${lombok.version}</version>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>io.fabric8</groupId>
+        <artifactId>java-generator-maven-plugin</artifactId>
+        <version>${kubernetes-client.version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <source>src/main/resources/kubernetes</source>
+          <!-- .. .-->
+        </configuration>
+      </plugin>
+      <!-- extraAnnotations requires annotation processor configuration -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>io.sundr</groupId>
+              <artifactId>builder-annotations</artifactId>
+              <version>${sundrio.version}</version>
+            </path>
+            <path>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+              <version>${lombok.version}</version>
+            </path>
+          </annotationProcessorPaths>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 ```
 
 ## Quick start Gradle
@@ -57,6 +107,13 @@ In a similar way with respect to the Maven plugin, the Java generator Gradle plu
 plugins {
   // ...
   id 'io.fabric8.java-generator' version "${kubernetesClientVersion}"
+}
+// ...
+dependencies {
+  // extraAnnotations requires explicit annotation processor configuration
+  annotationProcessor "io.sundr:builder-annotations:${sundrioVersion}"
+  compileOnly         "io.sundr:builder-annotations:${sundrioVersion}"
+  compileOnly         "org.projectlombok:lombok:${lombokVersion}"
 }
 // ...
 javaGen {
@@ -79,23 +136,43 @@ Provide a `source` referencing a file or a folder containing your CRDs definitio
 The full list of options of the CLI is (output of `--help`):
 
 ```
-Usage: java-gen [-hV] [-add-extra-annotations] [-enum-uppercase]
-                [-dt=<downloadTarget>] [-s=<source>]
-                [-suffix-strategy=<suffixStrategy>] -t=<target>
+Usage: java-gen [-hV] [-add-extra-annotations] [-always-preserve-unknown]
+                [-enum-uppercase]
+                [-deserialization-datetime-format=<deserializationDateTimeFormat
+                >] [-dt=<downloadTarget>] [-s=<source>]
+                [-serialization-datetime-format=<serializationDateTimeFormat>]
+                -t=<target> [-existing-java-types=<String=String>]...
+                [-files-suffixes=<filesSuffixes>]...
                 [-package-overrides=<String=String>]... [-u=<urls>]...
       -add-extra-annotations, --add-extra-annotations
                           Add extra lombok and sundrio annotation to the
                             generated classes
+      -always-preserve-unknown, --always-preserve-unknown
+                          Always preserve unknown fields in the generated
+                            classes by emitting an additionalProperties field
+      -deserialization-datetime-format, 
+        --deserialization-datetime-format=<deserializationDateTimeFormat>
+                          DateTime format used for Deserialization of fields of
+                            type `date-time`
       -dt, --download-target=<downloadTarget>
                           The folder to be used as a target for the downloaded
                             crds
       -enum-uppercase, --enum-uppercase
                           Uppercase the enum values
+      -existing-java-types, --existing-java-types=<String=String>
+                          Mapping from fully qualified generated type to fully
+                            qualified existing Java type
+      -files-suffixes, --files-suffixes=<filesSuffixes>
+                          Filter the source files with the specific suffixes
   -h, --help              Show this help message and exit.
       -package-overrides, --package-overrides=<String=String>
                           Apply the overrides to the package names
   -s, --source=<source>   The source(file or folder) with the
                             CustomResourceDefinition(s) to use
+      -serialization-datetime-format, 
+        --serialization-datetime-format=<serializationDateTimeFormat>
+                          DateTime format used for Serialization of fields of
+                            type `date-time`
   -t, --target=<target>   The folder to write the generated sources
   -u, --urls=<urls>       The source urls with the CustomResourceDefinition(s)
                             to use
@@ -105,6 +182,18 @@ Usage: java-gen [-hV] [-add-extra-annotations] [-enum-uppercase]
 And the corresponding configurations of the Maven plugin are (output of `mvn help:describe -DgroupId=io.fabric8 -DartifactId=java-generator-maven-plugin -Dversion=<version> -Ddetail`):
 
 ```
+    alwaysPreserveUnknown
+      User property: fabric8.java-generator.always-preserve-unknown
+      Always preserve unknown fields in the generated classes by emitting an
+      additionalProperties field
+
+    datetimeDeserializationFormat
+      User property: fabric8.java-generator.datetime-deserialization-format
+      DateTime format used for Deserialization of fields of type `date-time`
+
+    datetimeSerializationFormat
+      User property: fabric8.java-generator.datetime-serialization-format
+      DateTime format used for Serialization of fields of type `date-time`
 
     downloadTarget (Default: ${basedir}/target/manifests)
       User property: fabric8.java-generator.download-target
@@ -114,9 +203,18 @@ And the corresponding configurations of the Maven plugin are (output of `mvn hel
       User property: fabric8.java-generator.enum-uppercase
       Generate uppercase Enums
 
+    existingJavaTypes
+      User property: fabric8.java-generator.existing-java-types
+      Mapping from fully qualified generated type to fully qualified existing
+      Java type
+
     extraAnnotations
       User property: fabric8.java-generator.extra-annotations
       Generate Extra annotation for lombok and sundrio integration
+
+    filesSuffixes
+      User property: fabric8.java-generator.files-suffixes
+      Files suffixes to be processed
 
     generatedAnnotations
       User property: fabric8.java-generator.generated-annotations
@@ -143,6 +241,223 @@ And the corresponding configurations of the Maven plugin are (output of `mvn hel
       The URLs to be used to download CRDs from remote locations
 ```
 
+### Configuration Examples
+
+Below are examples of how to configure common options for Maven, Gradle, and the CLI, along with snippets showing how they affect the generated Java code.
+
+#### 1. Uppercase Enums
+
+Defaults to `true`, set to `false` to preserve the case from the CRD.
+
+**Maven:**
+```xml
+<configuration>
+  <enumUppercase>false</enumUppercase>
+</configuration>
+```
+
+**Gradle:**
+
+```groovy
+javaGen {
+  enumUppercase = false
+}
+```
+
+**CLI:**
+
+```bash
+--enum-uppercase=false
+```
+
+**Generated Code (default — uppercase):**
+
+```java
+public enum Material {
+    @com.fasterxml.jackson.annotation.JsonProperty("plastic")
+    PLASTIC("plastic"),
+    @com.fasterxml.jackson.annotation.JsonProperty("wood")
+    WOOD("wood");
+    // ...
+}
+```
+
+**Generated Code (with `enumUppercase = false`):**
+
+```java
+public enum Material {
+    @com.fasterxml.jackson.annotation.JsonProperty("plastic")
+    plastic("plastic"),
+    @com.fasterxml.jackson.annotation.JsonProperty("wood")
+    wood("wood");
+    // ...
+}
+```
+
+#### 2. Package Overrides
+
+Override the default package name generated from the CRD group and version.
+
+**Maven:**
+
+```xml
+<configuration>
+  <packageOverrides>
+    <!-- Key must match the generated package name exactly -->
+    <com.example.v1>com.mycompany.custom</com.example.v1>
+  </packageOverrides>
+</configuration>
+```
+
+**Gradle:**
+
+```groovy
+javaGen {
+  packageOverrides = [
+    // Key must match the generated package name exactly
+    "com.example.v1": "com.mycompany.custom"
+  ]
+}
+```
+
+**CLI:**
+
+```bash
+--package-overrides=com.example.v1=com.mycompany.custom
+```
+
+**Generated Code:**
+
+```java
+package com.mycompany.custom; // Overridden package name
+
+public class ToySpec implements KubernetesResource {
+    // ...
+}
+```
+
+#### 3. Always Preserve Unknown Fields
+
+Ensure that unknown fields in the JSON/YAML are captured in a map instead of being ignored.
+
+**Maven:**
+
+```xml
+<configuration>
+  <alwaysPreserveUnknown>true</alwaysPreserveUnknown>
+</configuration>
+```
+
+**Gradle:**
+
+```groovy
+javaGen {
+  alwaysPreserveUnknown = true
+}
+```
+
+**CLI:**
+
+```bash
+--always-preserve-unknown
+```
+
+**Generated Code:**
+
+```java
+public class ToySpec implements KubernetesResource {
+
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private java.util.Map<java.lang.String, java.lang.Object> additionalProperties = new java.util.HashMap<>();
+
+    @com.fasterxml.jackson.annotation.JsonAnyGetter
+    public java.util.Map<java.lang.String, java.lang.Object> getAdditionalProperties() {
+        return additionalProperties;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonAnySetter
+    public void setAdditionalProperty(java.lang.String key, java.lang.Object value) {
+        this.additionalProperties.put(key, value);
+    }
+    // ...
+}
+```
+
+#### 4. Filter Source Files
+
+Process only specific files from the source directory.
+
+**Maven:**
+
+```xml
+<configuration>
+  <filesSuffixes>
+    <suffix>.yaml</suffix>
+    <suffix>.yml</suffix>
+  </filesSuffixes>
+</configuration>
+```
+
+**Gradle:**
+
+```groovy
+javaGen {
+  filesSuffixes = [".yaml", ".yml"]
+}
+```
+
+**CLI:**
+
+```bash
+--files-suffixes=.yaml --files-suffixes=.yml
+```
+
+> **Note:** This option only controls which source files are processed — it does not affect the generated code.
+
+#### 5. Existing Java Types
+
+Map a specific CRD type to an existing Java class instead of generating a new one. This is useful when you want to reuse existing POJOs.
+
+**Maven:**
+
+```xml
+<configuration>
+  <existingJavaTypes>
+    <com.example.v1.ToySpec>com.mycompany.shared.ExistingToySpec</com.example.v1.ToySpec>
+  </existingJavaTypes>
+</configuration>
+```
+
+**Gradle:**
+
+```groovy
+javaGen {
+  existingJavaTypes = [
+    "com.example.v1.ToySpec": "com.mycompany.shared.ExistingToySpec"
+  ]
+}
+```
+
+**CLI:**
+
+```bash
+--existing-java-types=com.example.v1.ToySpec=com.mycompany.shared.ExistingToySpec
+```
+
+**Generated Code:**
+
+```java
+// The generator will skip generating 'ToySpec' and will reference the existing class instead.
+import com.mycompany.shared.ExistingToySpec;
+
+public class Toy implements HasMetadata {
+    // ...
+    private ExistingToySpec spec;
+    // ...
+}
+```
+
+
 ## Compiling the generated code
 
 The generated code depends on a few dependencies to successfully compile:
@@ -160,14 +475,57 @@ The generated code depends on a few dependencies to successfully compile:
 
 and, if `--add-extra-annotations`/`extraAnnotations` has been set, the following dependencies should be included as well:
 ```xml
-<dependency> 
-  <groupId>io.sundr</groupId> 
-  <artifactId>builder-annotations</artifactId> 
-  <scope>provided</scope> 
-</dependency> 
-<dependency> 
-  <groupId>org.projectlombok</groupId> 
-  <artifactId>lombok</artifactId> 
-  <scope>provided</scope> 
+<dependency>
+  <groupId>io.sundr</groupId>
+  <artifactId>builder-annotations</artifactId>
+  <scope>provided</scope>
+</dependency>
+<dependency>
+  <groupId>org.projectlombok</groupId>
+  <artifactId>lombok</artifactId>
+  <scope>provided</scope>
 </dependency>
 ```
+
+### Annotation processor configuration for `extraAnnotations`
+
+When `extraAnnotations` is enabled, the generated classes include `@Buildable` annotations from [Sundrio](https://github.com/sundrio/sundrio).
+The builder and fluent classes (e.g. `MyResourceBuilder`, `MyResourceFluent`) are **not** generated by the java-generator plugin itself — they are generated by Sundrio's **annotation processor** which must run during compilation.
+
+**Starting with JDK 23** ([JEP 611](https://openjdk.org/jeps/611)), `javac` no longer automatically discovers annotation processors from the classpath.
+You must explicitly configure annotation processor paths in the `maven-compiler-plugin`:
+
+```xml
+<plugin>
+  <groupId>org.apache.maven.plugins</groupId>
+  <artifactId>maven-compiler-plugin</artifactId>
+  <configuration>
+    <annotationProcessorPaths>
+      <path>
+        <groupId>io.sundr</groupId>
+        <artifactId>builder-annotations</artifactId>
+        <version>${sundrio.version}</version>
+      </path>
+      <path>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <version>${lombok.version}</version>
+      </path>
+    </annotationProcessorPaths>
+  </configuration>
+</plugin>
+```
+
+For Gradle, use the `annotationProcessor` configuration:
+
+```groovy
+dependencies {
+  annotationProcessor "io.sundr:builder-annotations:${sundrioVersion}"
+  compileOnly         "io.sundr:builder-annotations:${sundrioVersion}"
+  compileOnly         "org.projectlombok:lombok:${lombokVersion}"
+}
+```
+
+> **Note:** If your Maven build already has `annotationProcessorPaths` configured (either directly or inherited from a parent POM),
+> annotation processors on the regular classpath are **ignored**. You must add `builder-annotations` to `annotationProcessorPaths`
+> for the builders to be generated, regardless of JDK version.

@@ -1,8 +1,9 @@
 
 package io.fabric8.openshift.api.model.installer.baremetal.v1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,7 +11,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
@@ -20,19 +24,20 @@ import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * BMC stores the information about a baremetal host's management controller.
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "address",
     "disableCertificateVerification",
     "password",
@@ -40,7 +45,6 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -54,9 +58,14 @@ import lombok.experimental.Accessors;
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class BMC implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class BMC implements Editable<BMCBuilder>, KubernetesResource
 {
 
     @JsonProperty("address")
@@ -68,22 +77,14 @@ public class BMC implements KubernetesResource
     @JsonProperty("username")
     private String username;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public BMC() {
     }
 
-    /**
-     * 
-     * @param password
-     * @param address
-     * @param disableCertificateVerification
-     * @param username
-     */
     public BMC(String address, Boolean disableCertificateVerification, String password, String username) {
         super();
         this.address = address;
@@ -92,47 +93,82 @@ public class BMC implements KubernetesResource
         this.username = username;
     }
 
+    /**
+     * BMC stores the information about a baremetal host's management controller.
+     */
     @JsonProperty("address")
     public String getAddress() {
         return address;
     }
 
+    /**
+     * BMC stores the information about a baremetal host's management controller.
+     */
     @JsonProperty("address")
     public void setAddress(String address) {
         this.address = address;
     }
 
+    /**
+     * BMC stores the information about a baremetal host's management controller.
+     */
     @JsonProperty("disableCertificateVerification")
     public Boolean getDisableCertificateVerification() {
         return disableCertificateVerification;
     }
 
+    /**
+     * BMC stores the information about a baremetal host's management controller.
+     */
     @JsonProperty("disableCertificateVerification")
     public void setDisableCertificateVerification(Boolean disableCertificateVerification) {
         this.disableCertificateVerification = disableCertificateVerification;
     }
 
+    /**
+     * BMC stores the information about a baremetal host's management controller.
+     */
     @JsonProperty("password")
     public String getPassword() {
         return password;
     }
 
+    /**
+     * BMC stores the information about a baremetal host's management controller.
+     */
     @JsonProperty("password")
     public void setPassword(String password) {
         this.password = password;
     }
 
+    /**
+     * BMC stores the information about a baremetal host's management controller.
+     */
     @JsonProperty("username")
     public String getUsername() {
         return username;
     }
 
+    /**
+     * BMC stores the information about a baremetal host's management controller.
+     */
     @JsonProperty("username")
     public void setUsername(String username) {
         this.username = username;
     }
 
+    @JsonIgnore
+    public BMCBuilder edit() {
+        return new BMCBuilder(this);
+    }
+
+    @JsonIgnore
+    public BMCBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -140,6 +176,10 @@ public class BMC implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

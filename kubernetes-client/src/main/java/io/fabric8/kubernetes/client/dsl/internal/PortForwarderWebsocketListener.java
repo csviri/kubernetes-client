@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -75,13 +75,17 @@ public class PortForwarderWebsocketListener implements WebSocket.Listener {
           if (e instanceof InterruptedException) {
             Thread.currentThread().interrupt();
           }
-          logger.debug("Error while writing client data");
-          if (alive.get()) {
-            clientThrowables.add(e);
-            closeBothWays(webSocket, 1001, "Client error");
-          }
+          clientError(webSocket, "writing client data", e);
         }
       });
+    }
+  }
+
+  private void clientError(final WebSocket webSocket, String operation, Exception e) {
+    if (alive.get()) {
+      logger.debug("Error while " + operation, e);
+      clientThrowables.add(e);
+      closeBothWays(webSocket, 1001, "Client error");
     }
   }
 
@@ -139,11 +143,7 @@ public class PortForwarderWebsocketListener implements WebSocket.Listener {
             if (e instanceof InterruptedException) {
               Thread.currentThread().interrupt();
             }
-            if (alive.get()) {
-              clientThrowables.add(e);
-              logger.debug("Error while forwarding data to the client", e);
-              closeBothWays(webSocket, 1002, PROTOCOL_ERROR);
-            }
+            clientError(webSocket, "forwarding data to the client", e);
           }
         });
       }

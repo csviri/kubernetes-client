@@ -2,10 +2,10 @@
 package io.fabric8.openshift.api.model.miscellaneous.cloudcredential.v1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -13,35 +13,40 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
 import io.fabric8.kubernetes.api.model.LocalObjectReference;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * CredentialsRequestSpec defines the desired state of CredentialsRequest
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
+    "cloudTokenPath",
     "providerSpec",
     "secretRef",
     "serviceAccountNames"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -53,82 +58,134 @@ import lombok.experimental.Accessors;
     @BuildableReference(PodTemplateSpec.class),
     @BuildableReference(ResourceRequirements.class),
     @BuildableReference(IntOrString.class),
-    @BuildableReference(io.fabric8.kubernetes.api.model.ObjectReference.class),
+    @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class CredentialsRequestSpec implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class CredentialsRequestSpec implements Editable<CredentialsRequestSpecBuilder>, KubernetesResource
 {
 
+    @JsonProperty("cloudTokenPath")
+    private String cloudTokenPath;
     @JsonProperty("providerSpec")
-    @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private Map<String, Object> providerSpec = new LinkedHashMap<String, Object>();
+    @JsonDeserialize(using = io.fabric8.kubernetes.internal.KubernetesDeserializer.class)
+    private Object providerSpec;
     @JsonProperty("secretRef")
-    private io.fabric8.kubernetes.api.model.ObjectReference secretRef;
+    private ObjectReference secretRef;
     @JsonProperty("serviceAccountNames")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<java.lang.String> serviceAccountNames = new ArrayList<java.lang.String>();
+    private List<String> serviceAccountNames = new ArrayList<>();
     @JsonIgnore
-    private Map<java.lang.String, java.lang.Object> additionalProperties = new HashMap<java.lang.String, java.lang.Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public CredentialsRequestSpec() {
     }
 
-    /**
-     * 
-     * @param secretRef
-     * @param providerSpec
-     * @param serviceAccountNames
-     */
-    public CredentialsRequestSpec(Map<String, Object> providerSpec, io.fabric8.kubernetes.api.model.ObjectReference secretRef, List<java.lang.String> serviceAccountNames) {
+    public CredentialsRequestSpec(String cloudTokenPath, Object providerSpec, ObjectReference secretRef, List<String> serviceAccountNames) {
         super();
+        this.cloudTokenPath = cloudTokenPath;
         this.providerSpec = providerSpec;
         this.secretRef = secretRef;
         this.serviceAccountNames = serviceAccountNames;
     }
 
+    /**
+     * cloudTokenPath is the path where the Kubernetes ServiceAccount token (JSON Web Token) is mounted on the deployment for the workload requesting a credentials secret. The presence of this field in combination with fields such as spec.providerSpec.stsIAMRoleARN indicate that CCO should broker creation of a credentials secret containing fields necessary for token based authentication methods such as with the AWS Secure Token Service (STS).<br><p> <br><p> cloudTokenPath may also be used to specify the azure_federated_token_file path used in Azure configuration secrets generated by ccoctl. Defaults to "/var/run/secrets/openshift/serviceaccount/token".
+     */
+    @JsonProperty("cloudTokenPath")
+    public String getCloudTokenPath() {
+        return cloudTokenPath;
+    }
+
+    /**
+     * cloudTokenPath is the path where the Kubernetes ServiceAccount token (JSON Web Token) is mounted on the deployment for the workload requesting a credentials secret. The presence of this field in combination with fields such as spec.providerSpec.stsIAMRoleARN indicate that CCO should broker creation of a credentials secret containing fields necessary for token based authentication methods such as with the AWS Secure Token Service (STS).<br><p> <br><p> cloudTokenPath may also be used to specify the azure_federated_token_file path used in Azure configuration secrets generated by ccoctl. Defaults to "/var/run/secrets/openshift/serviceaccount/token".
+     */
+    @JsonProperty("cloudTokenPath")
+    public void setCloudTokenPath(String cloudTokenPath) {
+        this.cloudTokenPath = cloudTokenPath;
+    }
+
+    /**
+     * CredentialsRequestSpec defines the desired state of CredentialsRequest
+     */
     @JsonProperty("providerSpec")
-    public Map<String, Object> getProviderSpec() {
+    public Object getProviderSpec() {
         return providerSpec;
     }
 
+    /**
+     * CredentialsRequestSpec defines the desired state of CredentialsRequest
+     */
     @JsonProperty("providerSpec")
-    public void setProviderSpec(Map<String, Object> providerSpec) {
+    @JsonDeserialize(using = io.fabric8.kubernetes.internal.KubernetesDeserializer.class)
+    public void setProviderSpec(Object providerSpec) {
         this.providerSpec = providerSpec;
     }
 
+    /**
+     * CredentialsRequestSpec defines the desired state of CredentialsRequest
+     */
     @JsonProperty("secretRef")
-    public io.fabric8.kubernetes.api.model.ObjectReference getSecretRef() {
+    public ObjectReference getSecretRef() {
         return secretRef;
     }
 
+    /**
+     * CredentialsRequestSpec defines the desired state of CredentialsRequest
+     */
     @JsonProperty("secretRef")
-    public void setSecretRef(io.fabric8.kubernetes.api.model.ObjectReference secretRef) {
+    public void setSecretRef(ObjectReference secretRef) {
         this.secretRef = secretRef;
     }
 
+    /**
+     * ServiceAccountNames contains a list of ServiceAccounts that will use permissions associated with this CredentialsRequest. This is not used by CCO, but the information is needed for being able to properly set up access control in the cloud provider when the ServiceAccounts are used as part of the cloud credentials flow.
+     */
     @JsonProperty("serviceAccountNames")
-    public List<java.lang.String> getServiceAccountNames() {
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public List<String> getServiceAccountNames() {
         return serviceAccountNames;
     }
 
+    /**
+     * ServiceAccountNames contains a list of ServiceAccounts that will use permissions associated with this CredentialsRequest. This is not used by CCO, but the information is needed for being able to properly set up access control in the cloud provider when the ServiceAccounts are used as part of the cloud credentials flow.
+     */
     @JsonProperty("serviceAccountNames")
-    public void setServiceAccountNames(List<java.lang.String> serviceAccountNames) {
+    public void setServiceAccountNames(List<String> serviceAccountNames) {
         this.serviceAccountNames = serviceAccountNames;
     }
 
+    @JsonIgnore
+    public CredentialsRequestSpecBuilder edit() {
+        return new CredentialsRequestSpecBuilder(this);
+    }
+
+    @JsonIgnore
+    public CredentialsRequestSpecBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
-    public Map<java.lang.String, java.lang.Object> getAdditionalProperties() {
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 
     @JsonAnySetter
-    public void setAdditionalProperty(java.lang.String name, java.lang.Object value) {
+    public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

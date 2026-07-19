@@ -2,9 +2,10 @@
 package io.fabric8.kubernetes.api.model;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -12,9 +13,9 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.sundr.builder.annotations.Buildable;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
@@ -23,7 +24,6 @@ import lombok.experimental.Accessors;
 @JsonPropertyOrder({
     "apiVersion",
     "kind",
-    "metadata",
     "clusters",
     "contexts",
     "current-context",
@@ -33,53 +33,44 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
 })
-@Buildable(editableEnabled = false, validationEnabled = false, generateBuilderPackage = true, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
-public class Config implements KubernetesResource
+@Buildable(editableEnabled = false, validationEnabled = false, generateBuilderPackage = false, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class Config implements Editable<ConfigBuilder>, KubernetesResource
 {
 
     @JsonProperty("apiVersion")
     private String apiVersion;
     @JsonProperty("clusters")
-    private List<NamedCluster> clusters = new ArrayList<NamedCluster>();
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<NamedCluster> clusters = new ArrayList<>();
     @JsonProperty("contexts")
-    private List<NamedContext> contexts = new ArrayList<NamedContext>();
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<NamedContext> contexts = new ArrayList<>();
     @JsonProperty("current-context")
     private String currentContext;
     @JsonProperty("extensions")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<NamedExtension> extensions = new ArrayList<NamedExtension>();
+    private List<NamedExtension> extensions = new ArrayList<>();
     @JsonProperty("kind")
     private String kind;
     @JsonProperty("preferences")
     private Preferences preferences;
     @JsonProperty("users")
-    private List<NamedAuthInfo> users = new ArrayList<NamedAuthInfo>();
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<NamedAuthInfo> users = new ArrayList<>();
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public Config() {
     }
 
-    /**
-     * 
-     * @param extensions
-     * @param preferences
-     * @param apiVersion
-     * @param currentContext
-     * @param kind
-     * @param contexts
-     * @param clusters
-     * @param users
-     */
     public Config(String apiVersion, List<NamedCluster> clusters, List<NamedContext> contexts, String currentContext, List<NamedExtension> extensions, String kind, Preferences preferences, List<NamedAuthInfo> users) {
         super();
         this.apiVersion = apiVersion;
@@ -103,6 +94,7 @@ public class Config implements KubernetesResource
     }
 
     @JsonProperty("clusters")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<NamedCluster> getClusters() {
         return clusters;
     }
@@ -113,6 +105,7 @@ public class Config implements KubernetesResource
     }
 
     @JsonProperty("contexts")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<NamedContext> getContexts() {
         return contexts;
     }
@@ -133,6 +126,7 @@ public class Config implements KubernetesResource
     }
 
     @JsonProperty("extensions")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<NamedExtension> getExtensions() {
         return extensions;
     }
@@ -163,6 +157,7 @@ public class Config implements KubernetesResource
     }
 
     @JsonProperty("users")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<NamedAuthInfo> getUsers() {
         return users;
     }
@@ -172,7 +167,18 @@ public class Config implements KubernetesResource
         this.users = users;
     }
 
+    @JsonIgnore
+    public ConfigBuilder edit() {
+        return new ConfigBuilder(this);
+    }
+
+    @JsonIgnore
+    public ConfigBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -180,6 +186,10 @@ public class Config implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

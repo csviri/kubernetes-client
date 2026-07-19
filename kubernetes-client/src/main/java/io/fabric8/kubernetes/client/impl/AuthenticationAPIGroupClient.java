@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,6 @@ package io.fabric8.kubernetes.client.impl;
 
 import io.fabric8.kubernetes.client.V1AuthenticationAPIGroupDSL;
 import io.fabric8.kubernetes.client.dsl.AuthenticationAPIGroupDSL;
-import io.fabric8.kubernetes.client.dsl.V1Alpha1AuthenticationAPIGroupDSL;
 import io.fabric8.kubernetes.client.extension.ClientAdapter;
 
 public class AuthenticationAPIGroupClient extends ClientAdapter<AuthenticationAPIGroupClient>
@@ -25,11 +24,6 @@ public class AuthenticationAPIGroupClient extends ClientAdapter<AuthenticationAP
   @Override
   public V1AuthenticationAPIGroupDSL v1() {
     return adapt(V1AuthenticationAPIGroupClient.class);
-  }
-
-  @Override
-  public V1Alpha1AuthenticationAPIGroupDSL v1alpha1() {
-    return adapt(V1Alpha1AuthenticationAPIGroupDSL.class);
   }
 
   @Override

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.dsl.internal;
 
 import io.fabric8.kubernetes.api.model.Status;
@@ -142,6 +141,11 @@ public class ExecWebSocketListener implements ExecWatch, AutoCloseable, WebSocke
   private final ExecutorService executorService = Executors.newSingleThreadExecutor();
   private final SerialExecutor serialExecutor;
   private final AtomicBoolean closed = new AtomicBoolean(false);
+  // Gates the user-facing ExecListener.onClose/onFailure callbacks so exactly one fires for the
+  // lifecycle of the exec session. Distinct from `closed`, which guards transport-level state:
+  // when onError fires after exitCode is already complete (e.g. the terminateOnError + abrupt
+  // close race in #7779), `closed` is already set but the listener has not yet been notified.
+  private final AtomicBoolean listenerNotified = new AtomicBoolean(false);
   private final CompletableFuture<Integer> exitCode = new CompletableFuture<>();
   private KubernetesSerialization serialization;
 
@@ -169,6 +173,7 @@ public class ExecWebSocketListener implements ExecWatch, AutoCloseable, WebSocke
     this.serialExecutor = new SerialExecutor(executor);
   }
 
+  @SuppressWarnings("java:S2095") // channel wraps caller-provided OutputStream; closing it would close the caller's stream
   private ListenerStream createStream(String name, StreamContext streamContext) {
     ListenerStream stream = new ListenerStream(name);
     if (streamContext == null) {
@@ -261,35 +266,52 @@ public class ExecWebSocketListener implements ExecWatch, AutoCloseable, WebSocke
     closed.set(true);
     HttpResponse<?> response = null;
 
-    try {
-      if (t instanceof WebSocketHandshakeException) {
-        response = ((WebSocketHandshakeException) t).getResponse();
-        if (response != null) {
-          Status status = OperationSupport.createStatus(response, serialization);
-          status.setMessage(t.getMessage());
-          t = new KubernetesClientException(status).initCause(t);
-        }
-      }
-      cleanUpOnce();
-    } finally {
-      if (exitCode.isDone()) {
-        LOGGER.debug("Exec failure after done", t);
-      } else {
-        try {
-          if (listener != null) {
-            ExecListener.Response execResponse = null;
-            if (response != null) {
-              execResponse = new SimpleResponse(response);
-            }
-            listener.onFailure(t, execResponse);
-          } else {
-            LOGGER.error("Exec Failure", t);
-          }
-        } finally {
-          exitCode.completeExceptionally(t);
-        }
+    if (t instanceof WebSocketHandshakeException) {
+      response = ((WebSocketHandshakeException) t).getResponse();
+      if (response != null) {
+        Status status = OperationSupport.createStatus(response, serialization);
+        status.setMessage(t.getMessage());
+        t = new KubernetesClientException(status.getMessage(), t, status.getCode(), status, response.request());
       }
     }
+    executorService.shutdownNow();
+    // Defer failure handling through serialExecutor so any in-flight async writes and a
+    // queued channel-3 exit-status task complete first; otherwise a peer-close arriving
+    // immediately after the exit-status frame would cancel the still-pending
+    // handleExitStatus and overwrite the parsed exit code with the close exception.
+    final Throwable finalT = t;
+    final HttpResponse<?> finalResponse = response;
+    serialExecutor.execute(() -> {
+      try {
+        final boolean exitCodeAlreadyDone = exitCode.isDone();
+        if (exitCodeAlreadyDone) {
+          // exitCode was already captured (normal exit via channel 3, or terminateOnError via
+          // channel 2). Preserve the captured value — do not overwrite it with the close
+          // exception — but still notify the listener below so callers waiting on the
+          // onClose/onFailure pair are not stranded (#7779).
+          LOGGER.debug("Exec failure after done", finalT);
+        }
+        try {
+          if (listenerNotified.compareAndSet(false, true)) {
+            if (listener != null) {
+              ExecListener.Response execResponse = null;
+              if (finalResponse != null) {
+                execResponse = new SimpleResponse(finalResponse);
+              }
+              listener.onFailure(finalT, execResponse);
+            } else if (!exitCodeAlreadyDone) {
+              LOGGER.error("Exec Failure", finalT);
+            }
+          }
+        } finally {
+          if (!exitCodeAlreadyDone) {
+            exitCode.completeExceptionally(finalT);
+          }
+        }
+      } finally {
+        serialExecutor.shutdownNow();
+      }
+    });
   }
 
   @Override
@@ -316,7 +338,9 @@ public class ExecWebSocketListener implements ExecWatch, AutoCloseable, WebSocke
         case 2:
           if (terminateOnError) {
             String stringValue = toString(bytes);
-            exitCode.completeExceptionally(new KubernetesClientException(stringValue));
+            // Defer through serialExecutor so any pending channel 1 async writes
+            // are flushed before the exitCode future completes exceptionally.
+            serialExecutor.execute(() -> exitCode.completeExceptionally(new KubernetesClientException(stringValue)));
             close = true;
           } else {
             error.handle(byteString, webSocket);
@@ -327,7 +351,9 @@ public class ExecWebSocketListener implements ExecWatch, AutoCloseable, WebSocke
           try {
             errorChannel.handle(bytes, webSocket);
           } finally {
-            handleExitStatus(byteString);
+            // Defer through serialExecutor so any pending async writes (channel 1/2/errorChannel)
+            // are flushed before the exitCode future completes.
+            serialExecutor.execute(() -> handleExitStatus(byteString));
           }
           break;
         default:
@@ -379,7 +405,7 @@ public class ExecWebSocketListener implements ExecWatch, AutoCloseable, WebSocke
         }
         cleanUpOnce();
       } finally {
-        if (listener != null) {
+        if (listener != null && listenerNotified.compareAndSet(false, true)) {
           listener.onClose(code, reason);
         }
       }

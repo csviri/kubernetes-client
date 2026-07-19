@@ -2,9 +2,10 @@
 package io.fabric8.openshift.api.model.monitoring.v1alpha1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -12,7 +13,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
@@ -22,26 +26,27 @@ import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * AlertmanagerConfigSpec is a specification of the desired behavior of the Alertmanager configuration. By default, the Alertmanager configuration only applies to alerts for which the `namespace` label is equal to the namespace of the AlertmanagerConfig resource (see the `.spec.alertmanagerConfigMatcherStrategy` field of the Alertmanager CRD).
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "inhibitRules",
+    "muteTimeIntervals",
     "receivers",
     "route"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -55,72 +60,123 @@ import lombok.experimental.Accessors;
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class AlertmanagerConfigSpec implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class AlertmanagerConfigSpec implements Editable<AlertmanagerConfigSpecBuilder>, KubernetesResource
 {
 
     @JsonProperty("inhibitRules")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<InhibitRule> inhibitRules = new ArrayList<InhibitRule>();
+    private List<InhibitRule> inhibitRules = new ArrayList<>();
+    @JsonProperty("muteTimeIntervals")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<MuteTimeInterval> muteTimeIntervals = new ArrayList<>();
     @JsonProperty("receivers")
-    private List<Receiver> receivers = new ArrayList<Receiver>();
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<Receiver> receivers = new ArrayList<>();
     @JsonProperty("route")
     private Route route;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public AlertmanagerConfigSpec() {
     }
 
-    /**
-     * 
-     * @param route
-     * @param receivers
-     * @param inhibitRules
-     */
-    public AlertmanagerConfigSpec(List<InhibitRule> inhibitRules, List<Receiver> receivers, Route route) {
+    public AlertmanagerConfigSpec(List<InhibitRule> inhibitRules, List<MuteTimeInterval> muteTimeIntervals, List<Receiver> receivers, Route route) {
         super();
         this.inhibitRules = inhibitRules;
+        this.muteTimeIntervals = muteTimeIntervals;
         this.receivers = receivers;
         this.route = route;
     }
 
+    /**
+     * inhibitRules defines the list of inhibition rules. The rules will only apply to alerts matching the resource's namespace.
+     */
     @JsonProperty("inhibitRules")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<InhibitRule> getInhibitRules() {
         return inhibitRules;
     }
 
+    /**
+     * inhibitRules defines the list of inhibition rules. The rules will only apply to alerts matching the resource's namespace.
+     */
     @JsonProperty("inhibitRules")
     public void setInhibitRules(List<InhibitRule> inhibitRules) {
         this.inhibitRules = inhibitRules;
     }
 
+    /**
+     * muteTimeIntervals defines the list of MuteTimeInterval specifying when the routes should be muted.
+     */
+    @JsonProperty("muteTimeIntervals")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public List<MuteTimeInterval> getMuteTimeIntervals() {
+        return muteTimeIntervals;
+    }
+
+    /**
+     * muteTimeIntervals defines the list of MuteTimeInterval specifying when the routes should be muted.
+     */
+    @JsonProperty("muteTimeIntervals")
+    public void setMuteTimeIntervals(List<MuteTimeInterval> muteTimeIntervals) {
+        this.muteTimeIntervals = muteTimeIntervals;
+    }
+
+    /**
+     * receivers defines the list of receivers.
+     */
     @JsonProperty("receivers")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<Receiver> getReceivers() {
         return receivers;
     }
 
+    /**
+     * receivers defines the list of receivers.
+     */
     @JsonProperty("receivers")
     public void setReceivers(List<Receiver> receivers) {
         this.receivers = receivers;
     }
 
+    /**
+     * AlertmanagerConfigSpec is a specification of the desired behavior of the Alertmanager configuration. By default, the Alertmanager configuration only applies to alerts for which the `namespace` label is equal to the namespace of the AlertmanagerConfig resource (see the `.spec.alertmanagerConfigMatcherStrategy` field of the Alertmanager CRD).
+     */
     @JsonProperty("route")
     public Route getRoute() {
         return route;
     }
 
+    /**
+     * AlertmanagerConfigSpec is a specification of the desired behavior of the Alertmanager configuration. By default, the Alertmanager configuration only applies to alerts for which the `namespace` label is equal to the namespace of the AlertmanagerConfig resource (see the `.spec.alertmanagerConfigMatcherStrategy` field of the Alertmanager CRD).
+     */
     @JsonProperty("route")
     public void setRoute(Route route) {
         this.route = route;
     }
 
+    @JsonIgnore
+    public AlertmanagerConfigSpecBuilder edit() {
+        return new AlertmanagerConfigSpecBuilder(this);
+    }
+
+    @JsonIgnore
+    public AlertmanagerConfigSpecBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -128,6 +184,10 @@ public class AlertmanagerConfigSpec implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

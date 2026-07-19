@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,9 +20,9 @@ import java.util.function.Consumer;
 
 public class LeaderCallbacks {
 
-  private Runnable onStartLeading;
-  private Runnable onStopLeading;
-  private Consumer<String> onNewLeader;
+  private final Runnable onStartLeading;
+  private final Runnable onStopLeading;
+  private final Consumer<String> onNewLeader;
 
   public LeaderCallbacks(Runnable onStartLeading, Runnable onStopLeading, Consumer<String> onNewLeader) {
     this.onStartLeading = Objects.requireNonNull(onStartLeading, "onStartLeading callback is required");

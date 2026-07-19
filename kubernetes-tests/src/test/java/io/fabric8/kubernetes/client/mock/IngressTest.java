@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.mock;
 
 import io.fabric8.kubernetes.api.model.extensions.Ingress;
@@ -34,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnableKubernetesMockClient
+@EnableKubernetesMockClient(https = false)
 public class IngressTest {
 
   KubernetesMockServer server;
@@ -125,13 +124,13 @@ public class IngressTest {
     server.expect().withPath("/apis/extensions/v1beta1/namespaces/ns1/ingresses/ingress2")
         .andReturn(200, new IngressBuilder().build()).once();
 
-    boolean deleted = client.extensions().ingress().withName("ingress1").delete().size() == 1;
+    boolean deleted = client.extensions().ingress().withName("ingress1").withGracePeriod(0).delete().size() == 1;
     assertTrue(deleted);
 
-    deleted = client.extensions().ingress().withName("ingress2").delete().size() == 1;
+    deleted = client.extensions().ingress().withName("ingress2").withGracePeriod(0).delete().size() == 1;
     assertFalse(deleted);
 
-    deleted = client.extensions().ingress().inNamespace("ns1").withName("ingress2").delete().size() == 1;
+    deleted = client.extensions().ingress().inNamespace("ns1").withName("ingress2").withGracePeriod(0).delete().size() == 1;
     assertTrue(deleted);
   }
 

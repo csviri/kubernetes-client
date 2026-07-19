@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,13 +18,13 @@ package io.fabric8.volcano.test.crud;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.QuantityBuilder;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.volcano.api.model.scheduling.v1beta1.PodGroup;
+import io.fabric8.volcano.api.model.scheduling.v1beta1.PodGroupBuilder;
+import io.fabric8.volcano.api.model.scheduling.v1beta1.PodGroupList;
+import io.fabric8.volcano.api.model.scheduling.v1beta1.Queue;
+import io.fabric8.volcano.api.model.scheduling.v1beta1.QueueBuilder;
+import io.fabric8.volcano.api.model.scheduling.v1beta1.QueueList;
 import io.fabric8.volcano.client.VolcanoClient;
-import io.fabric8.volcano.scheduling.v1beta1.PodGroup;
-import io.fabric8.volcano.scheduling.v1beta1.PodGroupBuilder;
-import io.fabric8.volcano.scheduling.v1beta1.PodGroupList;
-import io.fabric8.volcano.scheduling.v1beta1.Queue;
-import io.fabric8.volcano.scheduling.v1beta1.QueueBuilder;
-import io.fabric8.volcano.scheduling.v1beta1.QueueList;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -44,10 +44,10 @@ class VolcanoTest {
   @Test
   void testPodGroupWithMetaAndSpec() {
 
-    Quantity cpu = new QuantityBuilder(false)
+    Quantity cpu = new QuantityBuilder()
         .withAmount("1")
         .build();
-    Quantity memory = new QuantityBuilder(false)
+    Quantity memory = new QuantityBuilder()
         .withAmount(TEST_MEMORY + "Mi")
         .build();
     Map<String, Quantity> resourceMap = new HashMap<>();

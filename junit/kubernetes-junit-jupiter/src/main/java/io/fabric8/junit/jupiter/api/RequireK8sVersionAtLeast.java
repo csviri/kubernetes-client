@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,7 @@ package io.fabric8.junit.jupiter.api;
 import io.fabric8.junit.jupiter.RequireK8sVersionAtLeastCondition;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
@@ -26,6 +27,7 @@ import java.lang.annotation.RetentionPolicy;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @ExtendWith(RequireK8sVersionAtLeastCondition.class)
+@Inherited
 public @interface RequireK8sVersionAtLeast {
   int majorVersion();
 

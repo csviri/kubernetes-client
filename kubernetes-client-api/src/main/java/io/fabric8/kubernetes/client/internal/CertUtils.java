@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,11 +15,7 @@
  */
 package io.fabric8.kubernetes.client.internal;
 
-import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.utils.Utils;
-import org.bouncycastle.openssl.PEMKeyPair;
-import org.bouncycastle.openssl.PEMParser;
-import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,6 +23,7 @@ import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -37,7 +34,6 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
-import java.security.Security;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
@@ -48,14 +44,14 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.RSAPrivateCrtKeySpec;
 import java.util.Base64;
 import java.util.Collection;
-import java.util.concurrent.Callable;
+import java.util.Collections;
 import java.util.stream.Collectors;
 
 public class CertUtils {
   private CertUtils() {
   }
 
-  private static final Logger LOG = LoggerFactory.getLogger(CertUtils.class);
+  private static final Logger logger = LoggerFactory.getLogger(CertUtils.class);
   private static final String TRUST_STORE_SYSTEM_PROPERTY = "javax.net.ssl.trustStore";
   private static final String TRUST_STORE_PASSWORD_SYSTEM_PROPERTY = "javax.net.ssl.trustStorePassword";
   private static final String TRUST_STORE_TYPE_SYSTEM_PROPERTY = "javax.net.ssl.trustStoreType";
@@ -73,15 +69,16 @@ public class CertUtils {
   public static KeyStore createTrustStore(String caCertData, String caCertFile, String trustStoreFile,
       String trustStorePassphrase) throws IOException, CertificateException, KeyStoreException, NoSuchAlgorithmException {
     ByteArrayInputStream pemInputStream = getInputStreamFromDataOrFile(caCertData, caCertFile);
-    return createTrustStore(pemInputStream, trustStoreFile,
+
+    KeyStore trustStore = loadTrustStore(trustStoreFile,
         getPassphrase(TRUST_STORE_PASSWORD_SYSTEM_PROPERTY, trustStorePassphrase));
+
+    return mergePemCertsIntoTrustStore(pemInputStream, trustStore, true);
   }
 
-  private static KeyStore createTrustStore(ByteArrayInputStream pemInputStream, String trustStoreFile,
-      char[] trustStorePassphrase)
-      throws IOException, CertificateException, KeyStoreException, NoSuchAlgorithmException {
-
-    final String trustStoreType = System.getProperty(TRUST_STORE_TYPE_SYSTEM_PROPERTY, KeyStore.getDefaultType());
+  static KeyStore loadTrustStore(String trustStoreFile, char[] trustStorePassphrase)
+      throws KeyStoreException, IOException, NoSuchAlgorithmException, CertificateException, FileNotFoundException {
+    String trustStoreType = System.getProperty(TRUST_STORE_TYPE_SYSTEM_PROPERTY, KeyStore.getDefaultType());
     KeyStore trustStore = KeyStore.getInstance(trustStoreType);
 
     if (Utils.isNotNullOrEmpty(trustStoreFile)) {
@@ -91,19 +88,46 @@ public class CertUtils {
     } else {
       loadDefaultTrustStoreFile(trustStore, trustStorePassphrase);
     }
+    return trustStore;
+  }
 
+  static KeyStore mergePemCertsIntoTrustStore(ByteArrayInputStream pemInputStream, KeyStore trustStore, boolean first)
+      throws CertificateException, KeyStoreException {
     CertificateFactory certFactory = CertificateFactory.getInstance("X509");
     while (pemInputStream.available() > 0) {
+      X509Certificate cert;
       try {
-        X509Certificate cert = (X509Certificate) certFactory.generateCertificate(pemInputStream);
-        String alias = cert.getSubjectX500Principal().getName() + "_" + cert.getSerialNumber().toString(16);
-        trustStore.setCertificateEntry(alias, cert);
+        cert = (X509Certificate) certFactory.generateCertificate(pemInputStream);
       } catch (CertificateException e) {
         if (pemInputStream.available() > 0) {
           // any remaining input means there is an actual problem with the key contents or file format
           throw e;
         }
-        LOG.debug("The trailing entry generated a certificate exception.  More than likely the contents end with comments.", e);
+        logger.debug("The trailing entry generated a certificate exception.  More than likely the contents end with comments.",
+            e);
+        break;
+      }
+      try {
+        String alias = cert.getSubjectX500Principal().getName() + "_" + cert.getSerialNumber().toString(16);
+        trustStore.setCertificateEntry(alias, cert);
+        first = false;
+      } catch (KeyStoreException e) {
+        if (first) {
+          // could be that the store type is not writable, rather than some elaborate check for read-only
+          // we'll simply try again with a well supported type
+          pemInputStream.reset();
+          KeyStore writableStore = KeyStore.getInstance("PKCS12");
+          try {
+            writableStore.load(null, null); // initialize the instance
+          } catch (NoSuchAlgorithmException | CertificateException | IOException e1) {
+            throw e; // not usable, just give up
+          }
+          for (String alias : Collections.list(trustStore.aliases())) {
+            writableStore.setCertificateEntry(alias, trustStore.getCertificate(alias));
+          }
+          return mergePemCertsIntoTrustStore(pemInputStream, writableStore, false);
+        }
+        throw e;
       }
     }
     return trustStore;
@@ -137,42 +161,30 @@ public class CertUtils {
     if (clientKeyAlgo == null) {
       clientKeyAlgo = "RSA"; // by default let's assume it's RSA
     }
-    if (clientKeyAlgo.equals("EC")) {
-      return handleECKey(keyInputStream);
-    } else if (clientKeyAlgo.equals("RSA")) {
-      return handleOtherKeys(keyInputStream, clientKeyAlgo);
+    byte[] keyBytes = decodePem(keyInputStream);
+    if (clientKeyAlgo.equals("EC") || clientKeyAlgo.equals("RSA")) {
+      try {
+        return handleOtherKeys(keyBytes, clientKeyAlgo);
+      } catch (IOException e) {
+        // could be a version 1 key
+        if (clientKeyAlgo.equals("EC")) {
+          return handleECKey(keyBytes);
+        } else {
+          throw e;
+        }
+      }
     }
 
     throw new InvalidKeySpecException("Unknown type of PKCS8 Private Key, tried RSA and ECDSA");
   }
 
-  private static PrivateKey handleECKey(InputStream keyInputStream) {
-    // Let's wrap the code to a callable inner class to avoid NoClassDef when loading this class.
-    try {
-      return new Callable<PrivateKey>() {
-        @Override
-        public PrivateKey call() {
-          try {
-            if (Security.getProvider("BC") == null && Security.getProvider("BCFIPS") == null) {
-              Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
-            }
-            PEMKeyPair keys = (PEMKeyPair) new PEMParser(new InputStreamReader(keyInputStream)).readObject();
-            return new JcaPEMKeyConverter().getKeyPair(keys).getPrivate();
-          } catch (IOException exception) {
-            exception.printStackTrace();
-          }
-          return null;
-        }
-      }.call();
-    } catch (NoClassDefFoundError e) {
-      throw new KubernetesClientException(
-          "JcaPEMKeyConverter is provided by BouncyCastle, an optional dependency. To use support for EC Keys you must explicitly add this dependency to classpath.");
-    }
+  private static PrivateKey handleECKey(byte[] keyBytes)
+      throws IOException, InvalidKeySpecException, NoSuchAlgorithmException {
+    return KeyFactory.getInstance("EC").generatePrivate(PKCS1Util.getECKeySpec(keyBytes));
   }
 
-  private static PrivateKey handleOtherKeys(InputStream keyInputStream, String clientKeyAlgo)
+  private static PrivateKey handleOtherKeys(byte[] keyBytes, String clientKeyAlgo)
       throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
-    byte[] keyBytes = decodePem(keyInputStream);
     try {
       // First let's try PKCS8
       return KeyFactory.getInstance(clientKeyAlgo).generatePrivate(new PKCS8EncodedKeySpec(keyBytes));
@@ -245,7 +257,7 @@ public class CertUtils {
         // still no good
       }
     }
-    LOG.info("There is a problem with reading default keystore/truststore file {} "
+    logger.info("There is a problem with reading default keystore/truststore file {} "
         + "- the file won't be loaded. The reason is: {}", fileToLoad, ex.getMessage());
     return false;
   }

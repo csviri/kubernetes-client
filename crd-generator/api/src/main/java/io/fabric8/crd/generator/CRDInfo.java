@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,15 +32,6 @@ public class CRDInfo {
 
   public String getCrdName() {
     return crdName;
-  }
-
-  /**
-   * @deprecated Use {@link #getCrdSpecVersion()} instead
-   * @return the CRD spec version
-   */
-  @Deprecated
-  public String getVersion() {
-    return getCrdSpecVersion();
   }
 
   public String getCrdSpecVersion() {

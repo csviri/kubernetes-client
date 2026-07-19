@@ -1,8 +1,9 @@
 
 package io.fabric8.kubernetes.api.model.flowcontrol.v1beta1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,7 +11,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
@@ -20,27 +24,25 @@ import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * LimitedPriorityLevelConfiguration specifies how to handle requests that are subject to limits. It addresses two issues:<br><p>  &#42; How are requests for this priority level limited?<br><p>  &#42; What should be done with requests that exceed the limit?
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "assuredConcurrencyShares",
-    "borrowingLimitPercent",
-    "lendablePercent",
     "limitResponse"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -54,85 +56,79 @@ import lombok.experimental.Accessors;
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class LimitedPriorityLevelConfiguration implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class LimitedPriorityLevelConfiguration implements Editable<LimitedPriorityLevelConfigurationBuilder>, KubernetesResource
 {
 
     @JsonProperty("assuredConcurrencyShares")
     private Integer assuredConcurrencyShares;
-    @JsonProperty("borrowingLimitPercent")
-    private Integer borrowingLimitPercent;
-    @JsonProperty("lendablePercent")
-    private Integer lendablePercent;
     @JsonProperty("limitResponse")
     private LimitResponse limitResponse;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public LimitedPriorityLevelConfiguration() {
     }
 
-    /**
-     * 
-     * @param lendablePercent
-     * @param borrowingLimitPercent
-     * @param limitResponse
-     * @param assuredConcurrencyShares
-     */
-    public LimitedPriorityLevelConfiguration(Integer assuredConcurrencyShares, Integer borrowingLimitPercent, Integer lendablePercent, LimitResponse limitResponse) {
+    public LimitedPriorityLevelConfiguration(Integer assuredConcurrencyShares, LimitResponse limitResponse) {
         super();
         this.assuredConcurrencyShares = assuredConcurrencyShares;
-        this.borrowingLimitPercent = borrowingLimitPercent;
-        this.lendablePercent = lendablePercent;
         this.limitResponse = limitResponse;
     }
 
+    /**
+     * `assuredConcurrencyShares` (ACS) configures the execution limit, which is a limit on the number of requests of this priority level that may be exeucting at a given time.  ACS must be a positive number. The server's concurrency limit (SCL) is divided among the concurrency-controlled priority levels in proportion to their assured concurrency shares. This produces the assured concurrency value (ACV) --- the number of requests that may be executing at a time --- for each such priority level:<br><p> <br><p>             ACV(l) = ceil( SCL &#42; ACS(l) / ( sum[priority levels k] ACS(k) ) )<br><p> <br><p> bigger numbers of ACS mean more reserved concurrent requests (at the expense of every other PL). This field has a default value of 30.
+     */
     @JsonProperty("assuredConcurrencyShares")
     public Integer getAssuredConcurrencyShares() {
         return assuredConcurrencyShares;
     }
 
+    /**
+     * `assuredConcurrencyShares` (ACS) configures the execution limit, which is a limit on the number of requests of this priority level that may be exeucting at a given time.  ACS must be a positive number. The server's concurrency limit (SCL) is divided among the concurrency-controlled priority levels in proportion to their assured concurrency shares. This produces the assured concurrency value (ACV) --- the number of requests that may be executing at a time --- for each such priority level:<br><p> <br><p>             ACV(l) = ceil( SCL &#42; ACS(l) / ( sum[priority levels k] ACS(k) ) )<br><p> <br><p> bigger numbers of ACS mean more reserved concurrent requests (at the expense of every other PL). This field has a default value of 30.
+     */
     @JsonProperty("assuredConcurrencyShares")
     public void setAssuredConcurrencyShares(Integer assuredConcurrencyShares) {
         this.assuredConcurrencyShares = assuredConcurrencyShares;
     }
 
-    @JsonProperty("borrowingLimitPercent")
-    public Integer getBorrowingLimitPercent() {
-        return borrowingLimitPercent;
-    }
-
-    @JsonProperty("borrowingLimitPercent")
-    public void setBorrowingLimitPercent(Integer borrowingLimitPercent) {
-        this.borrowingLimitPercent = borrowingLimitPercent;
-    }
-
-    @JsonProperty("lendablePercent")
-    public Integer getLendablePercent() {
-        return lendablePercent;
-    }
-
-    @JsonProperty("lendablePercent")
-    public void setLendablePercent(Integer lendablePercent) {
-        this.lendablePercent = lendablePercent;
-    }
-
+    /**
+     * LimitedPriorityLevelConfiguration specifies how to handle requests that are subject to limits. It addresses two issues:<br><p>  &#42; How are requests for this priority level limited?<br><p>  &#42; What should be done with requests that exceed the limit?
+     */
     @JsonProperty("limitResponse")
     public LimitResponse getLimitResponse() {
         return limitResponse;
     }
 
+    /**
+     * LimitedPriorityLevelConfiguration specifies how to handle requests that are subject to limits. It addresses two issues:<br><p>  &#42; How are requests for this priority level limited?<br><p>  &#42; What should be done with requests that exceed the limit?
+     */
     @JsonProperty("limitResponse")
     public void setLimitResponse(LimitResponse limitResponse) {
         this.limitResponse = limitResponse;
     }
 
+    @JsonIgnore
+    public LimitedPriorityLevelConfigurationBuilder edit() {
+        return new LimitedPriorityLevelConfigurationBuilder(this);
+    }
+
+    @JsonIgnore
+    public LimitedPriorityLevelConfigurationBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -140,6 +136,10 @@ public class LimitedPriorityLevelConfiguration implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

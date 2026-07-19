@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,8 +15,8 @@
  */
 package io.fabric8.openshift;
 
+import io.fabric8.junit.jupiter.api.KubernetesTest;
 import io.fabric8.junit.jupiter.api.RequireK8sSupport;
-import io.fabric8.kubernetes.api.model.Namespace;
 import io.fabric8.kubernetes.api.model.authorization.v1.LocalSubjectAccessReview;
 import io.fabric8.kubernetes.api.model.authorization.v1.LocalSubjectAccessReviewBuilder;
 import io.fabric8.kubernetes.api.model.authorization.v1.SubjectAccessReview;
@@ -32,19 +32,20 @@ import io.fabric8.kubernetes.api.model.rbac.RoleBuilder;
 import io.fabric8.openshift.api.model.Project;
 import io.fabric8.openshift.api.model.User;
 import io.fabric8.openshift.client.OpenShiftClient;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@KubernetesTest(createEphemeralNamespace = false)
 @RequireK8sSupport(Project.class)
 class K8sAuthorizationOnOpenShiftIT {
 
   OpenShiftClient client;
 
-  Namespace namespace;
-
+  @Tag("OSCI")
   @Test
   void createRoleK8s() {
     // Given
@@ -151,7 +152,7 @@ class K8sAuthorizationOnOpenShiftIT {
   void createLocalSubjectAccessReview() {
     // Given
     User currentUser = client.currentUser();
-    String ns = namespace.getMetadata().getName();
+    String ns = client.getConfiguration().getNamespace();
     LocalSubjectAccessReview lsar = new LocalSubjectAccessReviewBuilder()
         .withNewMetadata().withNamespace(ns).endMetadata()
         .withNewSpec()
@@ -177,10 +178,11 @@ class K8sAuthorizationOnOpenShiftIT {
   void createSubjectAccessReview() {
     // Given
     String user = client.currentUser().getMetadata().getName();
+    String ns = client.getConfiguration().getNamespace();
     SubjectAccessReview sar = new SubjectAccessReviewBuilder()
         .withNewSpec()
         .withNewResourceAttributes()
-        .withNamespace(namespace.getMetadata().getName())
+        .withNamespace(ns)
         .withVerb("get")
         .withResource("pods")
         .endResourceAttributes()

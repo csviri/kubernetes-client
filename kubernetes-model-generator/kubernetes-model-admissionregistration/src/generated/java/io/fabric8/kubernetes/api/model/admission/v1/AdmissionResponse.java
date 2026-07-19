@@ -2,10 +2,10 @@
 package io.fabric8.kubernetes.api.model.admission.v1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -13,7 +13,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
@@ -24,19 +27,17 @@ import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.Status;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "allowed",
     "auditAnnotations",
     "patch",
@@ -47,7 +48,6 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -61,48 +61,42 @@ import lombok.experimental.Accessors;
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class AdmissionResponse implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class AdmissionResponse implements Editable<AdmissionResponseBuilder>, KubernetesResource
 {
 
     @JsonProperty("allowed")
     private Boolean allowed;
     @JsonProperty("auditAnnotations")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private Map<String, String> auditAnnotations = new LinkedHashMap<String, String>();
+    private Map<String, String> auditAnnotations = new LinkedHashMap<>();
     @JsonProperty("patch")
-    private java.lang.String patch;
+    private String patch;
     @JsonProperty("patchType")
-    private java.lang.String patchType;
+    private String patchType;
     @JsonProperty("status")
     private Status status;
     @JsonProperty("uid")
-    private java.lang.String uid;
+    private String uid;
     @JsonProperty("warnings")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<java.lang.String> warnings = new ArrayList<java.lang.String>();
+    private List<String> warnings = new ArrayList<>();
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public AdmissionResponse() {
     }
 
-    /**
-     * 
-     * @param patch
-     * @param uid
-     * @param patchType
-     * @param allowed
-     * @param warnings
-     * @param auditAnnotations
-     * @param status
-     */
-    public AdmissionResponse(Boolean allowed, Map<String, String> auditAnnotations, java.lang.String patch, java.lang.String patchType, Status status, java.lang.String uid, List<java.lang.String> warnings) {
+    public AdmissionResponse(Boolean allowed, Map<String, String> auditAnnotations, String patch, String patchType, Status status, String uid, List<String> warnings) {
         super();
         this.allowed = allowed;
         this.auditAnnotations = auditAnnotations;
@@ -124,6 +118,7 @@ public class AdmissionResponse implements KubernetesResource
     }
 
     @JsonProperty("auditAnnotations")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public Map<String, String> getAuditAnnotations() {
         return auditAnnotations;
     }
@@ -134,22 +129,22 @@ public class AdmissionResponse implements KubernetesResource
     }
 
     @JsonProperty("patch")
-    public java.lang.String getPatch() {
+    public String getPatch() {
         return patch;
     }
 
     @JsonProperty("patch")
-    public void setPatch(java.lang.String patch) {
+    public void setPatch(String patch) {
         this.patch = patch;
     }
 
     @JsonProperty("patchType")
-    public java.lang.String getPatchType() {
+    public String getPatchType() {
         return patchType;
     }
 
     @JsonProperty("patchType")
-    public void setPatchType(java.lang.String patchType) {
+    public void setPatchType(String patchType) {
         this.patchType = patchType;
     }
 
@@ -164,33 +159,49 @@ public class AdmissionResponse implements KubernetesResource
     }
 
     @JsonProperty("uid")
-    public java.lang.String getUid() {
+    public String getUid() {
         return uid;
     }
 
     @JsonProperty("uid")
-    public void setUid(java.lang.String uid) {
+    public void setUid(String uid) {
         this.uid = uid;
     }
 
     @JsonProperty("warnings")
-    public List<java.lang.String> getWarnings() {
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public List<String> getWarnings() {
         return warnings;
     }
 
     @JsonProperty("warnings")
-    public void setWarnings(List<java.lang.String> warnings) {
+    public void setWarnings(List<String> warnings) {
         this.warnings = warnings;
     }
 
+    @JsonIgnore
+    public AdmissionResponseBuilder edit() {
+        return new AdmissionResponseBuilder(this);
+    }
+
+    @JsonIgnore
+    public AdmissionResponseBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
-    public Map<java.lang.String, Object> getAdditionalProperties() {
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 
     @JsonAnySetter
-    public void setAdditionalProperty(java.lang.String name, Object value) {
+    public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

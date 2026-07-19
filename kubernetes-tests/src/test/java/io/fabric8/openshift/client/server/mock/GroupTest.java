@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,17 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.openshift.client.server.mock;
 
 import io.fabric8.kubernetes.api.model.APIGroupListBuilder;
 import io.fabric8.kubernetes.api.model.DeletionPropagation;
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.openshift.api.model.Group;
 import io.fabric8.openshift.api.model.GroupBuilder;
 import io.fabric8.openshift.api.model.GroupList;
 import io.fabric8.openshift.api.model.GroupListBuilder;
 import io.fabric8.openshift.client.NamespacedOpenShiftClient;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -32,16 +32,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class GroupTest {
 
-  OpenShiftMockServer server;
+  KubernetesMockServer server;
   NamespacedOpenShiftClient client;
-
-  @BeforeEach
-  void setUp() {
-    client = server.createOpenShiftClient();
-  }
 
   @Test
   void testList() {
@@ -97,12 +92,12 @@ class GroupTest {
     server.expect().withPath("/apis/user.openshift.io/v1/groups/group1").andReturn(200, new GroupBuilder().build()).once();
     server.expect().withPath("/apis/user.openshift.io/v1/groups/Group2").andReturn(200, new GroupBuilder().build()).once();
 
-    boolean deleted = client.groups().withName("group1").delete().size() == 1;
+    boolean deleted = client.groups().withName("group1").withGracePeriod(0).delete().size() == 1;
 
-    deleted = client.groups().withName("Group2").delete().size() == 1;
+    deleted = client.groups().withName("Group2").withGracePeriod(0).delete().size() == 1;
     assertTrue(deleted);
 
-    deleted = client.groups().withName("Group3").delete().size() == 1;
+    deleted = client.groups().withName("Group3").withGracePeriod(0).delete().size() == 1;
     assertFalse(deleted);
   }
 
@@ -114,10 +109,12 @@ class GroupTest {
     boolean deleted = client.groups().withName("group1").withPropagationPolicy(DeletionPropagation.FOREGROUND).delete()
         .size() == 1;
 
-    deleted = client.groups().withName("Group2").withPropagationPolicy(DeletionPropagation.FOREGROUND).delete().size() == 1;
+    deleted = client.groups().withName("Group2").withPropagationPolicy(DeletionPropagation.FOREGROUND).withGracePeriod(0)
+        .delete().size() == 1;
     assertTrue(deleted);
 
-    deleted = client.groups().withName("Group3").withPropagationPolicy(DeletionPropagation.FOREGROUND).delete().size() == 1;
+    deleted = client.groups().withName("Group3").withPropagationPolicy(DeletionPropagation.FOREGROUND).withGracePeriod(0)
+        .delete().size() == 1;
     assertFalse(deleted);
   }
 }

@@ -1,8 +1,9 @@
 
 package io.fabric8.chaosmesh.v1alpha1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -27,23 +29,21 @@ import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * MistakeSpec represents one type of mistake
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "filling",
     "maxLength",
     "maxOccurrences"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -63,7 +63,8 @@ import lombok.experimental.Accessors;
     @BuildableReference(Volume.class),
     @BuildableReference(VolumeMount.class)
 })
-public class MistakeSpec implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class MistakeSpec implements Editable<MistakeSpecBuilder>, KubernetesResource
 {
 
     @JsonProperty("filling")
@@ -73,21 +74,14 @@ public class MistakeSpec implements KubernetesResource
     @JsonProperty("maxOccurrences")
     private Long maxOccurrences;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public MistakeSpec() {
     }
 
-    /**
-     * 
-     * @param filling
-     * @param maxOccurrences
-     * @param maxLength
-     */
     public MistakeSpec(String filling, Long maxLength, Long maxOccurrences) {
         super();
         this.filling = filling;
@@ -95,37 +89,66 @@ public class MistakeSpec implements KubernetesResource
         this.maxOccurrences = maxOccurrences;
     }
 
+    /**
+     * Filling determines what is filled in the mistake data.
+     */
     @JsonProperty("filling")
     public String getFilling() {
         return filling;
     }
 
+    /**
+     * Filling determines what is filled in the mistake data.
+     */
     @JsonProperty("filling")
     public void setFilling(String filling) {
         this.filling = filling;
     }
 
+    /**
+     * Max length of each wrong data segment in bytes
+     */
     @JsonProperty("maxLength")
     public Long getMaxLength() {
         return maxLength;
     }
 
+    /**
+     * Max length of each wrong data segment in bytes
+     */
     @JsonProperty("maxLength")
     public void setMaxLength(Long maxLength) {
         this.maxLength = maxLength;
     }
 
+    /**
+     * There will be [1, MaxOccurrences] segments of wrong data.
+     */
     @JsonProperty("maxOccurrences")
     public Long getMaxOccurrences() {
         return maxOccurrences;
     }
 
+    /**
+     * There will be [1, MaxOccurrences] segments of wrong data.
+     */
     @JsonProperty("maxOccurrences")
     public void setMaxOccurrences(Long maxOccurrences) {
         this.maxOccurrences = maxOccurrences;
     }
 
+    @JsonIgnore
+    public MistakeSpecBuilder edit() {
+        return new MistakeSpecBuilder(this);
+    }
+
+    @JsonIgnore
+    public MistakeSpecBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -133,6 +156,10 @@ public class MistakeSpec implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

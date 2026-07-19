@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.mock;
 
 import io.fabric8.kubernetes.api.model.APIResource;
@@ -31,11 +30,12 @@ import org.junit.jupiter.api.Test;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@EnableKubernetesMockClient
+@EnableKubernetesMockClient(https = false)
 class VisitResourcesTest {
-  private KubernetesMockServer server;
+  KubernetesMockServer server;
   private KubernetesClient client;
 
   @Test
@@ -43,14 +43,14 @@ class VisitResourcesTest {
     // api/v1 is missing
     // apis is missing
     // the following should still succeed
-    client.visitResources(new ApiVisitor() {
+    assertDoesNotThrow(() -> client.visitResources(new ApiVisitor() {
 
       @Override
       public ApiVisitResult visitResource(String group, String version, APIResource apiResource,
           MixedOperation<GenericKubernetesResource, GenericKubernetesResourceList, Resource<GenericKubernetesResource>> operation) {
         throw new AssertionError();
       }
-    });
+    }));
   }
 
   @Test

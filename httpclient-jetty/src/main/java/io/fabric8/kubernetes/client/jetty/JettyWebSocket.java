@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,7 +44,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class JettyWebSocket implements WebSocket, WebSocketListener {
 
-  private static final Logger LOG = LoggerFactory.getLogger(JettyWebSocket.class);
+  private static final Logger logger = LoggerFactory.getLogger(JettyWebSocket.class);
 
   private final WebSocket.Listener listener;
   private final AtomicLong sendQueue;
@@ -53,6 +53,7 @@ public class JettyWebSocket implements WebSocket, WebSocketListener {
   private final CompletableFuture<Void> terminated = new CompletableFuture<>();
   private final AtomicBoolean outputClosed = new AtomicBoolean();
   private boolean moreMessages;
+  @SuppressWarnings("java:S3077") // volatile publishes the session reference; Jetty Session is thread-safe
   private volatile Session webSocketSession;
 
   public JettyWebSocket(WebSocket.Listener listener) {
@@ -76,7 +77,7 @@ public class JettyWebSocket implements WebSocket, WebSocketListener {
       public void writeFailed(Throwable x) {
         sendQueue.addAndGet(-size);
         if (webSocketSession.isOpen()) {
-          LOG.warn("Queued write did not succeed", x);
+          logger.warn("Queued write did not succeed", x);
         }
         webSocketSession.disconnect(); // prevent further writes
       }
@@ -97,7 +98,7 @@ public class JettyWebSocket implements WebSocket, WebSocketListener {
     webSocketSession.close(code, reason, new WriteCallback() {
       @Override
       public void writeFailed(Throwable x) {
-        LOG.warn("Queued close did not succeed", x);
+        logger.warn("Queued close did not succeed", x);
         webSocketSession.disconnect(); // immediately terminate
       }
 

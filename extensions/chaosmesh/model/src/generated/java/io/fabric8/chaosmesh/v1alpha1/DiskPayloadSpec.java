@@ -1,8 +1,9 @@
 
 package io.fabric8.chaosmesh.v1alpha1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -27,23 +29,18 @@ import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "path",
     "payload-process-num",
     "size"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -63,7 +60,8 @@ import lombok.experimental.Accessors;
     @BuildableReference(Volume.class),
     @BuildableReference(VolumeMount.class)
 })
-public class DiskPayloadSpec implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class DiskPayloadSpec implements Editable<DiskPayloadSpecBuilder>, KubernetesResource
 {
 
     @JsonProperty("path")
@@ -73,21 +71,14 @@ public class DiskPayloadSpec implements KubernetesResource
     @JsonProperty("size")
     private String size;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public DiskPayloadSpec() {
     }
 
-    /**
-     * 
-     * @param path
-     * @param size
-     * @param payloadProcessNum
-     */
     public DiskPayloadSpec(String path, Integer payloadProcessNum, String size) {
         super();
         this.path = path;
@@ -95,37 +86,66 @@ public class DiskPayloadSpec implements KubernetesResource
         this.size = size;
     }
 
+    /**
+     * specifies the location to fill data in. if path not provided, payload will read/write from/into a temp file, temp file will be deleted after writing
+     */
     @JsonProperty("path")
     public String getPath() {
         return path;
     }
 
+    /**
+     * specifies the location to fill data in. if path not provided, payload will read/write from/into a temp file, temp file will be deleted after writing
+     */
     @JsonProperty("path")
     public void setPath(String path) {
         this.path = path;
     }
 
+    /**
+     * specifies the number of process work on writing, default 1, only 1-255 is valid value
+     */
     @JsonProperty("payload-process-num")
     public Integer getPayloadProcessNum() {
         return payloadProcessNum;
     }
 
+    /**
+     * specifies the number of process work on writing, default 1, only 1-255 is valid value
+     */
     @JsonProperty("payload-process-num")
     public void setPayloadProcessNum(Integer payloadProcessNum) {
         this.payloadProcessNum = payloadProcessNum;
     }
 
+    /**
+     * specifies how many units of data will write into the file path. support unit: c=1, w=2, b=512, kB=1000, K=1024, MB=1000&#42;1000, M=1024&#42;1024, GB=1000&#42;1000&#42;1000, G=1024&#42;1024&#42;1024 BYTES. example : 1M | 512kB
+     */
     @JsonProperty("size")
     public String getSize() {
         return size;
     }
 
+    /**
+     * specifies how many units of data will write into the file path. support unit: c=1, w=2, b=512, kB=1000, K=1024, MB=1000&#42;1000, M=1024&#42;1024, GB=1000&#42;1000&#42;1000, G=1024&#42;1024&#42;1024 BYTES. example : 1M | 512kB
+     */
     @JsonProperty("size")
     public void setSize(String size) {
         this.size = size;
     }
 
+    @JsonIgnore
+    public DiskPayloadSpecBuilder edit() {
+        return new DiskPayloadSpecBuilder(this);
+    }
+
+    @JsonIgnore
+    public DiskPayloadSpecBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -133,6 +153,10 @@ public class DiskPayloadSpec implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

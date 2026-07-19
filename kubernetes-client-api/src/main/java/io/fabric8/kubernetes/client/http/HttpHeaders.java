@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.http;
 
 import java.util.List;
@@ -24,9 +23,12 @@ public interface HttpHeaders {
 
   /**
    * Returns a List of all the Header String values for the provided key/name.
+   * <p>
+   * key is case-insensitive as defined in RFC 2616.
    *
    * @param key The header key/name for which to provide the values.
    * @return the List of header values for the provided key.
+   * @see <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-4.2">RFC 2616 Section 4.2</a>
    */
   List<String> headers(String key);
 

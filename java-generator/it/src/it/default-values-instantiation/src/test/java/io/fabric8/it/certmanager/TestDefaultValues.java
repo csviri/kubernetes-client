@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,12 +15,14 @@
  */
 package io.fabric8.it.certmanager;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.cert_manager.v1.CertificateRequest;
 import io.cert_manager.v1.certificaterequestspec.Ten;
+import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.client.utils.Serialization;
 import org.junit.jupiter.api.Test;
 
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import static io.cert_manager.v1.CertificateRequestSpec.*;
@@ -28,11 +30,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TestDefaultValues {
 
+  DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssX");
+
   @Test
   void testDefaultValues() throws Exception {
     // Arrange
-    CertificateRequest cr =
-      Serialization.unmarshal(getClass().getResourceAsStream("/empty.yaml"), CertificateRequest.class);
+    CertificateRequest cr = Serialization.unmarshal(getClass().getResourceAsStream("/empty.yaml"), CertificateRequest.class);
 
     // Act
     String one = cr.getSpec().getOne();
@@ -46,6 +49,11 @@ class TestDefaultValues {
     List<String> nine = cr.getSpec().getNine();
     Ten ten = cr.getSpec().getTen();
     Eleven eleven = cr.getSpec().getEleven();
+    ZonedDateTime twelve = cr.getSpec().getTwelve();
+    Thirteen thirteen = cr.getSpec().getThirteen();
+    IntOrString fourteen = cr.getSpec().getFourteen();
+    IntOrString fifteen = cr.getSpec().getFifteen();
+    List<Sixteen> sixteen = cr.getSpec().getSixteen();
 
     // Assert
     assertEquals("one", one);
@@ -53,7 +61,7 @@ class TestDefaultValues {
     assertEquals(3, three);
     assertEquals(4L, four);
     assertEquals(5L, five);
-    assertEquals(6,1f, six);
+    assertEquals(6, 1f, six);
     assertEquals(7.2d, seven);
     assertEquals(8.2d, eight);
     assertEquals(2, nine.size());
@@ -62,5 +70,13 @@ class TestDefaultValues {
     assertEquals("tenone", ten.getTenOne());
     assertEquals("tentwo", ten.getTenTwo());
     assertEquals(Eleven.BAZ, eleven);
+    assertEquals(ZonedDateTime.parse("2017-07-21T17:32:28Z", formatter), twelve);
+    assertEquals(Thirteen.V__302, thirteen);
+    assertEquals(302L, thirteen.getValue());
+    assertEquals("10Gi", fourteen.getStrVal());
+    assertEquals(11, fifteen.getIntVal());
+    assertEquals(1, sixteen.size());
+    assertEquals(Sixteen.class, sixteen.get(0).getClass());
+    assertEquals(Sixteen.ALL, sixteen.get(0));
   }
 }

@@ -1,8 +1,9 @@
 
 package io.fabric8.knative.sources.v1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,8 +11,9 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import io.fabric8.knative.internal.pkg.apis.duck.v1.CloudEventOverrides;
-import io.fabric8.knative.internal.pkg.apis.duck.v1.Destination;
+import io.fabric8.knative.duck.v1.CloudEventOverrides;
+import io.fabric8.knative.duck.v1.Destination;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -22,29 +24,28 @@ import io.fabric8.kubernetes.api.model.LocalObjectReference;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
+import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * ContainerSourceSpec defines the desired state of ContainerSource
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "ceOverrides",
     "sink",
     "template"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -53,7 +54,7 @@ import lombok.experimental.Accessors;
     @BuildableReference(ObjectMeta.class),
     @BuildableReference(LabelSelector.class),
     @BuildableReference(Container.class),
-    @BuildableReference(io.fabric8.kubernetes.api.model.PodTemplateSpec.class),
+    @BuildableReference(PodTemplateSpec.class),
     @BuildableReference(ResourceRequirements.class),
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
@@ -64,7 +65,8 @@ import lombok.experimental.Accessors;
     @BuildableReference(Volume.class),
     @BuildableReference(VolumeMount.class)
 })
-public class ContainerSourceSpec implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class ContainerSourceSpec implements Editable<ContainerSourceSpecBuilder>, KubernetesResource
 {
 
     @JsonProperty("ceOverrides")
@@ -72,61 +74,83 @@ public class ContainerSourceSpec implements KubernetesResource
     @JsonProperty("sink")
     private Destination sink;
     @JsonProperty("template")
-    private io.fabric8.kubernetes.api.model.PodTemplateSpec template;
+    private PodTemplateSpec template;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public ContainerSourceSpec() {
     }
 
-    /**
-     * 
-     * @param template
-     * @param sink
-     * @param ceOverrides
-     */
-    public ContainerSourceSpec(CloudEventOverrides ceOverrides, Destination sink, io.fabric8.kubernetes.api.model.PodTemplateSpec template) {
+    public ContainerSourceSpec(CloudEventOverrides ceOverrides, Destination sink, PodTemplateSpec template) {
         super();
         this.ceOverrides = ceOverrides;
         this.sink = sink;
         this.template = template;
     }
 
+    /**
+     * ContainerSourceSpec defines the desired state of ContainerSource
+     */
     @JsonProperty("ceOverrides")
     public CloudEventOverrides getCeOverrides() {
         return ceOverrides;
     }
 
+    /**
+     * ContainerSourceSpec defines the desired state of ContainerSource
+     */
     @JsonProperty("ceOverrides")
     public void setCeOverrides(CloudEventOverrides ceOverrides) {
         this.ceOverrides = ceOverrides;
     }
 
+    /**
+     * ContainerSourceSpec defines the desired state of ContainerSource
+     */
     @JsonProperty("sink")
     public Destination getSink() {
         return sink;
     }
 
+    /**
+     * ContainerSourceSpec defines the desired state of ContainerSource
+     */
     @JsonProperty("sink")
     public void setSink(Destination sink) {
         this.sink = sink;
     }
 
+    /**
+     * ContainerSourceSpec defines the desired state of ContainerSource
+     */
     @JsonProperty("template")
-    public io.fabric8.kubernetes.api.model.PodTemplateSpec getTemplate() {
+    public PodTemplateSpec getTemplate() {
         return template;
     }
 
+    /**
+     * ContainerSourceSpec defines the desired state of ContainerSource
+     */
     @JsonProperty("template")
-    public void setTemplate(io.fabric8.kubernetes.api.model.PodTemplateSpec template) {
+    public void setTemplate(PodTemplateSpec template) {
         this.template = template;
     }
 
+    @JsonIgnore
+    public ContainerSourceSpecBuilder edit() {
+        return new ContainerSourceSpecBuilder(this);
+    }
+
+    @JsonIgnore
+    public ContainerSourceSpecBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -134,6 +158,10 @@ public class ContainerSourceSpec implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

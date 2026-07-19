@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,7 +38,7 @@ class TemplateTest {
         .addToObjects(new ProjectBuilder().build())
         .build();
     // When
-    final List<HasMetadata> result = template.getObjects();
+    final List<Object> result = template.getObjects();
     // Then
     assertThat(result)
         .extracting("class")

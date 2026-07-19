@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,7 +54,7 @@ public class KubernetesDeserializerTest extends TestBase {
     final List<HasMetadata> result = kubernetesClient.load(
         KubernetesDeserializerTest.class.getResourceAsStream("/deserializer_test.yaml")).items();
     // Then
-    assertEquals(22, result.size());
+    assertEquals(23, result.size());
     assertResourceTypes(result);
   }
 

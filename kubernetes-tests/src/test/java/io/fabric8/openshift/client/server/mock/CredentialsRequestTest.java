@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,9 @@
  */
 package io.fabric8.openshift.client.server.mock;
 
+import io.fabric8.kubernetes.api.model.GenericKubernetesResourceBuilder;
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.openshift.api.model.miscellaneous.cloudcredential.v1.CredentialsRequest;
 import io.fabric8.openshift.api.model.miscellaneous.cloudcredential.v1.CredentialsRequestBuilder;
 import io.fabric8.openshift.api.model.miscellaneous.cloudcredential.v1.CredentialsRequestList;
@@ -26,10 +29,10 @@ import java.net.HttpURLConnection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class CredentialsRequestTest {
   private OpenShiftClient client;
-  private OpenShiftMockServer server;
+  KubernetesMockServer server;
 
   @Test
   void get() {
@@ -74,7 +77,8 @@ class CredentialsRequestTest {
         .once();
 
     // When
-    boolean isDeleted = client.credentialsRequests().inNamespace("ns1").withName("test-delete").delete().size() == 1;
+    boolean isDeleted = client.credentialsRequests().inNamespace("ns1").withName("test-delete").withGracePeriod(0).delete()
+        .size() == 1;
 
     // Then
     assertThat(isDeleted).isTrue();
@@ -84,9 +88,11 @@ class CredentialsRequestTest {
     return new CredentialsRequestBuilder()
         .withNewMetadata().withName(name).endMetadata()
         .withNewSpec()
-        .addToProviderSpec("apiVersion", "cloudcredential.openshift.io/v1")
-        .addToProviderSpec("kind", "GCPProviderSpec")
-        .addToProviderSpec("skipServiceCheck", "true")
+        .withProviderSpec(new GenericKubernetesResourceBuilder()
+            .withApiVersion("cloudcredential.openshift.io/v1")
+            .withKind("GCPProviderSpec")
+            .addToAdditionalProperties("skipServiceCheck", "true")
+            .build())
         .withNewSecretRef()
         .withName("cloud-credential-operator-gcp-ro-creds")
         .withNamespace("openshift-cloud-credential-operator")

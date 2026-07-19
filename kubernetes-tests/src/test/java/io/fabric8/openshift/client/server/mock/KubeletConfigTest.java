@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,21 +15,24 @@
  */
 package io.fabric8.openshift.client.server.mock;
 
-import io.fabric8.openshift.api.model.machineconfig.v1.KubeletConfig;
-import io.fabric8.openshift.api.model.machineconfig.v1.KubeletConfigBuilder;
-import io.fabric8.openshift.api.model.machineconfig.v1.KubeletConfigList;
-import io.fabric8.openshift.api.model.machineconfig.v1.KubeletConfigListBuilder;
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
+import io.fabric8.openshift.api.model.machineconfiguration.v1.KubeletConfig;
+import io.fabric8.openshift.api.model.machineconfiguration.v1.KubeletConfigBuilder;
+import io.fabric8.openshift.api.model.machineconfiguration.v1.KubeletConfigList;
+import io.fabric8.openshift.api.model.machineconfiguration.v1.KubeletConfigListBuilder;
 import io.fabric8.openshift.client.OpenShiftClient;
 import org.junit.jupiter.api.Test;
 
 import java.net.HttpURLConnection;
+import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class KubeletConfigTest {
   private OpenShiftClient client;
-  private OpenShiftMockServer server;
+  KubernetesMockServer server;
 
   @Test
   void get() {
@@ -74,7 +77,8 @@ class KubeletConfigTest {
         .once();
 
     // When
-    boolean isDeleted = client.machineConfigurations().kubeletConfigs().withName("cluster").delete().size() == 1;
+    boolean isDeleted = client.machineConfigurations().kubeletConfigs().withName("cluster").withGracePeriod(0).delete()
+        .size() == 1;
 
     // Then
     assertThat(isDeleted).isTrue();
@@ -87,7 +91,7 @@ class KubeletConfigTest {
         .withNewMachineConfigPoolSelector()
         .addToMatchLabels("custom-kubelet", "large-pods")
         .endMachineConfigPoolSelector()
-        .addToKubeletConfig("maxPods", "500")
+        .withKubeletConfig(Collections.singletonMap("maxPods", "500"))
         .endSpec()
         .build();
   }

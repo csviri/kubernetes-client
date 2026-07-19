@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.dsl.internal;
 
 import io.fabric8.kubernetes.api.model.HasMetadata;
@@ -58,7 +57,6 @@ final class FilterNestedImpl<T extends HasMetadata, L extends KubernetesResource
     context.fields = new LinkedHashMap<>(this.baseOperation.context.getFields());
     // Use a multi-value map as its possible to define keyA != foo && keyA != bar
     context.fieldsNot = new LinkedHashMap<>(this.baseOperation.context.getFieldsNot());
-    context.selectorAsString = this.baseOperation.context.selectorAsString;
   }
 
   @Override
@@ -203,6 +201,12 @@ final class FilterNestedImpl<T extends HasMetadata, L extends KubernetesResource
   @Override
   public FilterNested<FilterWatchListDeletable<T, L, R>> withLabelSelector(String selectorAsString) {
     this.context.selectorAsString = selectorAsString;
+    return this;
+  }
+
+  @Override
+  public FilterNested<FilterWatchListDeletable<T, L, R>> withShardSelector(String shardSelector) {
+    this.context.shardSelector = shardSelector;
     return this;
   }
 }

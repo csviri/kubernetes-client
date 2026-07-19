@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,8 @@
  */
 package io.fabric8.openshift.client.server.mock;
 
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.openshift.api.model.miscellaneous.metal3.v1alpha1.BareMetalHost;
 import io.fabric8.openshift.api.model.miscellaneous.metal3.v1alpha1.BareMetalHostBuilder;
 import io.fabric8.openshift.api.model.miscellaneous.metal3.v1alpha1.BareMetalHostList;
@@ -26,10 +28,10 @@ import java.net.HttpURLConnection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class BareMetalHostTest {
   private OpenShiftClient client;
-  private OpenShiftMockServer server;
+  KubernetesMockServer server;
 
   @Test
   void get() {
@@ -74,7 +76,8 @@ class BareMetalHostTest {
         .once();
 
     // When
-    boolean isDeleted = client.bareMetalHosts().inNamespace("ns1").withName("test-delete").delete().size() == 1;
+    boolean isDeleted = client.bareMetalHosts().inNamespace("ns1").withName("test-delete").withGracePeriod(0).delete()
+        .size() == 1;
 
     // Then
     assertThat(isDeleted).isTrue();
@@ -99,13 +102,6 @@ class BareMetalHostTest {
         .withNewUserData("bmo-master-user-data", "bmo-project")
         .withNewNetworkData("bmo-master-network-data", "bmo-project")
         .withNewMetaData("bmo-master-meta-data", "bmo-project")
-        .withNewRaid()
-        .addNewHardwareRAIDVolume()
-        .withLevel("1")
-        .withSizeGibibytes(200)
-        .withRotational(true)
-        .endHardwareRAIDVolume()
-        .endRaid()
         .withBootMACAddress("98:03:9b:61:80:48")
         .withExternallyProvisioned(true)
         .withHardwareProfile("default")

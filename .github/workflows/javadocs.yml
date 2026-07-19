@@ -22,7 +22,7 @@ env:
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     paths-ignore:
       - 'doc/**'
@@ -40,14 +40,15 @@ permissions:
 jobs:
   javadoc:
     name: JavaDocs
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup Java 8
-        uses: actions/setup-java@v3
+        uses: actions/checkout@v7
+      - name: Setup Java 11
+        uses: actions/setup-java@v5
         with:
-          java-version: '8'
+          java-version: '11'
           distribution: 'temurin'
+          cache: 'maven'
       - name: Check Java Docs
-        run: ./mvnw ${MAVEN_ARGS} clean install javadoc:jar -DskipTests -Pjavadoc-test
+        run: make javadoc MAVEN_ARGS="${MAVEN_ARGS}"

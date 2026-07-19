@@ -2,10 +2,10 @@
 package io.fabric8.chaosmesh.v1alpha1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -13,13 +13,13 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
-import io.fabric8.kubernetes.api.model.LabelSelectorRequirement;
 import io.fabric8.kubernetes.api.model.LocalObjectReference;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.ObjectReference;
@@ -31,18 +31,16 @@ import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * PodSelectorSpec defines the some selectors to select objects. If the all selectors are empty, all objects will be used in chaos experiment.
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "annotationSelectors",
-    "expressionSelectors",
     "fieldSelectors",
     "labelSelectors",
     "namespaces",
@@ -53,7 +51,6 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -73,59 +70,46 @@ import lombok.experimental.Accessors;
     @BuildableReference(Volume.class),
     @BuildableReference(VolumeMount.class)
 })
-public class PodSelectorSpec implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class PodSelectorSpec implements Editable<PodSelectorSpecBuilder>, KubernetesResource
 {
 
     @JsonProperty("annotationSelectors")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private Map<String, String> annotationSelectors = new LinkedHashMap<String, String>();
-    @JsonProperty("expressionSelectors")
-    @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<LabelSelectorRequirement> expressionSelectors = new ArrayList<LabelSelectorRequirement>();
+    private Map<String, String> annotationSelectors = new LinkedHashMap<>();
     @JsonProperty("fieldSelectors")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private Map<String, String> fieldSelectors = new LinkedHashMap<String, String>();
+    private Map<String, String> fieldSelectors = new LinkedHashMap<>();
     @JsonProperty("labelSelectors")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private Map<String, String> labelSelectors = new LinkedHashMap<String, String>();
+    private Map<String, String> labelSelectors = new LinkedHashMap<>();
     @JsonProperty("namespaces")
-    private List<java.lang.String> namespaces = new ArrayList<java.lang.String>();
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<String> namespaces = new ArrayList<>();
     @JsonProperty("nodeSelectors")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private Map<String, String> nodeSelectors = new LinkedHashMap<String, String>();
+    private Map<String, String> nodeSelectors = new LinkedHashMap<>();
     @JsonProperty("nodes")
-    private List<java.lang.String> nodes = new ArrayList<java.lang.String>();
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<String> nodes = new ArrayList<>();
     @JsonProperty("podPhaseSelectors")
-    private List<java.lang.String> podPhaseSelectors = new ArrayList<java.lang.String>();
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<String> podPhaseSelectors = new ArrayList<>();
     @JsonProperty("pods")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private Map<String, List<java.lang.String>> pods = new LinkedHashMap<String, List<java.lang.String>>();
+    private Map<String, List<String>> pods = new LinkedHashMap<>();
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public PodSelectorSpec() {
     }
 
-    /**
-     * 
-     * @param podPhaseSelectors
-     * @param expressionSelectors
-     * @param fieldSelectors
-     * @param nodes
-     * @param labelSelectors
-     * @param pods
-     * @param annotationSelectors
-     * @param namespaces
-     * @param nodeSelectors
-     */
-    public PodSelectorSpec(Map<String, String> annotationSelectors, List<LabelSelectorRequirement> expressionSelectors, Map<String, String> fieldSelectors, Map<String, String> labelSelectors, List<java.lang.String> namespaces, Map<String, String> nodeSelectors, List<java.lang.String> nodes, List<java.lang.String> podPhaseSelectors, Map<String, List<java.lang.String>> pods) {
+    public PodSelectorSpec(Map<String, String> annotationSelectors, Map<String, String> fieldSelectors, Map<String, String> labelSelectors, List<String> namespaces, Map<String, String> nodeSelectors, List<String> nodes, List<String> podPhaseSelectors, Map<String, List<String>> pods) {
         super();
         this.annotationSelectors = annotationSelectors;
-        this.expressionSelectors = expressionSelectors;
         this.fieldSelectors = fieldSelectors;
         this.labelSelectors = labelSelectors;
         this.namespaces = namespaces;
@@ -135,104 +119,165 @@ public class PodSelectorSpec implements KubernetesResource
         this.pods = pods;
     }
 
+    /**
+     * Map of string keys and values that can be used to select objects. A selector based on annotations.
+     */
     @JsonProperty("annotationSelectors")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public Map<String, String> getAnnotationSelectors() {
         return annotationSelectors;
     }
 
+    /**
+     * Map of string keys and values that can be used to select objects. A selector based on annotations.
+     */
     @JsonProperty("annotationSelectors")
     public void setAnnotationSelectors(Map<String, String> annotationSelectors) {
         this.annotationSelectors = annotationSelectors;
     }
 
-    @JsonProperty("expressionSelectors")
-    public List<LabelSelectorRequirement> getExpressionSelectors() {
-        return expressionSelectors;
-    }
-
-    @JsonProperty("expressionSelectors")
-    public void setExpressionSelectors(List<LabelSelectorRequirement> expressionSelectors) {
-        this.expressionSelectors = expressionSelectors;
-    }
-
+    /**
+     * Map of string keys and values that can be used to select objects. A selector based on fields.
+     */
     @JsonProperty("fieldSelectors")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public Map<String, String> getFieldSelectors() {
         return fieldSelectors;
     }
 
+    /**
+     * Map of string keys and values that can be used to select objects. A selector based on fields.
+     */
     @JsonProperty("fieldSelectors")
     public void setFieldSelectors(Map<String, String> fieldSelectors) {
         this.fieldSelectors = fieldSelectors;
     }
 
+    /**
+     * Map of string keys and values that can be used to select objects. A selector based on labels.
+     */
     @JsonProperty("labelSelectors")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public Map<String, String> getLabelSelectors() {
         return labelSelectors;
     }
 
+    /**
+     * Map of string keys and values that can be used to select objects. A selector based on labels.
+     */
     @JsonProperty("labelSelectors")
     public void setLabelSelectors(Map<String, String> labelSelectors) {
         this.labelSelectors = labelSelectors;
     }
 
+    /**
+     * Namespaces is a set of namespace to which objects belong.
+     */
     @JsonProperty("namespaces")
-    public List<java.lang.String> getNamespaces() {
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public List<String> getNamespaces() {
         return namespaces;
     }
 
+    /**
+     * Namespaces is a set of namespace to which objects belong.
+     */
     @JsonProperty("namespaces")
-    public void setNamespaces(List<java.lang.String> namespaces) {
+    public void setNamespaces(List<String> namespaces) {
         this.namespaces = namespaces;
     }
 
+    /**
+     * Map of string keys and values that can be used to select nodes. Selector which must match a node's labels, and objects must belong to these selected nodes.
+     */
     @JsonProperty("nodeSelectors")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public Map<String, String> getNodeSelectors() {
         return nodeSelectors;
     }
 
+    /**
+     * Map of string keys and values that can be used to select nodes. Selector which must match a node's labels, and objects must belong to these selected nodes.
+     */
     @JsonProperty("nodeSelectors")
     public void setNodeSelectors(Map<String, String> nodeSelectors) {
         this.nodeSelectors = nodeSelectors;
     }
 
+    /**
+     * Nodes is a set of node name and objects must belong to these nodes.
+     */
     @JsonProperty("nodes")
-    public List<java.lang.String> getNodes() {
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public List<String> getNodes() {
         return nodes;
     }
 
+    /**
+     * Nodes is a set of node name and objects must belong to these nodes.
+     */
     @JsonProperty("nodes")
-    public void setNodes(List<java.lang.String> nodes) {
+    public void setNodes(List<String> nodes) {
         this.nodes = nodes;
     }
 
+    /**
+     * PodPhaseSelectors is a set of condition of a pod at the current time. supported value: Pending / Running / Succeeded / Failed / Unknown
+     */
     @JsonProperty("podPhaseSelectors")
-    public List<java.lang.String> getPodPhaseSelectors() {
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public List<String> getPodPhaseSelectors() {
         return podPhaseSelectors;
     }
 
+    /**
+     * PodPhaseSelectors is a set of condition of a pod at the current time. supported value: Pending / Running / Succeeded / Failed / Unknown
+     */
     @JsonProperty("podPhaseSelectors")
-    public void setPodPhaseSelectors(List<java.lang.String> podPhaseSelectors) {
+    public void setPodPhaseSelectors(List<String> podPhaseSelectors) {
         this.podPhaseSelectors = podPhaseSelectors;
     }
 
+    /**
+     * Pods is a map of string keys and a set values that used to select pods. The key defines the namespace which pods belong, and the each values is a set of pod names.
+     */
     @JsonProperty("pods")
-    public Map<String, List<java.lang.String>> getPods() {
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public Map<String, List<String>> getPods() {
         return pods;
     }
 
+    /**
+     * Pods is a map of string keys and a set values that used to select pods. The key defines the namespace which pods belong, and the each values is a set of pod names.
+     */
     @JsonProperty("pods")
-    public void setPods(Map<String, List<java.lang.String>> pods) {
+    public void setPods(Map<String, List<String>> pods) {
         this.pods = pods;
     }
 
+    @JsonIgnore
+    public PodSelectorSpecBuilder edit() {
+        return new PodSelectorSpecBuilder(this);
+    }
+
+    @JsonIgnore
+    public PodSelectorSpecBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
-    public Map<java.lang.String, Object> getAdditionalProperties() {
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 
     @JsonAnySetter
-    public void setAdditionalProperty(java.lang.String name, Object value) {
+    public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

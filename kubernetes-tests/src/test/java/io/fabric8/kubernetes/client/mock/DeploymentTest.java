@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,7 +38,7 @@ import io.fabric8.kubernetes.client.dsl.RollableScalableResource;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.kubernetes.client.utils.Utils;
-import okhttp3.mockwebserver.RecordedRequest;
+import io.fabric8.mockwebserver.http.RecordedRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -47,6 +47,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -54,7 +55,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnableKubernetesMockClient
+@EnableKubernetesMockClient(https = false)
 class DeploymentTest {
 
   KubernetesMockServer server;
@@ -240,13 +241,13 @@ class DeploymentTest {
         .andReturn(200, new DeploymentBuilder(deployment2).editSpec().withReplicas(0).endSpec().build())
         .times(5);
 
-    boolean deleted = client.apps().deployments().withName("deployment1").delete().size() == 1;
+    boolean deleted = client.apps().deployments().withName("deployment1").withGracePeriod(0).delete().size() == 1;
     assertTrue(deleted);
 
-    deleted = client.apps().deployments().withName("deployment2").delete().size() == 1;
+    deleted = client.apps().deployments().withName("deployment2").withGracePeriod(0).delete().size() == 1;
     assertFalse(deleted);
 
-    deleted = client.apps().deployments().inNamespace("ns1").withName("deployment2").delete().size() == 1;
+    deleted = client.apps().deployments().inNamespace("ns1").withName("deployment2").withGracePeriod(0).delete().size() == 1;
     assertTrue(deleted);
   }
 
@@ -319,7 +320,7 @@ class DeploymentTest {
     Boolean deleted = client.apps().deployments().inAnyNamespace().delete(deployment1, deployment2);
     assertTrue(deleted);
 
-    deleted = client.resource(deployment3).delete().size() == 1;
+    deleted = client.resource(deployment3).withGracePeriod(0).delete().size() == 1;
     assertFalse(deleted);
   }
 
@@ -622,7 +623,8 @@ class DeploymentTest {
     // Then
     RecordedRequest recordedRequest = server.getLastRequest();
     assertEquals("PATCH", recordedRequest.getMethod());
-    assertEquals("{\"spec\":{\"paused\":true}}", recordedRequest.getBody().readUtf8());
+    assertThat(recordedRequest.getBody().readUtf8())
+        .isEqualTo("{\"spec\":{\"paused\":true}}");
   }
 
   @Test
@@ -652,7 +654,8 @@ class DeploymentTest {
     RecordedRequest recordedRequest = server.getLastRequest();
     assertNotNull(deployment);
     assertEquals("PATCH", recordedRequest.getMethod());
-    assertEquals("{\"spec\":{\"paused\":null}}", recordedRequest.getBody().readUtf8());
+    assertThat(recordedRequest.getBody().readUtf8())
+        .isEqualTo("{\"spec\":{\"paused\":null}}");
   }
 
   @Test

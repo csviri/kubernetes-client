@@ -1,8 +1,9 @@
 
 package io.fabric8.knative.sources.v1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,9 +11,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import io.fabric8.knative.internal.pkg.apis.duck.v1.CloudEventOverrides;
-import io.fabric8.knative.internal.pkg.apis.duck.v1.Destination;
-import io.fabric8.knative.internal.pkg.tracker.Reference;
+import io.fabric8.knative.duck.v1.CloudEventOverrides;
+import io.fabric8.knative.duck.v1.Destination;
+import io.fabric8.knative.pkg.tracker.Reference;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -30,23 +32,21 @@ import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * SinkBindingSpec holds the desired state of the SinkBinding (from the client).
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "ceOverrides",
     "sink",
     "subject"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -66,7 +66,8 @@ import lombok.experimental.Accessors;
     @BuildableReference(Volume.class),
     @BuildableReference(VolumeMount.class)
 })
-public class SinkBindingSpec implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class SinkBindingSpec implements Editable<SinkBindingSpecBuilder>, KubernetesResource
 {
 
     @JsonProperty("ceOverrides")
@@ -76,21 +77,14 @@ public class SinkBindingSpec implements KubernetesResource
     @JsonProperty("subject")
     private Reference subject;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public SinkBindingSpec() {
     }
 
-    /**
-     * 
-     * @param sink
-     * @param subject
-     * @param ceOverrides
-     */
     public SinkBindingSpec(CloudEventOverrides ceOverrides, Destination sink, Reference subject) {
         super();
         this.ceOverrides = ceOverrides;
@@ -98,37 +92,66 @@ public class SinkBindingSpec implements KubernetesResource
         this.subject = subject;
     }
 
+    /**
+     * SinkBindingSpec holds the desired state of the SinkBinding (from the client).
+     */
     @JsonProperty("ceOverrides")
     public CloudEventOverrides getCeOverrides() {
         return ceOverrides;
     }
 
+    /**
+     * SinkBindingSpec holds the desired state of the SinkBinding (from the client).
+     */
     @JsonProperty("ceOverrides")
     public void setCeOverrides(CloudEventOverrides ceOverrides) {
         this.ceOverrides = ceOverrides;
     }
 
+    /**
+     * SinkBindingSpec holds the desired state of the SinkBinding (from the client).
+     */
     @JsonProperty("sink")
     public Destination getSink() {
         return sink;
     }
 
+    /**
+     * SinkBindingSpec holds the desired state of the SinkBinding (from the client).
+     */
     @JsonProperty("sink")
     public void setSink(Destination sink) {
         this.sink = sink;
     }
 
+    /**
+     * SinkBindingSpec holds the desired state of the SinkBinding (from the client).
+     */
     @JsonProperty("subject")
     public Reference getSubject() {
         return subject;
     }
 
+    /**
+     * SinkBindingSpec holds the desired state of the SinkBinding (from the client).
+     */
     @JsonProperty("subject")
     public void setSubject(Reference subject) {
         this.subject = subject;
     }
 
+    @JsonIgnore
+    public SinkBindingSpecBuilder edit() {
+        return new SinkBindingSpecBuilder(this);
+    }
+
+    @JsonIgnore
+    public SinkBindingSpecBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -136,6 +159,10 @@ public class SinkBindingSpec implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

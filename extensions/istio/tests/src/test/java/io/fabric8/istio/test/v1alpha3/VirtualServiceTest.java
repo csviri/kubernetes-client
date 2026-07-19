@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,8 +15,8 @@
  */
 package io.fabric8.istio.test.v1alpha3;
 
-import io.fabric8.istio.api.analysis.v1alpha1.AnalysisMessageBaseLevel;
-import io.fabric8.istio.api.networking.v1alpha3.Percent;
+import io.fabric8.istio.api.api.analysis.v1alpha1.AnalysisMessageBaseLevel;
+import io.fabric8.istio.api.api.networking.v1alpha3.Percent;
 import io.fabric8.istio.api.networking.v1alpha3.VirtualService;
 import io.fabric8.istio.api.networking.v1alpha3.VirtualServiceBuilder;
 import io.fabric8.kubernetes.api.model.HasMetadata;
@@ -38,9 +38,9 @@ class VirtualServiceTest {
         .addNewHttp()
         .withNewFault()
         .withNewDelay()
-        .withNewHTTPFaultInjectionDelayFixedHttpType()
+        .withNewHTTPFaultInjectionDelayFixedDelayHttpType()
         .withFixedDelay("1s")
-        .endHTTPFaultInjectionDelayFixedHttpType()
+        .endHTTPFaultInjectionDelayFixedDelayHttpType()
         .withPercent(10)
         .endDelay()
         .endFault()
@@ -58,7 +58,6 @@ class VirtualServiceTest {
   void loadingFromYAMLIssue103ShouldWork() throws Exception {
     final InputStream inputStream = VirtualServiceTest.class.getResourceAsStream("/v1alpha3/virtual-service-issue103.yaml");
     final VirtualService virtualService = Serialization.yamlMapper().readValue(inputStream, VirtualService.class);
-
     /*
      * ...
      * spec:
@@ -68,7 +67,7 @@ class VirtualServiceTest {
      * fixedDelay: 6s
      * percentage:
      * value: 90.0
-     * 
+     *
      * ...
      */
     final Percent percentage = virtualService.getSpec().getHttp().get(0).getFault().getDelay().getPercentage();

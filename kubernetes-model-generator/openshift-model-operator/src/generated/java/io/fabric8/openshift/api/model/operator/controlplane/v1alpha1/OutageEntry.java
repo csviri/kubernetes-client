@@ -2,9 +2,10 @@
 package io.fabric8.openshift.api.model.operator.controlplane.v1alpha1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -12,7 +13,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
@@ -22,19 +26,20 @@ import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * OutageEntry records time period of an outage
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "end",
     "endLogs",
     "message",
@@ -43,7 +48,6 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -57,42 +61,38 @@ import lombok.experimental.Accessors;
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class OutageEntry implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class OutageEntry implements Editable<OutageEntryBuilder>, KubernetesResource
 {
 
     @JsonProperty("end")
     private String end;
     @JsonProperty("endLogs")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<LogEntry> endLogs = new ArrayList<LogEntry>();
+    private List<LogEntry> endLogs = new ArrayList<>();
     @JsonProperty("message")
-    private java.lang.String message;
+    private String message;
     @JsonProperty("start")
     private String start;
     @JsonProperty("startLogs")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<LogEntry> startLogs = new ArrayList<LogEntry>();
+    private List<LogEntry> startLogs = new ArrayList<>();
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public OutageEntry() {
     }
 
-    /**
-     * 
-     * @param startLogs
-     * @param endLogs
-     * @param start
-     * @param end
-     * @param message
-     */
-    public OutageEntry(String end, List<LogEntry> endLogs, java.lang.String message, String start, List<LogEntry> startLogs) {
+    public OutageEntry(String end, List<LogEntry> endLogs, String message, String start, List<LogEntry> startLogs) {
         super();
         this.end = end;
         this.endLogs = endLogs;
@@ -101,64 +101,111 @@ public class OutageEntry implements KubernetesResource
         this.startLogs = startLogs;
     }
 
+    /**
+     * OutageEntry records time period of an outage
+     */
     @JsonProperty("end")
     public String getEnd() {
         return end;
     }
 
+    /**
+     * OutageEntry records time period of an outage
+     */
     @JsonProperty("end")
     public void setEnd(String end) {
         this.end = end;
     }
 
+    /**
+     * endLogs contains log entries related to the end of this outage. Should contain the success entry that resolved the outage and possibly a few of the failure log entries that preceded it.
+     */
     @JsonProperty("endLogs")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<LogEntry> getEndLogs() {
         return endLogs;
     }
 
+    /**
+     * endLogs contains log entries related to the end of this outage. Should contain the success entry that resolved the outage and possibly a few of the failure log entries that preceded it.
+     */
     @JsonProperty("endLogs")
     public void setEndLogs(List<LogEntry> endLogs) {
         this.endLogs = endLogs;
     }
 
+    /**
+     * message summarizes outage details in a human readable format.
+     */
     @JsonProperty("message")
-    public java.lang.String getMessage() {
+    public String getMessage() {
         return message;
     }
 
+    /**
+     * message summarizes outage details in a human readable format.
+     */
     @JsonProperty("message")
-    public void setMessage(java.lang.String message) {
+    public void setMessage(String message) {
         this.message = message;
     }
 
+    /**
+     * OutageEntry records time period of an outage
+     */
     @JsonProperty("start")
     public String getStart() {
         return start;
     }
 
+    /**
+     * OutageEntry records time period of an outage
+     */
     @JsonProperty("start")
     public void setStart(String start) {
         this.start = start;
     }
 
+    /**
+     * startLogs contains log entries related to the start of this outage. Should contain the original failure, any entries where the failure mode changed.
+     */
     @JsonProperty("startLogs")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<LogEntry> getStartLogs() {
         return startLogs;
     }
 
+    /**
+     * startLogs contains log entries related to the start of this outage. Should contain the original failure, any entries where the failure mode changed.
+     */
     @JsonProperty("startLogs")
     public void setStartLogs(List<LogEntry> startLogs) {
         this.startLogs = startLogs;
     }
 
+    @JsonIgnore
+    public OutageEntryBuilder edit() {
+        return new OutageEntryBuilder(this);
+    }
+
+    @JsonIgnore
+    public OutageEntryBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
-    public Map<java.lang.String, Object> getAdditionalProperties() {
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 
     @JsonAnySetter
-    public void setAdditionalProperty(java.lang.String name, Object value) {
+    public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

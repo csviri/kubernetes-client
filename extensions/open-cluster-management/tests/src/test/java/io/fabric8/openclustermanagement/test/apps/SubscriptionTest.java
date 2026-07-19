@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,10 +17,10 @@ package io.fabric8.openclustermanagement.test.apps;
 
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
-import io.fabric8.openclustermanagement.api.model.multicloudoperatorssubscription.apps.v1.Subscription;
-import io.fabric8.openclustermanagement.api.model.multicloudoperatorssubscription.apps.v1.SubscriptionBuilder;
-import io.fabric8.openclustermanagement.api.model.multicloudoperatorssubscription.apps.v1.SubscriptionList;
-import io.fabric8.openclustermanagement.api.model.multicloudoperatorssubscription.apps.v1.SubscriptionListBuilder;
+import io.fabric8.openclustermanagement.api.model.apps.v1.Subscription;
+import io.fabric8.openclustermanagement.api.model.apps.v1.SubscriptionBuilder;
+import io.fabric8.openclustermanagement.api.model.apps.v1.SubscriptionList;
+import io.fabric8.openclustermanagement.api.model.apps.v1.SubscriptionListBuilder;
 import io.fabric8.openclustermanagement.client.OpenClusterManagementClient;
 import org.junit.jupiter.api.Test;
 
@@ -30,8 +30,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @EnableKubernetesMockClient
 class SubscriptionTest {
-  private OpenClusterManagementClient client;
-  private KubernetesMockServer server;
+  OpenClusterManagementClient client;
+  KubernetesMockServer server;
 
   @Test
   void get() {

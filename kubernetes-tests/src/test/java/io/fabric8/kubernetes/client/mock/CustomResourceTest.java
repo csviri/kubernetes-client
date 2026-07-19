@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.mock;
 
 import io.fabric8.kubernetes.api.model.DeleteOptions;
@@ -38,7 +37,7 @@ import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.kubernetes.client.utils.Serialization;
 import io.fabric8.kubernetes.client.utils.Utils;
-import okhttp3.mockwebserver.RecordedRequest;
+import io.fabric8.mockwebserver.http.RecordedRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -57,7 +56,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnableKubernetesMockClient
+@EnableKubernetesMockClient(https = false)
 class CustomResourceTest {
   private static final Long WATCH_EVENT_PERIOD = 5L;
 
@@ -226,7 +225,7 @@ class CustomResourceTest {
 
     // When
     boolean result = client.genericKubernetesResources(customResourceDefinitionContext).inNamespace("ns1")
-        .withName("example-hello").delete().size() == 1;
+        .withName("example-hello").withGracePeriod(0).delete().size() == 1;
 
     // Then
     assertTrue(result);
@@ -343,7 +342,7 @@ class CustomResourceTest {
   @Test
   void testDeleteWithNonExistentResource() throws IOException {
     assertThat(client.genericKubernetesResources(customResourceDefinitionContext).inNamespace("ns2").withName("example-hello")
-        .delete().size() == 1)
+        .withGracePeriod(0).delete().size() == 1)
         .isFalse();
   }
 
@@ -386,6 +385,7 @@ class CustomResourceTest {
 
           @Override
           public void onClose(WatcherException cause) {
+            // NO OP
           }
         });
 
@@ -417,6 +417,7 @@ class CustomResourceTest {
 
           @Override
           public void onClose(WatcherException cause) {
+            // NO OP
           }
         });
 
@@ -430,8 +431,8 @@ class CustomResourceTest {
   void testWatchSingleResource() throws IOException, InterruptedException {
     // Given
     server.expect()
-        .withPath("/apis/test.fabric8.io/v1alpha1/namespaces/ns1/hellos" + "?fieldSelector="
-            + Utils.toUrlEncoded("metadata.name=example-hello") + "&allowWatchBookmarks=true&watch=true")
+        .withPath("/apis/test.fabric8.io/v1alpha1/namespaces/ns1/hellos" + "?allowWatchBookmarks=true&fieldSelector="
+            + Utils.toUrlEncoded("metadata.name=example-hello") + "&watch=true")
         .andUpgradeToWebSocket()
         .open()
         .waitFor(WATCH_EVENT_PERIOD)
@@ -451,6 +452,7 @@ class CustomResourceTest {
 
           @Override
           public void onClose(WatcherException cause) {
+            // NO OP
           }
         });
 
@@ -464,8 +466,8 @@ class CustomResourceTest {
   void testWatchWithLabels() throws IOException, InterruptedException {
     // Given
     server.expect()
-        .withPath("/apis/test.fabric8.io/v1alpha1/namespaces/ns1/hellos?labelSelector=" + Utils.toUrlEncoded("foo=bar")
-            + "&allowWatchBookmarks=true&watch=true")
+        .withPath("/apis/test.fabric8.io/v1alpha1/namespaces/ns1/hellos?allowWatchBookmarks=true&labelSelector="
+            + Utils.toUrlEncoded("foo=bar") + "&watch=true")
         .andUpgradeToWebSocket()
         .open()
         .waitFor(WATCH_EVENT_PERIOD)
@@ -484,6 +486,7 @@ class CustomResourceTest {
 
           @Override
           public void onClose(WatcherException cause) {
+            // NO OP
           }
         });
 
@@ -498,8 +501,9 @@ class CustomResourceTest {
     // Given
     String watchResourceVersion = "1001";
     server.expect()
-        .withPath("/apis/test.fabric8.io/v1alpha1/namespaces/ns1/hellos?resourceVersion=" + watchResourceVersion
-            + "&allowWatchBookmarks=true&watch=true")
+        .withPath("/apis/test.fabric8.io/v1alpha1/namespaces/ns1/hellos?allowWatchBookmarks=true&resourceVersion="
+            + watchResourceVersion
+            + "&watch=true")
         .andUpgradeToWebSocket()
         .open()
         .waitFor(WATCH_EVENT_PERIOD)
@@ -520,6 +524,7 @@ class CustomResourceTest {
 
           @Override
           public void onClose(WatcherException cause) {
+            // NO OP
           }
         });
 
@@ -533,7 +538,7 @@ class CustomResourceTest {
   void testWatchWithListOptions() throws IOException, InterruptedException {
     // Given
     server.expect().withPath(
-        "/apis/test.fabric8.io/v1alpha1/namespaces/ns1/hellos?resourceVersion=1003&timeoutSeconds=30&allowWatchBookmarks=true&watch=true")
+        "/apis/test.fabric8.io/v1alpha1/namespaces/ns1/hellos?allowWatchBookmarks=true&resourceVersion=1003&timeoutSeconds=30&watch=true")
         .andUpgradeToWebSocket()
         .open()
         .waitFor(WATCH_EVENT_PERIOD)
@@ -557,6 +562,7 @@ class CustomResourceTest {
 
               @Override
               public void onClose(WatcherException cause) {
+                // NO OP
               }
             });
 
@@ -567,10 +573,10 @@ class CustomResourceTest {
 
   @Test
   @DisplayName("Should be able to test watch with Namespace and ListOptions provided")
-  void testWatchWithNamespaceAndListOptions() throws IOException, InterruptedException {
+  void testWatchWithNamespaceAndListOptions() throws InterruptedException {
     // Given
     server.expect().withPath(
-        "/apis/test.fabric8.io/v1alpha1/namespaces/ns1/hellos?resourceVersion=1003&timeoutSeconds=30&allowWatchBookmarks=true&watch=true")
+        "/apis/test.fabric8.io/v1alpha1/namespaces/ns1/hellos?allowWatchBookmarks=true&resourceVersion=1003&timeoutSeconds=30&watch=true")
         .andUpgradeToWebSocket()
         .open()
         .waitFor(WATCH_EVENT_PERIOD)
@@ -594,6 +600,7 @@ class CustomResourceTest {
 
               @Override
               public void onClose(WatcherException cause) {
+                // NO OP
               }
             });
 

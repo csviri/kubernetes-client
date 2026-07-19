@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,7 @@
  */
 package io.fabric8.kubernetes.client.http;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -41,7 +42,13 @@ public class StandardHttpHeaders implements HttpHeaders {
 
   @Override
   public List<String> headers(String key) {
-    return Collections.unmodifiableList(headers.getOrDefault(key, Collections.emptyList()));
+    final List<String> values = new ArrayList<>();
+    for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
+      if (entry.getKey().equalsIgnoreCase(key)) {
+        values.addAll(entry.getValue());
+      }
+    }
+    return Collections.unmodifiableList(values);
   }
 
   @Override

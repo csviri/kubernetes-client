@@ -21,7 +21,7 @@
   <parent>
     <groupId>io.fabric8</groupId>
     <artifactId>kubernetes-client-project</artifactId>
-    <version>6.8-SNAPSHOT</version>
+    <version>999-SNAPSHOT</version>
   </parent>
 
   <artifactId>kubernetes-client</artifactId>
@@ -67,26 +67,15 @@
     </dependency>
     <dependency>
       <groupId>io.fabric8</groupId>
-      <artifactId>kubernetes-httpclient-okhttp</artifactId>
+      <artifactId>kubernetes-httpclient-vertx</artifactId>
       <scope>runtime</scope>
     </dependency>
 
     <dependency>
       <groupId>io.fabric8</groupId>
       <artifactId>zjsonpatch</artifactId>
-      <version>${zjsonpatch.version}</version>
     </dependency>
 
-    <dependency>
-      <groupId>org.bouncycastle</groupId>
-      <artifactId>bcprov-jdk18on</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.bouncycastle</groupId>
-      <artifactId>bcpkix-jdk18on</artifactId>
-      <optional>true</optional>
-    </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-compress</artifactId>
@@ -97,19 +86,15 @@
     <dependency>
       <groupId>io.sundr</groupId>
       <artifactId>builder-annotations</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.sundr</groupId>
-      <artifactId>transform-annotations</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.apache.felix</groupId>
-      <artifactId>org.apache.felix.scr.annotations</artifactId>
-      <version>${scr.annotations.version}</version>
+      <groupId>org.osgi</groupId>
+      <artifactId>org.osgi.service.component.annotations</artifactId>
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
@@ -158,8 +143,8 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <forkCount>1</forkCount>
-          <reuseForks>false</reuseForks>
+          <forkCount>1C</forkCount>
+          <reuseForks>true</reuseForks>
           <!-- We cleanup system properties an env vars, so that we can test in a predictable env -->
           <environmentVariables>
             <KUBERNETES_MASTER />
@@ -205,22 +190,6 @@
       </plugin>
       <plugin>
         <groupId>org.apache.felix</groupId>
-        <artifactId>maven-scr-plugin</artifactId>
-        <version>${maven.scr.plugin.version}</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>scr</goal>
-            </goals>
-            <configuration>
-              <specVersion>1.2</specVersion>
-              <strictMode>true</strictMode>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
         <version>${maven.bundle.plugin.version}</version>
         <executions>
@@ -232,7 +201,7 @@
             </goals>
             <configuration>
               <excludeDependencies>
-                kubernetes-httpclient-okhttp
+                kubernetes-httpclient-vertx
               </excludeDependencies>
               <instructions>
                 <Bundle-Name>${project.name}</Bundle-Name>
@@ -258,7 +227,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>templating-maven-plugin</artifactId>
-        <version>1.0.0</version>
+        <version>3.1.0</version>
         <executions>
           <execution>
             <goals>

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,14 +30,25 @@ import io.fabric8.crd.generator.v1beta1.decorator.AddStatusSubresourceDecorator;
 import io.fabric8.crd.generator.v1beta1.decorator.AddSubresourcesDecorator;
 import io.fabric8.crd.generator.v1beta1.decorator.EnsureSingleStorageVersionDecorator;
 import io.fabric8.crd.generator.v1beta1.decorator.PromoteSingleVersionAttributesDecorator;
+import io.fabric8.crd.generator.v1beta1.decorator.SetDeprecatedVersionDecorator;
 import io.fabric8.crd.generator.v1beta1.decorator.SetServedVersionDecorator;
 import io.fabric8.crd.generator.v1beta1.decorator.SetStorageVersionDecorator;
+import io.fabric8.crd.generator.v1beta1.decorator.SortCustomResourceDefinitionVersionDecorator;
 import io.fabric8.crd.generator.v1beta1.decorator.SortPrinterColumnsDecorator;
 import io.sundr.model.TypeDef;
 
 import java.util.Optional;
 
+/**
+ * @deprecated Use {@link io.fabric8.crd.generator.v1.CustomResourceHandler} instead.
+ */
+@Deprecated
 public class CustomResourceHandler extends AbstractCustomResourceHandler {
+
+  /**
+   * @deprecated Use {@link io.fabric8.crd.generator.v1.CustomResourceHandler#VERSION} instead.
+   */
+  @Deprecated
   public static final String VERSION = "v1beta1";
 
   public CustomResourceHandler(Resources resources, boolean parallel) {
@@ -45,11 +56,11 @@ public class CustomResourceHandler extends AbstractCustomResourceHandler {
   }
 
   @Override
-  protected Decorator getPrinterColumnDecorator(
+  protected Decorator<?> getPrinterColumnDecorator(
       String name, String version, String path, String type, String column,
-      String description, String format) {
+      String description, String format, int priority) {
     return new AddAdditionPrinterColumnDecorator(name, version, type, column, path, format,
-        description);
+        description, priority);
   }
 
   @Override
@@ -90,7 +101,9 @@ public class CustomResourceHandler extends AbstractCustomResourceHandler {
 
     resources.decorate(new SetServedVersionDecorator(name, version, config.served()));
     resources.decorate(new SetStorageVersionDecorator(name, version, config.storage()));
+    resources.decorate(new SetDeprecatedVersionDecorator(name, version, config.deprecated(), config.deprecationWarning()));
     resources.decorate(new EnsureSingleStorageVersionDecorator(name));
+    resources.decorate(new SortCustomResourceDefinitionVersionDecorator(name));
     resources.decorate(new PromoteSingleVersionAttributesDecorator(name));
     resources.decorate(new SortPrinterColumnsDecorator(name, version));
   }

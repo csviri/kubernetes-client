@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.dsl;
 
 public interface ItemReplacable<T> {
@@ -23,7 +22,7 @@ public interface ItemReplacable<T> {
    *
    * @param item replacement
    * @return the replaced item from the api server
-   * @deprecated use resource(item).replaceStatus()
+   * @deprecated use resource(item).updateStatus()
    */
   @Deprecated
   T replaceStatus(T item);
@@ -33,7 +32,7 @@ public interface ItemReplacable<T> {
    *
    * @param item replacement
    * @return the replaced item from the api server
-   * @deprecated use resource(item).replace()
+   * @deprecated use resource(item).update()
    */
   @Deprecated
   T replace(T item);

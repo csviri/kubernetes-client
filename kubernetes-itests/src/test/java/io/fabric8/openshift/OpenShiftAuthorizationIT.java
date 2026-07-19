@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,8 +15,8 @@
  */
 package io.fabric8.openshift;
 
+import io.fabric8.junit.jupiter.api.KubernetesTest;
 import io.fabric8.junit.jupiter.api.RequireK8sSupport;
-import io.fabric8.kubernetes.api.model.Namespace;
 import io.fabric8.openshift.api.model.LocalResourceAccessReview;
 import io.fabric8.openshift.api.model.LocalResourceAccessReviewBuilder;
 import io.fabric8.openshift.api.model.LocalSubjectAccessReview;
@@ -34,18 +34,18 @@ import io.fabric8.openshift.api.model.SubjectAccessReviewResponse;
 import io.fabric8.openshift.api.model.SubjectRulesReview;
 import io.fabric8.openshift.api.model.SubjectRulesReviewBuilder;
 import io.fabric8.openshift.client.OpenShiftClient;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@KubernetesTest(createEphemeralNamespace = false)
 @RequireK8sSupport(RoleBindingRestriction.class)
 class OpenShiftAuthorizationIT {
 
   OpenShiftClient client;
-
-  Namespace namespace;
 
   @Test
   void createSubjectAccessReviewOpenShift() {
@@ -63,10 +63,12 @@ class OpenShiftAuthorizationIT {
     assertTrue(sarResponse.getAllowed());
   }
 
+  @Tag("OSCI")
   @Test
   void createSubjectRulesReviewOpenShift() {
     // Given
     String user = client.currentUser().getMetadata().getName();
+    String namespace = client.getConfiguration().getNamespace();
     SubjectRulesReview srr = new SubjectRulesReviewBuilder()
         .withNewSpec()
         .withUser(user)
@@ -74,7 +76,7 @@ class OpenShiftAuthorizationIT {
         .build();
 
     // When
-    SubjectRulesReview createdSrr = client.subjectRulesReviews().inNamespace(namespace.getMetadata().getName()).create(srr);
+    SubjectRulesReview createdSrr = client.subjectRulesReviews().inNamespace(namespace).create(srr);
 
     // Then
     assertNotNull(createdSrr);
@@ -82,13 +84,15 @@ class OpenShiftAuthorizationIT {
     assertFalse(createdSrr.getStatus().getRules().isEmpty());
   }
 
+  @Tag("OSCI")
   @Test
   void createSelfSubjectRulesReview() {
     // Given
+    String namespace = client.getConfiguration().getNamespace();
     SelfSubjectRulesReview ssrr = new SelfSubjectRulesReviewBuilder().build();
 
     // When
-    SelfSubjectRulesReview createdSsrr = client.selfSubjectRulesReviews().inNamespace(namespace.getMetadata().getName())
+    SelfSubjectRulesReview createdSsrr = client.selfSubjectRulesReviews().inNamespace(namespace)
         .create(ssrr);
 
     // Then
@@ -97,16 +101,18 @@ class OpenShiftAuthorizationIT {
     assertFalse(createdSsrr.getStatus().getRules().isEmpty());
   }
 
+  @Tag("OSCI")
   @Test
   void createLocalResourceAccessReview() {
     // Given
+    String namespace = client.getConfiguration().getNamespace();
     LocalResourceAccessReview lrar = new LocalResourceAccessReviewBuilder()
         .withVerb("create")
         .withResource("configmaps")
         .build();
 
     // When
-    ResourceAccessReviewResponse rarr = client.localResourceAccessReviews().inNamespace(namespace.getMetadata().getName())
+    ResourceAccessReviewResponse rarr = client.localResourceAccessReviews().inNamespace(namespace)
         .create(lrar);
 
     // Then
@@ -115,17 +121,19 @@ class OpenShiftAuthorizationIT {
     assertFalse(rarr.getGroups().isEmpty());
   }
 
+  @Tag("OSCI")
   @Test
   void createLocalSubjectAccessReview() {
     // Given
+    String namespace = client.getConfiguration().getNamespace();
     LocalSubjectAccessReview localSubjectAccessReview = new LocalSubjectAccessReviewBuilder()
-        .withNamespace(namespace.getMetadata().getName())
+        .withNamespace(namespace)
         .withVerb("get")
         .withResource("pods")
         .build();
 
     // When
-    SubjectAccessReviewResponse response = client.localSubjectAccessReviews().inNamespace(namespace.getMetadata().getName())
+    SubjectAccessReviewResponse response = client.localSubjectAccessReviews().inNamespace(namespace)
         .create(localSubjectAccessReview);
 
     // Then

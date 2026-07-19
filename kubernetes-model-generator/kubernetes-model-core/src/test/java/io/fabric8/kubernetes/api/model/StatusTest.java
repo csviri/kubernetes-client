@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,9 +19,10 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class StatusTest {
+class StatusTest {
+
   @Test
-  public void testBuilder() {
+  void testBuilder() {
     Status status = new io.fabric8.kubernetes.api.model.StatusBuilder()
         .withNewMetadata().withContinue("2343212").endMetadata()
         .withStatus("Some status")

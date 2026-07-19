@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -69,6 +69,9 @@ public class TokenRefreshInterceptor implements Interceptor {
 
     if (Utils.isNotNullOrEmpty(token)) {
       headerBuilder.header(AUTHORIZATION, "Bearer " + token);
+    } else if (useRemoteRefresh(config)) {
+      // trigger a 401, rather than attempting an unauthenticated request
+      headerBuilder.header(AUTHORIZATION, "Bearer invalid");
     }
     if (isTimeToRefresh()) {
       refreshToken(headerBuilder);

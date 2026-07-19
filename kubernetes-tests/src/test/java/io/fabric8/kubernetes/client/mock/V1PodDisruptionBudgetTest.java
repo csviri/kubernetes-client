@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,9 +38,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnableKubernetesMockClient
+@EnableKubernetesMockClient(https = false)
 class V1PodDisruptionBudgetTest {
-  private KubernetesMockServer server;
+  KubernetesMockServer server;
   private KubernetesClient client;
 
   @Test
@@ -136,7 +136,8 @@ class V1PodDisruptionBudgetTest {
             .build())
         .once();
 
-    boolean deleted = client.policy().v1().podDisruptionBudget().withName("poddisruptionbudget1").delete().size() == 1;
+    boolean deleted = client.policy().v1().podDisruptionBudget().withName("poddisruptionbudget1").withGracePeriod(0).delete()
+        .size() == 1;
     assertTrue(deleted);
   }
 

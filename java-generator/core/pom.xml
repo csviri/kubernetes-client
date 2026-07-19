@@ -22,7 +22,7 @@
   <parent>
     <artifactId>java-generator-parent</artifactId>
     <groupId>io.fabric8</groupId>
-    <version>6.8-SNAPSHOT</version>
+    <version>999-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
@@ -44,13 +44,12 @@
     <dependency>
       <groupId>com.github.javaparser</groupId>
       <artifactId>javaparser-core</artifactId>
-      <version>3.25.3</version>
+      <version>3.28.2</version>
     </dependency>
 
     <dependency>
       <groupId>io.sundr</groupId>
       <artifactId>builder-annotations</artifactId>
-      <version>${sundrio.version}</version>
       <scope>compile</scope>
     </dependency>
 
@@ -87,7 +86,7 @@
     <dependency>
       <groupId>com.google.testing.compile</groupId>
       <artifactId>compile-testing</artifactId>
-      <version>0.21.0</version>
+      <version>0.23.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>

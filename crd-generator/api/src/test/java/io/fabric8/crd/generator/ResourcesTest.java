@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,9 +29,9 @@ public class ResourcesTest {
     Resources r = new Resources();
 
     AddAdditionPrinterColumnDecorator dec1 = new AddAdditionPrinterColumnDecorator("resource", "v1", "string", "replicas",
-        ".replicas", null, null);
+        ".replicas", null, null, 0);
     AddAdditionPrinterColumnDecorator dec2 = new AddAdditionPrinterColumnDecorator("resource", "v1", "boolean", "enabled",
-        ".replicas", null, null);
+        ".replicas", null, null, 0);
 
     r.decorate(dec1);
     r.decorate(dec2);
@@ -42,14 +42,13 @@ public class ResourcesTest {
   }
 
   @Test
-  public void shouldSupportMultipleSortPrinterColums() {
+  public void shouldSupportMultipleSortPrinterColumns() {
     Resources r = new Resources();
     SortPrinterColumnsDecorator dec1 = new SortPrinterColumnsDecorator("my-crd", "v1");
     SortPrinterColumnsDecorator dec2 = new SortPrinterColumnsDecorator("my-crd", "v2");
     r.decorate(dec1);
     r.decorate(dec2);
     assertEquals(2, r.getDecorators().size());
-    r.getDecorators().stream().forEach(d -> System.out.println(d));
     assertTrue(r.getDecorators().contains(dec1));
     assertTrue(r.getDecorators().contains(dec2));
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,18 +15,17 @@
  */
 package io.fabric8.kubernetes.api.model;
 
-import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-public class KubernetesListTest {
+class KubernetesListTest {
 
   @Test
-  public void testDefaultValues() {
+  void testDefaultValues() {
     Service service = new io.fabric8.kubernetes.api.model.ServiceBuilder()
         .withNewMetadata()
         .withName("test-service")
@@ -60,8 +59,8 @@ public class KubernetesListTest {
     assertNotNull(kubernetesList.getApiVersion());
     assertEquals("v1", kubernetesList.getApiVersion());
     assertEquals("List", kubernetesList.getKind());
-    assertThat(kubernetesList.getItems(), CoreMatchers.hasItem(service));
-    assertThat(kubernetesList.getItems(), CoreMatchers.hasItem(replicationController));
+    assertThat(kubernetesList.getItems())
+        .contains(service, replicationController);
   }
 
   @Test
@@ -91,7 +90,7 @@ public class KubernetesListTest {
   }
 
   @Test
-  public void testDefaultNullValues() {
+  void testDefaultNullValues() {
     Container container = new io.fabric8.kubernetes.api.model.ContainerBuilder().build();
     assertNull(container.getLifecycle());
     assertNull(container.getLivenessProbe());

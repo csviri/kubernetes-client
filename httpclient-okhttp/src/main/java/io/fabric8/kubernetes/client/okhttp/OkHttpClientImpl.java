@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.okhttp;
 
 import io.fabric8.kubernetes.client.KubernetesClientException;
@@ -34,7 +33,6 @@ import io.fabric8.kubernetes.client.http.WebSocketResponse;
 import io.fabric8.kubernetes.client.utils.Utils;
 import okhttp3.Call;
 import okhttp3.Callback;
-import okhttp3.ConnectionPool;
 import okhttp3.Dispatcher;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -42,7 +40,6 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
-import okhttp3.internal.Internal;
 import okio.Buffer;
 import okio.BufferedSink;
 import okio.BufferedSource;
@@ -54,21 +51,21 @@ import org.slf4j.LoggerFactory;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.io.PrintWriter;
 import java.io.Reader;
-import java.io.StringWriter;
-import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 public class OkHttpClientImpl extends StandardHttpClient<OkHttpClientImpl, OkHttpClientFactory, OkHttpClientBuilderImpl> {
@@ -78,6 +75,9 @@ public class OkHttpClientImpl extends StandardHttpClient<OkHttpClientImpl, OkHtt
   static final Map<String, MediaType> MEDIA_TYPES = new ConcurrentHashMap<>();
 
   public static final MediaType JSON = parseMediaType("application/json");
+
+  private static final Set<String> METHODS_REQUIRING_BODY = new HashSet<>(
+      Arrays.asList("POST", "PUT", "PATCH", "PROPPATCH", "REPORT"));
 
   static MediaType parseMediaType(String contentType) {
     MediaType result = MediaType.parse(contentType);
@@ -152,7 +152,10 @@ public class OkHttpClientImpl extends StandardHttpClient<OkHttpClientImpl, OkHtt
 
     @Override
     public void cancel() {
-      Utils.closeQuietly(source);
+      // closing from a non dispatcher thread risks deadlock because close is
+      // a long-running operation that may need to re-obtain the dispatcher lock
+      // and the thread may already be holding other locks
+      executor.execute(() -> Utils.closeQuietly(source));
       done.cancel(false);
     }
   }
@@ -242,53 +245,17 @@ public class OkHttpClientImpl extends StandardHttpClient<OkHttpClientImpl, OkHtt
 
   private final okhttp3.OkHttpClient httpClient;
 
-  public OkHttpClientImpl(OkHttpClient client, OkHttpClientBuilderImpl builder) {
-    super(builder);
+  public OkHttpClientImpl(OkHttpClient client, OkHttpClientBuilderImpl builder, AtomicBoolean closed) {
+    super(builder, closed);
     this.httpClient = client;
   }
 
   @Override
-  public void close() {
-    if (LOG.isDebugEnabled()) {
-      StringWriter writer = new StringWriter();
-      PrintWriter printWriter = new PrintWriter(writer);
-      new Exception().printStackTrace(printWriter);
-      printWriter.close();
-      String stack = writer.toString();
-      stack = stack.substring(stack.indexOf("\n"));
-      LOG.debug("Shutting down dispatcher {} at the following call stack: {}", this.httpClient.dispatcher(), stack);
-    }
-    ConnectionPool connectionPool = httpClient.connectionPool();
-
+  public void doClose() {
     Dispatcher dispatcher = httpClient.dispatcher();
-    ExecutorService executorService = httpClient.dispatcher() != null ? httpClient.dispatcher().executorService() : null;
-
-    if (dispatcher != null) {
-      dispatcher.cancelAll();
-    }
-
-    if (connectionPool != null) {
-      connectionPool.evictAll();
-
-      // begin hack to terminate the idle task, which is not necessary after 4.3.0 - https://github.com/square/okhttp/commit/bc3ad111ad01100a77846f7dc433b0c0f5b58dba
-      // to immediately clean it up, we need to notify the thread waiting on the ConnectionPool / RealConnectionPool
-      Object realConnectionPool = connectionPool;
-
-      try {
-        // 3.14+ holds a delegate to the real pool
-        Method method = Internal.class.getMethod("realConnectionPool", ConnectionPool.class);
-        realConnectionPool = method.invoke(Internal.instance, connectionPool);
-      } catch (Exception e) {
-        // could be 3.12
-      }
-      synchronized (realConnectionPool) {
-        realConnectionPool.notifyAll();
-      }
-    }
-
-    if (executorService != null) {
-      executorService.shutdownNow();
-    }
+    dispatcher.cancelAll();
+    httpClient.connectionPool().evictAll();
+    dispatcher.executorService().shutdownNow();
   }
 
   private CompletableFuture<HttpResponse<AsyncBody>> sendAsync(StandardHttpRequest request,
@@ -313,7 +280,7 @@ public class OkHttpClientImpl extends StandardHttpClient<OkHttpClientImpl, OkHtt
       call.enqueue(new Callback() {
 
         @Override
-        public void onResponse(Call call, Response response) throws IOException {
+        public void onResponse(Call call, Response response) {
           BufferedSource source = response.body().source();
 
           AsyncBody asyncBody = handler.apply(source);
@@ -378,10 +345,10 @@ public class OkHttpClientImpl extends StandardHttpClient<OkHttpClientImpl, OkHtt
       String contentType = request.getContentType();
       if (body instanceof StringBodyContent) {
         requestBuilder.method(request.method(),
-            RequestBody.create(OkHttpClientImpl.parseMediaType(contentType), ((StringBodyContent) body).getContent()));
+            RequestBody.create(((StringBodyContent) body).getContent(), OkHttpClientImpl.parseMediaType(contentType)));
       } else if (body instanceof ByteArrayBodyContent) {
         requestBuilder.method(request.method(),
-            RequestBody.create(OkHttpClientImpl.parseMediaType(contentType), ((ByteArrayBodyContent) body).getContent()));
+            RequestBody.create(((ByteArrayBodyContent) body).getContent(), OkHttpClientImpl.parseMediaType(contentType)));
       } else if (body instanceof InputStreamBodyContent) {
         InputStreamBodyContent bodyContent = (InputStreamBodyContent) body;
         requestBuilder.method(request.method(), new RequestBody() {
@@ -400,13 +367,16 @@ public class OkHttpClientImpl extends StandardHttpClient<OkHttpClientImpl, OkHtt
           }
 
           @Override
-          public long contentLength() throws IOException {
+          public long contentLength() {
             return bodyContent.getLength();
           }
         });
       } else {
         throw new AssertionError("Unsupported body content");
       }
+    } else if (Utils.isNotNullOrEmpty(request.method())) {
+      requestBuilder.method(request.method(),
+          METHODS_REQUIRING_BODY.contains(request.method()) ? RequestBody.create(new byte[0], null) : null);
     }
 
     request.headers().entrySet().stream()

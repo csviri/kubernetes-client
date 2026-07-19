@@ -2,9 +2,10 @@
 package io.fabric8.kubernetes.api.model.scheduling.v1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -12,7 +13,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.KubernetesResourceList;
@@ -24,17 +28,19 @@ import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.fabric8.kubernetes.model.annotation.Group;
 import io.fabric8.kubernetes.model.annotation.Version;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
-import io.sundr.transform.annotations.TemplateTransformation;
-import io.sundr.transform.annotations.TemplateTransformations;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * PriorityClassList is a collection of priority classes.
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
@@ -45,7 +51,6 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -59,51 +64,36 @@ import lombok.experimental.Accessors;
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
-})
-@TemplateTransformations({
-    @TemplateTransformation(value = "/manifest.vm", outputPath = "META-INF/services/io.fabric8.kubernetes.api.model.KubernetesResource", gather = true)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
 @Version("v1")
 @Group("scheduling.k8s.io")
-public class PriorityClassList implements KubernetesResource, KubernetesResourceList<io.fabric8.kubernetes.api.model.scheduling.v1.PriorityClass>
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class PriorityClassList implements Editable<PriorityClassListBuilder>, KubernetesResource, KubernetesResourceList<io.fabric8.kubernetes.api.model.scheduling.v1.PriorityClass>
 {
 
-    /**
-     * 
-     * (Required)
-     * 
-     */
     @JsonProperty("apiVersion")
     private String apiVersion = "scheduling.k8s.io/v1";
     @JsonProperty("items")
-    private List<io.fabric8.kubernetes.api.model.scheduling.v1.PriorityClass> items = new ArrayList<io.fabric8.kubernetes.api.model.scheduling.v1.PriorityClass>();
-    /**
-     * 
-     * (Required)
-     * 
-     */
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<io.fabric8.kubernetes.api.model.scheduling.v1.PriorityClass> items = new ArrayList<>();
     @JsonProperty("kind")
     private String kind = "PriorityClassList";
     @JsonProperty("metadata")
     private ListMeta metadata;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public PriorityClassList() {
     }
 
-    /**
-     * 
-     * @param metadata
-     * @param apiVersion
-     * @param kind
-     * @param items
-     */
     public PriorityClassList(String apiVersion, List<io.fabric8.kubernetes.api.model.scheduling.v1.PriorityClass> items, String kind, ListMeta metadata) {
         super();
         this.apiVersion = apiVersion;
@@ -113,9 +103,7 @@ public class PriorityClassList implements KubernetesResource, KubernetesResource
     }
 
     /**
-     * 
-     * (Required)
-     * 
+     * APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
      */
     @JsonProperty("apiVersion")
     public String getApiVersion() {
@@ -123,29 +111,32 @@ public class PriorityClassList implements KubernetesResource, KubernetesResource
     }
 
     /**
-     * 
-     * (Required)
-     * 
+     * APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
      */
     @JsonProperty("apiVersion")
     public void setApiVersion(String apiVersion) {
         this.apiVersion = apiVersion;
     }
 
+    /**
+     * items is the list of PriorityClasses
+     */
     @JsonProperty("items")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<io.fabric8.kubernetes.api.model.scheduling.v1.PriorityClass> getItems() {
         return items;
     }
 
+    /**
+     * items is the list of PriorityClasses
+     */
     @JsonProperty("items")
     public void setItems(List<io.fabric8.kubernetes.api.model.scheduling.v1.PriorityClass> items) {
         this.items = items;
     }
 
     /**
-     * 
-     * (Required)
-     * 
+     * Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
      */
     @JsonProperty("kind")
     public String getKind() {
@@ -153,26 +144,41 @@ public class PriorityClassList implements KubernetesResource, KubernetesResource
     }
 
     /**
-     * 
-     * (Required)
-     * 
+     * Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
      */
     @JsonProperty("kind")
     public void setKind(String kind) {
         this.kind = kind;
     }
 
+    /**
+     * PriorityClassList is a collection of priority classes.
+     */
     @JsonProperty("metadata")
     public ListMeta getMetadata() {
         return metadata;
     }
 
+    /**
+     * PriorityClassList is a collection of priority classes.
+     */
     @JsonProperty("metadata")
     public void setMetadata(ListMeta metadata) {
         this.metadata = metadata;
     }
 
+    @JsonIgnore
+    public PriorityClassListBuilder edit() {
+        return new PriorityClassListBuilder(this);
+    }
+
+    @JsonIgnore
+    public PriorityClassListBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -180,6 +186,10 @@ public class PriorityClassList implements KubernetesResource, KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

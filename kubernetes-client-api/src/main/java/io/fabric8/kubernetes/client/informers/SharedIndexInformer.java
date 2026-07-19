@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -74,6 +74,13 @@ public interface SharedIndexInformer<T> extends AutoCloseable {
   SharedIndexInformer<T> addEventHandler(ResourceEventHandler<? super T> handler);
 
   /**
+   * Remove event handler.
+   *
+   * @param handler event handler
+   */
+  SharedIndexInformer<T> removeEventHandler(ResourceEventHandler<? super T> handler);
+
+  /**
    * Adds an event handler to the shared informer using the specified resync period.
    * Events to a single handler are delivered sequentially, but there is no
    * coordination between different handlers.
@@ -144,8 +151,12 @@ public interface SharedIndexInformer<T> extends AutoCloseable {
 
   /**
    * Return true if the informer is actively watching
-   * <br>
-   * Will return false when {@link #isRunning()} is true when the watch needs to be re-established.
+   * <p>
+   * Will return false even when {@link #isRunning()} is true
+   * if the watch needs to be re-established due to connectivity issues, 410 Gone response, etc.
+   * <p>
+   * A single false observation does not mean the informer is unhealthy as it will likely be able to resume
+   * normal operations.
    */
   boolean isWatching();
 

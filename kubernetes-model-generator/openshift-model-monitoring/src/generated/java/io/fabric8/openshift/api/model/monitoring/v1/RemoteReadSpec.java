@@ -1,9 +1,10 @@
 
 package io.fabric8.openshift.api.model.monitoring.v1;
 
-import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -11,35 +12,45 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
 import io.fabric8.kubernetes.api.model.LocalObjectReference;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
-import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.SecretKeySelector;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * RemoteReadSpec defines the configuration for Prometheus to read back samples from a remote endpoint.
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "authorization",
     "basicAuth",
     "bearerToken",
     "bearerTokenFile",
+    "filterExternalLabels",
+    "followRedirects",
+    "headers",
     "name",
+    "noProxy",
     "oauth2",
+    "proxyConnectHeader",
+    "proxyFromEnvironment",
     "proxyUrl",
     "readRecent",
     "remoteTimeout",
@@ -49,7 +60,6 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -61,11 +71,16 @@ import lombok.experimental.Accessors;
     @BuildableReference(PodTemplateSpec.class),
     @BuildableReference(ResourceRequirements.class),
     @BuildableReference(IntOrString.class),
-    @BuildableReference(ObjectReference.class),
+    @BuildableReference(io.fabric8.kubernetes.api.model.ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class RemoteReadSpec implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class RemoteReadSpec implements Editable<RemoteReadSpecBuilder>, KubernetesResource
 {
 
     @JsonProperty("authorization")
@@ -73,59 +88,63 @@ public class RemoteReadSpec implements KubernetesResource
     @JsonProperty("basicAuth")
     private BasicAuth basicAuth;
     @JsonProperty("bearerToken")
-    private java.lang.String bearerToken;
+    private String bearerToken;
     @JsonProperty("bearerTokenFile")
-    private java.lang.String bearerTokenFile;
+    private String bearerTokenFile;
+    @JsonProperty("filterExternalLabels")
+    private Boolean filterExternalLabels;
+    @JsonProperty("followRedirects")
+    private Boolean followRedirects;
+    @JsonProperty("headers")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private Map<String, String> headers = new LinkedHashMap<>();
     @JsonProperty("name")
-    private java.lang.String name;
+    private String name;
+    @JsonProperty("noProxy")
+    private String noProxy;
     @JsonProperty("oauth2")
     private OAuth2 oauth2;
+    @JsonProperty("proxyConnectHeader")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private Map<String, List<SecretKeySelector>> proxyConnectHeader = new LinkedHashMap<>();
+    @JsonProperty("proxyFromEnvironment")
+    private Boolean proxyFromEnvironment;
     @JsonProperty("proxyUrl")
-    private java.lang.String proxyUrl;
+    private String proxyUrl;
     @JsonProperty("readRecent")
     private Boolean readRecent;
     @JsonProperty("remoteTimeout")
-    private java.lang.String remoteTimeout;
+    private String remoteTimeout;
     @JsonProperty("requiredMatchers")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private Map<String, String> requiredMatchers = new LinkedHashMap<String, String>();
+    private Map<String, String> requiredMatchers = new LinkedHashMap<>();
     @JsonProperty("tlsConfig")
     private TLSConfig tlsConfig;
     @JsonProperty("url")
-    private java.lang.String url;
+    private String url;
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public RemoteReadSpec() {
     }
 
-    /**
-     * 
-     * @param authorization
-     * @param readRecent
-     * @param bearerToken
-     * @param remoteTimeout
-     * @param requiredMatchers
-     * @param basicAuth
-     * @param proxyUrl
-     * @param name
-     * @param oauth2
-     * @param bearerTokenFile
-     * @param url
-     * @param tlsConfig
-     */
-    public RemoteReadSpec(Authorization authorization, BasicAuth basicAuth, java.lang.String bearerToken, java.lang.String bearerTokenFile, java.lang.String name, OAuth2 oauth2, java.lang.String proxyUrl, Boolean readRecent, java.lang.String remoteTimeout, Map<String, String> requiredMatchers, TLSConfig tlsConfig, java.lang.String url) {
+    public RemoteReadSpec(Authorization authorization, BasicAuth basicAuth, String bearerToken, String bearerTokenFile, Boolean filterExternalLabels, Boolean followRedirects, Map<String, String> headers, String name, String noProxy, OAuth2 oauth2, Map<String, List<SecretKeySelector>> proxyConnectHeader, Boolean proxyFromEnvironment, String proxyUrl, Boolean readRecent, String remoteTimeout, Map<String, String> requiredMatchers, TLSConfig tlsConfig, String url) {
         super();
         this.authorization = authorization;
         this.basicAuth = basicAuth;
         this.bearerToken = bearerToken;
         this.bearerTokenFile = bearerTokenFile;
+        this.filterExternalLabels = filterExternalLabels;
+        this.followRedirects = followRedirects;
+        this.headers = headers;
         this.name = name;
+        this.noProxy = noProxy;
         this.oauth2 = oauth2;
+        this.proxyConnectHeader = proxyConnectHeader;
+        this.proxyFromEnvironment = proxyFromEnvironment;
         this.proxyUrl = proxyUrl;
         this.readRecent = readRecent;
         this.remoteTimeout = remoteTimeout;
@@ -134,134 +153,320 @@ public class RemoteReadSpec implements KubernetesResource
         this.url = url;
     }
 
+    /**
+     * RemoteReadSpec defines the configuration for Prometheus to read back samples from a remote endpoint.
+     */
     @JsonProperty("authorization")
     public Authorization getAuthorization() {
         return authorization;
     }
 
+    /**
+     * RemoteReadSpec defines the configuration for Prometheus to read back samples from a remote endpoint.
+     */
     @JsonProperty("authorization")
     public void setAuthorization(Authorization authorization) {
         this.authorization = authorization;
     }
 
+    /**
+     * RemoteReadSpec defines the configuration for Prometheus to read back samples from a remote endpoint.
+     */
     @JsonProperty("basicAuth")
     public BasicAuth getBasicAuth() {
         return basicAuth;
     }
 
+    /**
+     * RemoteReadSpec defines the configuration for Prometheus to read back samples from a remote endpoint.
+     */
     @JsonProperty("basicAuth")
     public void setBasicAuth(BasicAuth basicAuth) {
         this.basicAuth = basicAuth;
     }
 
+    /**
+     * bearerToken is deprecated: this will be removed in a future release. &#42;Warning: this field shouldn't be used because the token value appears in clear-text. Prefer using `authorization`.&#42;
+     */
     @JsonProperty("bearerToken")
-    public java.lang.String getBearerToken() {
+    public String getBearerToken() {
         return bearerToken;
     }
 
+    /**
+     * bearerToken is deprecated: this will be removed in a future release. &#42;Warning: this field shouldn't be used because the token value appears in clear-text. Prefer using `authorization`.&#42;
+     */
     @JsonProperty("bearerToken")
-    public void setBearerToken(java.lang.String bearerToken) {
+    public void setBearerToken(String bearerToken) {
         this.bearerToken = bearerToken;
     }
 
+    /**
+     * bearerTokenFile defines the file from which to read the bearer token for the URL.<br><p> <br><p> Deprecated: this will be removed in a future release. Prefer using `authorization`.
+     */
     @JsonProperty("bearerTokenFile")
-    public java.lang.String getBearerTokenFile() {
+    public String getBearerTokenFile() {
         return bearerTokenFile;
     }
 
+    /**
+     * bearerTokenFile defines the file from which to read the bearer token for the URL.<br><p> <br><p> Deprecated: this will be removed in a future release. Prefer using `authorization`.
+     */
     @JsonProperty("bearerTokenFile")
-    public void setBearerTokenFile(java.lang.String bearerTokenFile) {
+    public void setBearerTokenFile(String bearerTokenFile) {
         this.bearerTokenFile = bearerTokenFile;
     }
 
+    /**
+     * filterExternalLabels defines whether to use the external labels as selectors for the remote read endpoint.<br><p> <br><p> It requires Prometheus &gt;= v2.34.0.
+     */
+    @JsonProperty("filterExternalLabels")
+    public Boolean getFilterExternalLabels() {
+        return filterExternalLabels;
+    }
+
+    /**
+     * filterExternalLabels defines whether to use the external labels as selectors for the remote read endpoint.<br><p> <br><p> It requires Prometheus &gt;= v2.34.0.
+     */
+    @JsonProperty("filterExternalLabels")
+    public void setFilterExternalLabels(Boolean filterExternalLabels) {
+        this.filterExternalLabels = filterExternalLabels;
+    }
+
+    /**
+     * followRedirects defines whether HTTP requests follow HTTP 3xx redirects.<br><p> <br><p> It requires Prometheus &gt;= v2.26.0.
+     */
+    @JsonProperty("followRedirects")
+    public Boolean getFollowRedirects() {
+        return followRedirects;
+    }
+
+    /**
+     * followRedirects defines whether HTTP requests follow HTTP 3xx redirects.<br><p> <br><p> It requires Prometheus &gt;= v2.26.0.
+     */
+    @JsonProperty("followRedirects")
+    public void setFollowRedirects(Boolean followRedirects) {
+        this.followRedirects = followRedirects;
+    }
+
+    /**
+     * headers defines the custom HTTP headers to be sent along with each remote read request. Be aware that headers that are set by Prometheus itself can't be overwritten. Only valid in Prometheus versions 2.26.0 and newer.
+     */
+    @JsonProperty("headers")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public Map<String, String> getHeaders() {
+        return headers;
+    }
+
+    /**
+     * headers defines the custom HTTP headers to be sent along with each remote read request. Be aware that headers that are set by Prometheus itself can't be overwritten. Only valid in Prometheus versions 2.26.0 and newer.
+     */
+    @JsonProperty("headers")
+    public void setHeaders(Map<String, String> headers) {
+        this.headers = headers;
+    }
+
+    /**
+     * name of the remote read queue, it must be unique if specified. The name is used in metrics and logging in order to differentiate read configurations.<br><p> <br><p> It requires Prometheus &gt;= v2.15.0.
+     */
     @JsonProperty("name")
-    public java.lang.String getName() {
+    public String getName() {
         return name;
     }
 
+    /**
+     * name of the remote read queue, it must be unique if specified. The name is used in metrics and logging in order to differentiate read configurations.<br><p> <br><p> It requires Prometheus &gt;= v2.15.0.
+     */
     @JsonProperty("name")
-    public void setName(java.lang.String name) {
+    public void setName(String name) {
         this.name = name;
     }
 
+    /**
+     * noProxy defines a comma-separated string that can contain IPs, CIDR notation, domain names that should be excluded from proxying. IP and domain names can contain port numbers.<br><p> <br><p> It requires Prometheus &gt;= v2.43.0, Alertmanager &gt;= v0.25.0 or Thanos &gt;= v0.32.0.
+     */
+    @JsonProperty("noProxy")
+    public String getNoProxy() {
+        return noProxy;
+    }
+
+    /**
+     * noProxy defines a comma-separated string that can contain IPs, CIDR notation, domain names that should be excluded from proxying. IP and domain names can contain port numbers.<br><p> <br><p> It requires Prometheus &gt;= v2.43.0, Alertmanager &gt;= v0.25.0 or Thanos &gt;= v0.32.0.
+     */
+    @JsonProperty("noProxy")
+    public void setNoProxy(String noProxy) {
+        this.noProxy = noProxy;
+    }
+
+    /**
+     * RemoteReadSpec defines the configuration for Prometheus to read back samples from a remote endpoint.
+     */
     @JsonProperty("oauth2")
     public OAuth2 getOauth2() {
         return oauth2;
     }
 
+    /**
+     * RemoteReadSpec defines the configuration for Prometheus to read back samples from a remote endpoint.
+     */
     @JsonProperty("oauth2")
     public void setOauth2(OAuth2 oauth2) {
         this.oauth2 = oauth2;
     }
 
+    /**
+     * proxyConnectHeader optionally specifies headers to send to proxies during CONNECT requests.<br><p> <br><p> It requires Prometheus &gt;= v2.43.0, Alertmanager &gt;= v0.25.0 or Thanos &gt;= v0.32.0.
+     */
+    @JsonProperty("proxyConnectHeader")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public Map<String, List<SecretKeySelector>> getProxyConnectHeader() {
+        return proxyConnectHeader;
+    }
+
+    /**
+     * proxyConnectHeader optionally specifies headers to send to proxies during CONNECT requests.<br><p> <br><p> It requires Prometheus &gt;= v2.43.0, Alertmanager &gt;= v0.25.0 or Thanos &gt;= v0.32.0.
+     */
+    @JsonProperty("proxyConnectHeader")
+    public void setProxyConnectHeader(Map<String, List<SecretKeySelector>> proxyConnectHeader) {
+        this.proxyConnectHeader = proxyConnectHeader;
+    }
+
+    /**
+     * proxyFromEnvironment defines whether to use the proxy configuration defined by environment variables (HTTP_PROXY, HTTPS_PROXY, and NO_PROXY).<br><p> <br><p> It requires Prometheus &gt;= v2.43.0, Alertmanager &gt;= v0.25.0 or Thanos &gt;= v0.32.0.
+     */
+    @JsonProperty("proxyFromEnvironment")
+    public Boolean getProxyFromEnvironment() {
+        return proxyFromEnvironment;
+    }
+
+    /**
+     * proxyFromEnvironment defines whether to use the proxy configuration defined by environment variables (HTTP_PROXY, HTTPS_PROXY, and NO_PROXY).<br><p> <br><p> It requires Prometheus &gt;= v2.43.0, Alertmanager &gt;= v0.25.0 or Thanos &gt;= v0.32.0.
+     */
+    @JsonProperty("proxyFromEnvironment")
+    public void setProxyFromEnvironment(Boolean proxyFromEnvironment) {
+        this.proxyFromEnvironment = proxyFromEnvironment;
+    }
+
+    /**
+     * proxyUrl defines the HTTP proxy server to use.
+     */
     @JsonProperty("proxyUrl")
-    public java.lang.String getProxyUrl() {
+    public String getProxyUrl() {
         return proxyUrl;
     }
 
+    /**
+     * proxyUrl defines the HTTP proxy server to use.
+     */
     @JsonProperty("proxyUrl")
-    public void setProxyUrl(java.lang.String proxyUrl) {
+    public void setProxyUrl(String proxyUrl) {
         this.proxyUrl = proxyUrl;
     }
 
+    /**
+     * readRecent defines whether reads should be made for queries for time ranges that the local storage should have complete data for.
+     */
     @JsonProperty("readRecent")
     public Boolean getReadRecent() {
         return readRecent;
     }
 
+    /**
+     * readRecent defines whether reads should be made for queries for time ranges that the local storage should have complete data for.
+     */
     @JsonProperty("readRecent")
     public void setReadRecent(Boolean readRecent) {
         this.readRecent = readRecent;
     }
 
+    /**
+     * remoteTimeout defines the timeout for requests to the remote read endpoint.
+     */
     @JsonProperty("remoteTimeout")
-    public java.lang.String getRemoteTimeout() {
+    public String getRemoteTimeout() {
         return remoteTimeout;
     }
 
+    /**
+     * remoteTimeout defines the timeout for requests to the remote read endpoint.
+     */
     @JsonProperty("remoteTimeout")
-    public void setRemoteTimeout(java.lang.String remoteTimeout) {
+    public void setRemoteTimeout(String remoteTimeout) {
         this.remoteTimeout = remoteTimeout;
     }
 
+    /**
+     * requiredMatchers defines an optional list of equality matchers which have to be present in a selector to query the remote read endpoint.
+     */
     @JsonProperty("requiredMatchers")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public Map<String, String> getRequiredMatchers() {
         return requiredMatchers;
     }
 
+    /**
+     * requiredMatchers defines an optional list of equality matchers which have to be present in a selector to query the remote read endpoint.
+     */
     @JsonProperty("requiredMatchers")
     public void setRequiredMatchers(Map<String, String> requiredMatchers) {
         this.requiredMatchers = requiredMatchers;
     }
 
+    /**
+     * RemoteReadSpec defines the configuration for Prometheus to read back samples from a remote endpoint.
+     */
     @JsonProperty("tlsConfig")
     public TLSConfig getTlsConfig() {
         return tlsConfig;
     }
 
+    /**
+     * RemoteReadSpec defines the configuration for Prometheus to read back samples from a remote endpoint.
+     */
     @JsonProperty("tlsConfig")
     public void setTlsConfig(TLSConfig tlsConfig) {
         this.tlsConfig = tlsConfig;
     }
 
+    /**
+     * url defines the URL of the endpoint to query from.
+     */
     @JsonProperty("url")
-    public java.lang.String getUrl() {
+    public String getUrl() {
         return url;
     }
 
+    /**
+     * url defines the URL of the endpoint to query from.
+     */
     @JsonProperty("url")
-    public void setUrl(java.lang.String url) {
+    public void setUrl(String url) {
         this.url = url;
     }
 
+    @JsonIgnore
+    public RemoteReadSpecBuilder edit() {
+        return new RemoteReadSpecBuilder(this);
+    }
+
+    @JsonIgnore
+    public RemoteReadSpecBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
-    public Map<java.lang.String, Object> getAdditionalProperties() {
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 
     @JsonAnySetter
-    public void setAdditionalProperty(java.lang.String name, Object value) {
+    public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

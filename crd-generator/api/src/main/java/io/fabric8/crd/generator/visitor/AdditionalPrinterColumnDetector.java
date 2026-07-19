@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,9 +15,7 @@
  */
 package io.fabric8.crd.generator.visitor;
 
-import io.fabric8.kubernetes.model.annotation.PrinterColumn;
-
-import java.util.ArrayList;
+import io.fabric8.crd.generator.annotation.PrinterColumn;
 
 public class AdditionalPrinterColumnDetector extends AnnotatedMultiPropertyPathDetector {
 
@@ -26,6 +24,6 @@ public class AdditionalPrinterColumnDetector extends AnnotatedMultiPropertyPathD
   }
 
   public AdditionalPrinterColumnDetector(String prefix) {
-    super(prefix, PrinterColumn.class.getSimpleName(), new ArrayList<>());
+    super(prefix, PrinterColumn.class.getSimpleName());
   }
 }

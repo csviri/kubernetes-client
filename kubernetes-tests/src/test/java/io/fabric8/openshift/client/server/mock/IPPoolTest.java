@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,11 +15,13 @@
  */
 package io.fabric8.openshift.client.server.mock;
 
-import io.fabric8.openshift.api.model.whereabouts.v1alpha1.IPAllocationBuilder;
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.openshift.api.model.whereabouts.v1alpha1.IPPool;
 import io.fabric8.openshift.api.model.whereabouts.v1alpha1.IPPoolBuilder;
 import io.fabric8.openshift.api.model.whereabouts.v1alpha1.IPPoolList;
 import io.fabric8.openshift.api.model.whereabouts.v1alpha1.IPPoolListBuilder;
+import io.fabric8.openshift.api.model.whereabouts.v1alpha1.IPPoolSpecAllocationsBuilder;
 import io.fabric8.openshift.client.OpenShiftClient;
 import org.junit.jupiter.api.Test;
 
@@ -27,10 +29,10 @@ import java.net.HttpURLConnection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class IPPoolTest {
   private OpenShiftClient client;
-  private OpenShiftMockServer server;
+  KubernetesMockServer server;
 
   @Test
   void get() {
@@ -75,7 +77,8 @@ class IPPoolTest {
         .once();
 
     // When
-    boolean isDeleted = client.whereabouts().ippools().inNamespace("ns1").withName("ippool1").delete().size() == 1;
+    boolean isDeleted = client.whereabouts().ippools().inNamespace("ns1").withName("ippool1").withGracePeriod(0).delete()
+        .size() == 1;
 
     // Then
     assertThat(isDeleted).isTrue();
@@ -85,7 +88,7 @@ class IPPoolTest {
     return new IPPoolBuilder()
         .withNewMetadata().withName(name).endMetadata()
         .withNewSpec()
-        .addToAllocations("key1", new IPAllocationBuilder().withId("id1").build())
+        .addToAllocations("key1", new IPPoolSpecAllocationsBuilder().withId("id1").build())
         .withRange("192.168.12.0/24")
         .endSpec()
         .build();

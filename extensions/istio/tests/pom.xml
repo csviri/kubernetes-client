@@ -21,17 +21,26 @@
   <parent>
     <groupId>io.fabric8</groupId>
     <artifactId>istio-extension-pom</artifactId>
-    <version>6.8-SNAPSHOT</version>
+    <version>999-SNAPSHOT</version>
   </parent>
 
   <artifactId>istio-tests</artifactId>
   <packaging>jar</packaging>
   <name>Fabric8 :: Istio :: Tests</name>
 
+  <properties>
+    <maven.deploy.skip>true</maven.deploy.skip>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>io.fabric8</groupId>
       <artifactId>istio-client</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
     </dependency>
 
     <dependency>
@@ -43,12 +52,6 @@
     <dependency>
       <groupId>io.fabric8</groupId>
       <artifactId>mockwebserver</artifactId>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-engine</artifactId>
       <scope>test</scope>
     </dependency>
 

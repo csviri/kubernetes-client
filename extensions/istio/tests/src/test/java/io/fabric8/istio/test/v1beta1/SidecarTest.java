@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,14 +15,14 @@
  */
 package io.fabric8.istio.test.v1beta1;
 
-import io.fabric8.istio.api.networking.v1beta1.IstioEgressListenerBuilder;
+import io.fabric8.istio.api.api.networking.v1alpha3.IstioEgressListenerBuilder;
 import io.fabric8.istio.api.networking.v1beta1.Sidecar;
 import io.fabric8.istio.api.networking.v1beta1.SidecarBuilder;
 import io.fabric8.istio.client.IstioClient;
 import io.fabric8.kubernetes.api.model.DeletionPropagation;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
-import okhttp3.mockwebserver.RecordedRequest;
+import io.fabric8.mockwebserver.http.RecordedRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,29 +16,35 @@
 package io.fabric8.java.generator.nodes;
 
 import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.Modifier;
+import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.PackageDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
+import com.github.javaparser.ast.expr.BooleanLiteralExpr;
+import com.github.javaparser.ast.expr.MemberValuePair;
+import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.Name;
-import com.github.javaparser.ast.expr.NameExpr;
+import com.github.javaparser.ast.expr.NormalAnnotationExpr;
 import com.github.javaparser.ast.expr.SingleMemberAnnotationExpr;
 import com.github.javaparser.ast.expr.StringLiteralExpr;
+import com.github.javaparser.ast.expr.SuperExpr;
+import com.github.javaparser.ast.stmt.BlockStmt;
+import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
+import com.github.javaparser.utils.StringEscapeUtils;
 import io.fabric8.java.generator.Config;
+import io.fabric8.kubernetes.api.model.apiextensions.v1.JSONSchemaProps;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
-public class JCRObject extends AbstractJSONSchema2Pojo implements JObjectExtraAnnotations {
+public class JCRObject extends JObject implements JObjectExtraAnnotations {
 
-  private final String pkg;
-  private final String type;
-  private final String className;
   private final String group;
   private final String version;
   private final String scope;
-  private final String specClassName;
-  private final String statusClassName;
-  private final boolean withSpec;
-  private final boolean withStatus;
   private final String singular;
   private final String plural;
 
@@ -51,27 +57,19 @@ public class JCRObject extends AbstractJSONSchema2Pojo implements JObjectExtraAn
       String group,
       String version,
       String scope,
-      String specClassName,
-      String statusClassName,
-      boolean withSpec,
-      boolean withStatus,
+      Map<String, JSONSchemaProps> toplevelProps,
+      List<String> required,
+      boolean preserveUnknownFields,
+      String description,
       boolean storage,
       boolean served,
       String singular,
       String plural,
       Config config) {
-    super(config, null, false, null, null);
-
-    this.pkg = (pkg == null) ? "" : pkg.trim();
-    this.type = (this.pkg.isEmpty()) ? type : pkg + "." + type;
-    this.className = type;
+    super(pkg, type, toplevelProps, required, preserveUnknownFields, config, description, false, null);
     this.group = group;
     this.version = version;
     this.scope = scope;
-    this.specClassName = specClassName;
-    this.statusClassName = statusClassName;
-    this.withSpec = withSpec;
-    this.withStatus = withStatus;
     this.storage = storage;
     this.served = served;
     this.singular = singular;
@@ -92,43 +90,56 @@ public class JCRObject extends AbstractJSONSchema2Pojo implements JObjectExtraAn
     ClassOrInterfaceDeclaration clz = cu.addClass(className);
 
     clz.addAnnotation(
-        new SingleMemberAnnotationExpr(
+        new NormalAnnotationExpr(
             new Name("io.fabric8.kubernetes.model.annotation.Version"),
-            new NameExpr(
-                "value = \""
-                    + version
-                    + "\" , storage = "
-                    + storage
-                    + " , served = "
-                    + served)));
+            new NodeList<>(
+                new MemberValuePair("value", new StringLiteralExpr(StringEscapeUtils.escapeJava(version))),
+                new MemberValuePair("storage", new BooleanLiteralExpr(storage)),
+                new MemberValuePair("served", new BooleanLiteralExpr(served)))));
     clz.addAnnotation(
         new SingleMemberAnnotationExpr(
             new Name("io.fabric8.kubernetes.model.annotation.Group"),
-            new StringLiteralExpr(group)));
+            new StringLiteralExpr(StringEscapeUtils.escapeJava(group))));
 
     if (singular != null) {
       clz.addAnnotation(
           new SingleMemberAnnotationExpr(
               new Name("io.fabric8.kubernetes.model.annotation.Singular"),
-              new StringLiteralExpr(singular)));
+              new StringLiteralExpr(StringEscapeUtils.escapeJava(singular))));
     }
 
     if (plural != null) {
       clz.addAnnotation(
           new SingleMemberAnnotationExpr(
               new Name("io.fabric8.kubernetes.model.annotation.Plural"),
-              new StringLiteralExpr(plural)));
+              new StringLiteralExpr(StringEscapeUtils.escapeJava(plural))));
     }
 
     ClassOrInterfaceType jlVoid = new ClassOrInterfaceType().setName("java.lang.Void");
 
-    ClassOrInterfaceType spec = (withSpec)
-        ? new ClassOrInterfaceType().setName(this.pkg + "." + this.specClassName)
+    ClassOrInterfaceType spec = (fields.containsKey("spec"))
+        ? new ClassOrInterfaceType().setName(type + "Spec")
         : jlVoid;
+    fields.remove("spec");
+    if (required.contains("spec")) {
+      clz.addMethod("getSpec", Modifier.Keyword.PUBLIC)
+          .setType(spec)
+          .setBody(new BlockStmt().addStatement(new ReturnStmt(new MethodCallExpr(new SuperExpr(), "getSpec"))))
+          .addAnnotation(new NormalAnnotationExpr(new Name("java.lang.Override"), new NodeList<>()))
+          .addAnnotation(new NormalAnnotationExpr(new Name("io.fabric8.generator.annotation.Required"), new NodeList<>()));
+    }
 
-    ClassOrInterfaceType status = (withStatus)
-        ? new ClassOrInterfaceType().setName(this.pkg + "." + this.statusClassName)
+    ClassOrInterfaceType status = (fields.containsKey("status"))
+        ? new ClassOrInterfaceType().setName(type + "Status")
         : jlVoid;
+    fields.remove("status");
+    if (required.contains("status")) {
+      clz.addMethod("getStatus", Modifier.Keyword.PUBLIC)
+          .setType(status)
+          .setBody(new BlockStmt().addStatement(new ReturnStmt(new MethodCallExpr(new SuperExpr(), "getStatus"))))
+          .addAnnotation(new NormalAnnotationExpr(new Name("java.lang.Override"), new NodeList<>()))
+          .addAnnotation(new NormalAnnotationExpr(new Name("io.fabric8.generator.annotation.Required"), new NodeList<>()));
+    }
 
     ClassOrInterfaceType crType = new ClassOrInterfaceType()
         .setName("io.fabric8.kubernetes.client.CustomResource")
@@ -146,7 +157,13 @@ public class JCRObject extends AbstractJSONSchema2Pojo implements JObjectExtraAn
     if (config.isObjectExtraAnnotations()) {
       addExtraAnnotations(clz);
     }
+
+    List<GeneratorResult.ClassResult> buffer = generateJavaFields(clz);
+
+    List<GeneratorResult.ClassResult> results = new ArrayList<>();
+    results.add(new GeneratorResult.ClassResult(className, cu));
+    results.addAll(buffer);
     return new GeneratorResult(
-        Collections.singletonList(new GeneratorResult.ClassResult(className, cu)));
+        Collections.unmodifiableList(results));
   }
 }

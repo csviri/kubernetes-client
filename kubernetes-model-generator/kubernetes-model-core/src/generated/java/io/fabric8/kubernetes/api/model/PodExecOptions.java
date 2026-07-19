@@ -2,9 +2,10 @@
 package io.fabric8.kubernetes.api.model;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -12,13 +13,11 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.model.annotation.Group;
 import io.fabric8.kubernetes.model.annotation.Version;
 import io.sundr.builder.annotations.Buildable;
-import io.sundr.transform.annotations.TemplateTransformation;
-import io.sundr.transform.annotations.TemplateTransformations;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
@@ -27,7 +26,6 @@ import lombok.experimental.Accessors;
 @JsonPropertyOrder({
     "apiVersion",
     "kind",
-    "metadata",
     "command",
     "container",
     "stderr",
@@ -37,36 +35,24 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
 })
-@Buildable(editableEnabled = false, validationEnabled = false, generateBuilderPackage = true, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
-@TemplateTransformations({
-    @TemplateTransformation(value = "/manifest.vm", outputPath = "META-INF/services/io.fabric8.kubernetes.api.model.KubernetesResource", gather = true)
-})
+@Buildable(editableEnabled = false, validationEnabled = false, generateBuilderPackage = false, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
 @Version("v1")
 @Group("")
-public class PodExecOptions implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class PodExecOptions implements Editable<PodExecOptionsBuilder>, KubernetesResource
 {
 
-    /**
-     * 
-     * (Required)
-     * 
-     */
     @JsonProperty("apiVersion")
     private String apiVersion = "v1";
     @JsonProperty("command")
-    private List<String> command = new ArrayList<String>();
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<String> command = new ArrayList<>();
     @JsonProperty("container")
     private String container;
-    /**
-     * 
-     * (Required)
-     * 
-     */
     @JsonProperty("kind")
     private String kind = "PodExecOptions";
     @JsonProperty("stderr")
@@ -78,26 +64,14 @@ public class PodExecOptions implements KubernetesResource
     @JsonProperty("tty")
     private Boolean tty;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public PodExecOptions() {
     }
 
-    /**
-     * 
-     * @param container
-     * @param stdin
-     * @param apiVersion
-     * @param stdout
-     * @param kind
-     * @param tty
-     * @param stderr
-     * @param command
-     */
     public PodExecOptions(String apiVersion, List<String> command, String container, String kind, Boolean stderr, Boolean stdin, Boolean stdout, Boolean tty) {
         super();
         this.apiVersion = apiVersion;
@@ -110,27 +84,18 @@ public class PodExecOptions implements KubernetesResource
         this.tty = tty;
     }
 
-    /**
-     * 
-     * (Required)
-     * 
-     */
     @JsonProperty("apiVersion")
     public String getApiVersion() {
         return apiVersion;
     }
 
-    /**
-     * 
-     * (Required)
-     * 
-     */
     @JsonProperty("apiVersion")
     public void setApiVersion(String apiVersion) {
         this.apiVersion = apiVersion;
     }
 
     @JsonProperty("command")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<String> getCommand() {
         return command;
     }
@@ -150,21 +115,11 @@ public class PodExecOptions implements KubernetesResource
         this.container = container;
     }
 
-    /**
-     * 
-     * (Required)
-     * 
-     */
     @JsonProperty("kind")
     public String getKind() {
         return kind;
     }
 
-    /**
-     * 
-     * (Required)
-     * 
-     */
     @JsonProperty("kind")
     public void setKind(String kind) {
         this.kind = kind;
@@ -210,7 +165,18 @@ public class PodExecOptions implements KubernetesResource
         this.tty = tty;
     }
 
+    @JsonIgnore
+    public PodExecOptionsBuilder edit() {
+        return new PodExecOptionsBuilder(this);
+    }
+
+    @JsonIgnore
+    public PodExecOptionsBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -218,6 +184,10 @@ public class PodExecOptions implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

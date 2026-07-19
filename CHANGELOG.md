@@ -1,19 +1,662 @@
 ## CHANGELOG
 
-### 6.8-SNAPSHOT
+### 7.9-SNAPSHOT
 
 #### Bugs
+* Fix #7983: (mockwebserver) WebSocket upgrades are now performed synchronously from the Vert.x request handler instead of from the asynchronous `HttpServerRequest#body()` callback. Deferring the upgrade let the request end event be processed first, so `HttpServerRequest#toWebSocket()` intermittently threw `IllegalStateException: Request has already been read` and the upgrade was lost (surfacing as flaky `exec`/`attach` mock-server tests). Upgrade requests carry no body, so they are detected via the `Upgrade` header and upgraded before the request is read; the asynchronous path is unchanged for regular HTTP requests
+* Fix #7955: (java-generator) Malicious CRD schema values can no longer inject executable code into the generated Java sources. Schema-controlled values (enum values, CRD group/version/names, property names, descriptions and defaults) are emitted as fully escaped Java string literals, so a value carrying a Unicode-escaped quote cannot break out of its literal once `javac` decodes it. As a defense in depth, each generated class is also re-parsed and structurally validated before it is written (with Java Unicode escape preprocessing enabled to match `javac`), aborting generation on any residual structural mismatch
+
+#### Improvements
+
+#### Dependency Upgrade
+
+#### New Features
+
+#### _**Note**_: Breaking changes
+
+### 7.8.0 (2026-06-29)
+
+#### Bugs
+* Fix #7953: (httpclient-jdk) bodyless requests now preserve the requested HTTP method instead of silently defaulting to `GET`. `JdkHttpClientImpl.requestBuilder` only called `HttpRequest.Builder.method(...)` inside the `body != null` branch, so a bodyless `DELETE`/`POST`/`PUT`/`PATCH` (such as `client.raw(uri, "DELETE", null)`) was sent as `GET` on the JDK backend; the method is now set with `BodyPublishers.noBody()` when there is no body, matching the OkHttp, Jetty and Vert.x backends
+* Fix #7435: (kubernetes-client) A `SharedIndexInformer`'s periodic resync no longer stops permanently and silently when a single resync cycle throws. `DefaultSharedIndexInformer.scheduleResync` runs the resync through `Utils.scheduleAtFixedRate`, whose self-rescheduling chain re-arms the next cycle only when the previous one completes normally; an uncaught exception completed the (unobserved) `resyncFuture` exceptionally and the resync was never scheduled again, with no log, while the independent watch kept `isWatching()` reporting `true` (a restart was required to recover). The resync command now catches and `WARN`-logs the failure so the schedule fires again at the next interval
+* Fix #7933: (kubernetes-client-api) Deterministic TLS trust failures (untrusted cert, expired cert, hostname mismatch) are now classified as terminal and fail fast instead of being retried by the shared `StandardHttpClient.shouldRetry` backoff loop (~19 s drain). The classifier walks both `getCause()` and `getSuppressed()` trees for `CertificateException`, `CertPathValidatorException`, `CertPathBuilderException`, and `SSLPeerUnverifiedException`. Affects all five HTTP client modules (jdk, jetty, okhttp, vertx-4, vertx-5) on both the HTTP request and WebSocket connect paths
+* Fix #7867: (kubernetes-server-mock) `WatchEventsListener` now buffers outgoing watch events that are scheduled before Vert.x fires `onOpen` and replays them once the WebSocket is available, closing the open-side race where a CRUD operation landing between `handleWatch` registering the listener and `onOpen` populating `webSocketRef` scheduled a send that dereferenced a null `webSocketRef`; the resulting `NullPointerException` was silently swallowed by the executor and the event was dropped. Buffered events are replayed after the initial-sync `ADDED`s so ordering is preserved
+* Fix #7896: (kubernetes-client) `AbstractWatchManager.watchEnded()` now emits a `WatcherException` when a watch closes cleanly with no messages within 2 seconds, compensating for a GKE-specific behaviour on `v1/events` where the GKFE proxy rejects a stale `resourceVersion` with a bare WebSocket close (code 1000, no body) instead of `{"type":"ERROR","code":410}`, causing an indefinite reconnect loop with the same stale resourceVersion
+* Fix #7907: (httpclient-vertx-5) WebSocket-over-TLS operations (`exec`/`attach`/`portForward`/WebSocket-backed watches, and the CRD-establishment waits that depend on them) now trust the cluster certificate again. Vert.x 5.1 rewrote the WebSocket client to resolve TLS through a per-connection `ClientSSLOptions` that ignored the custom `SslContextFactory` the client used as its sole carrier of trust material, so WebSocket handshakes silently fell back to the default JVM trust store, failed PKIX validation, and hung to the client-side timeout (regular HTTPS request/response was unaffected). Both the HTTP and WebSocket clients are now configured uniformly with Vert.x `TrustOptions`/`KeyCertOptions` derived from the supplied trust/key managers
+* Fix #7873: (kube-api-test) `Utils.findFreePort` now records every port it hands out for the JVM's lifetime and skips any port already returned, eliminating the back-to-back duplicate-port window that surfaced as a `JUnitExtensionOnMethodTest.simpleTest2` flake — the probe `ServerSocket` was closed before the caller bound it, so `EtcdProcess.startEtcd()` and `KubeAPIServerProcess.startApiServer()` could draw the same port from `Random.nextInt`, etcd would win the bind, and apiserver would exit 1 with `bind: address already in use`, surfacing in `ProcessReadinessChecker` as `Connection reset by peer`
+* Fix #7857: (kubernetes-server-mock) `WatchEventsListener.onClosing` now queues the server-side `WebSocket.close(...)` on the listener's send executor instead of invoking it directly on the Vert.x event loop. This preserves FIFO ordering with any data frames already queued on that executor, so events scheduled before a client-initiated watch close (e.g. an `ADDED`/`DELETED` pair on a final `create`/`delete` before `watch.close()`) are delivered before the close frame instead of being silently dropped by writes against an already-closing socket
+* Fix #7832: (sonar) Re-interrupt thread in 8 production-code catch blocks that swallowed `InterruptedException` without preserving the interrupt status (S2142)
+* Fix #7841: (mockwebserver) split `Dispatcher` shutdown into two phases so `MockDispatcher` only tears down per-session `WebSocketSession` executors after the HTTP server has drained, removing the window where an in-flight upgrade's `onOpen` could land on a shut-down executor. `shutdown()` still runs before `httpServer.close()` to unblock blocked dispatches (e.g. `QueueDispatcher.take()`); the new `releaseResources()` runs after. `WebSocketSession.send()` additionally catches `RejectedExecutionException` defensively so any residual shutdown race stays silent instead of bubbling as a Vert.x `Unhandled exception`. `KubernetesMixedDispatcher` now delegates both lifecycle hooks to its inner `MockDispatcher`, fixing a pre-existing leak where CRUD-mode WebSocket session executors were never shut down
+* Fix #7779: (kubernetes-client) ExecWebSocketListener now notifies the user-supplied ExecListener on transport-level errors that race with `terminateOnError` / channel-3 exit-status completion — `listener.onFailure` (or `onClose`) fires exactly once, gated by a dedicated flag, instead of being silently swallowed when the deferred onError task observes `exitCode.isDone()`
+* Fix #7765: (kubernetes-client) `BaseOperation.informOnCondition` now stops the informer inline when the inner predicate completes the future, closing a CompletableFuture `postComplete` race where a waiter helping drain dependents could fire `informer.stop` after `cf.complete` had already triggered a spurious `?watch=true` HTTP request
+* Fix #7847: (kubernetes-client) `BaseClient.addToCloseable` now synchronizes on the internal closeable set rather than the caller-supplied parameter, so callers cannot break mutual exclusion by passing different references (sonar S2445)
+* Fix #7847: (kubernetes-client-api) `KUBERNETES_SUBDOMAIN_REGEX` uses possessive quantifiers on the outer groups to block ReDoS-style backtracking on adversarial subdomain input; semantics still match the canonical RFC 1123 subdomain pattern (sonar S5998)
+* Fix #7847: (kubernetes-client-api) `Serialization.yamlMapper` builds the mapper into a local before assigning to the `volatile` field, so concurrent readers can no longer observe a partially-initialized instance with modules not yet registered (sonar S3064)
+* Fix #7847: (mockwebserver) self-signed cert/key temp file cleanup goes through `Files.deleteIfExists` with logging instead of swallowing the `File.delete()` return value (sonar S899)
+* Fix #7847: (httpclient-okhttp) `OkHttpClientBuilderImpl` now picks the first `X509TrustManager` from a multi-entry `TrustManager[]` rather than passing `null` to OkHttp's `sslSocketFactory` and NPE'ing; user-supplied `sslContext` is preserved for multi-CA setups (sonar S2637)
+* Fix #7847: (httpclient-okhttp) `OkHttpClientImpl.doClose` removes dead null checks on `dispatcher` and `connectionPool` that are guaranteed non-null by the OkHttp API (sonar S2583)
+
+#### Improvements
+* Fix #7675: (mockwebserver) `MockWebServer.dispatcher` field marked `volatile` so a `setDispatcher(...)` call is reliably visible to the Vert.x request handler thread without further synchronization. `MockWebServer.reset()` Javadoc tightened to make its non-destructive contract explicit (no change to the running server, dispatcher, listeners, SSL/TLS state, port, or protocols)
+* Fix #7809: (kubernetes-client) Support for shard selectors for list and watch - including informers
+* Fix #7837: (kubernetes-client) Follow-ups on shard selector
+* Fix #7899: (kubernetes-client) Callback before re-list for Informers
+
+#### Dependency Upgrade
+* Fix #7849: bump istio.io/client-go from 1.29.2 to 1.30.0
+* Fix #7894: bump k8s.io/autoscaler/vertical-pod-autoscaler from 1.6.0 to 1.7.0
+* Fix #7894: bump k8s.io/gengo/v2 from 2.0.0-20251215205346-5ee0d033ba5b to 2.0.0-20260408192533-25e2208e0dc3
+* Fix #7894: bump k8s.io/kube-openapi from 0.0.0-20260319004828-5883c5ee87b9 to 0.0.0-20260414162039-ec9c827d403f
+* Fix #7875: bump vertx5.version from 5.0.12 to 5.1.1, adapting httpclient-vertx-5 to Vert.x 5.1 behaviour changes (SSL engine options no longer accept an empty protocol array; request-body stream errors are reset with HTTP/2 CANCEL so they are not retried as transient IOExceptions)
+
+#### New Features
+* Fix #7926: (httpclient-vertx-5, httpclient-vertx) opt-in TLS warm-up on the Vert.x HTTP client factory. `Vertx5HttpClientFactory`/`VertxHttpClientFactory` now expose `setTlsWarmup(TlsWarmup)` with modes `OFF`, `CONTEXT` (default, unchanged) and `FULL`. `FULL` runs a synchronous, once-per-JVM, throwaway loopback TLS handshake off the event loop when the client is built, so the first real connection no longer blocks the event loop on the one-time JDK/Netty TLS class loading — for users on cold or hard-CPU-throttled JVMs hitting the first-connection block/timeout described in #7921. Default behavior is unchanged; see the FAQ for CDS and pod CPU-sizing guidance for hard-throttled pods
+* Fix #5084: Jbang scripts to generate graalVM metadata
+* Fix #7375: (crd-generator) Support @JsonClassDescription for adding descriptions to classes in the generated CRD schema.
+
+#### _**Note**_: Breaking changes
+
+### 7.7.0 (2026-05-12)
+
+#### Bugs
+* Fix #7747: (mockwebserver) avoid RejectedExecutionException in MockWebServer#shutdown() — linearize close sequence to remove the httpClose-listener vs await race, and make shutdown() idempotent against repeated calls (e.g. JUnit @Nested afterAll cascades)
+* Fix #7734: (mockwebserver) avoid sending Content-Length together with Transfer-Encoding for chunked responses
+* Fix #7716: (informer) SerialExecutor.execute() now returns immediately after shutdown — no wrapper is offered, scheduleNext() is not called, and the underlying executor is not touched, fixing a post-stop NPE race exposed by SharedProcessor.distribute(...) after stop()
+* Fix #7702: ExecWebSocketListener.onError now wraps WebSocketHandshakeException via the chaining KubernetesClientException constructor instead of post-hoc initCause — handshake failures with a non-null upgrade response no longer throw IllegalStateException synchronously, so onFailure/exitCode receive the parsed Status and the original handshake exception as the cause
+* Fix #7686: (httpclient-vertx-5) StackBasedRecursionGuard.enter() no longer increments depth when refusing entry, fixing an infinite runOnContext loop that stalled InputStreamReadStream uploads under CPU contention
+* Fix #7700: ExecWebSocketListener.onError now defers failure handling through the SerialExecutor so a pending channel-3 exit-status task runs first and the parsed exit code is preserved instead of being overwritten by a peer-close exception
+* Fix #7698: (httpclient-vertx-5) InputStreamReadStream now fires endHandler when registered after the end signal has already been delivered, fixing a race for empty/fast streams
+* Fix #7696: (httpclient-vertx) clear response exception handler before reset in cancel() to prevent StreamResetException from racing with future cancellation
+* Fix #7695: ExecWebSocketListener now defers exitCode completion through the SerialExecutor so pending stdout/stderr async writes are flushed before exit signals
+* Fix #7632: java-generator now HTML-escapes `<`, `>`, and `&` in CRD descriptions to produce valid Javadoc
+* Fix #7543: fix processInlineDuplicateFields to recursively resolve nested inline embeds
+* Fix #7450: StandardHttpClient.shouldRetry() does not retry on Vert.x HttpClosedException
+* Fix #7350: Improper callback timing in leaderelection leads to the dual-leader
+* Fix #7265: fix ephemeral removal of index entries from informer caches
+
+#### Improvements
+* Fix #7426: add `HasMetadata#isSameResource` to test whether two HasMetadata instances point to the same logical cluster resource, with an optional strict mode that also requires matching kind and resourceVersion
+* Fix #7662: (mockwebserver) new `MockWebServer#setHttp2ClearTextEnabled(boolean)` setter to opt out of HTTP/2 cleartext (h2c) upgrade
+* Fix #7522: improve dependency management for kubernetes-httpclient-okhttp
+* Fix #7550: add a ResourceEventHandler onList method and deprecated onNothing
+* Fix #6922: add addOwnerReference variant to set controller and blockOwnerDeletion fields
+* Fix #3396: (mockwebserver) Enhance self-signed certificate generation to include Subject Alternative Names (SANs) for proper TLS verification by modern clients
+* Fix #6923: Make the crd-generator-maven-plugin be toolchain aware
+
+#### Dependency Upgrade
+* Fix #7754: bump baremetal-operator/apis from 0.12.4 to 0.13.0
+* Fix #7754: bump cluster-api-provider-metal3 from 1.12.4 to 1.13.0
+* Fix #7651: bump k8s.io/apimachinery from 0.35.4 to 0.36.0
+* Fix #7579: bump istio.io/client-go from 1.28.0 to 1.29.1
+* Fix #7551: bump jackson-bom from 2.20.0 to 2.21.1
+* Fix #7718: bump kin-openapi from 0.135.0 to 0.137.0
+* Fix #7758: bump kin-openapi from 0.137.0 to 0.138.0
+* Fix #7723: bump knative.dev/eventing from 0.48.2 to 0.49.0
+* Fix #7723: bump knative.dev/eventing-github from 0.48.0 to 0.49.0
+* Fix #7723: bump knative.dev/eventing-gitlab from 0.48.0 to 0.49.0
+* Fix #7723: bump knative.dev/eventing-kafka-broker from 0.48.3 to 0.49.0
+* Fix #7723: bump knative.dev/networking from 0.0.0-20260120131110-a7cdca238a0d to 0.0.0-20260422140718-e9578ef11562
+* Fix #7723: bump knative.dev/serving from 0.48.2 to 0.49.0
+* Fix #7580: bump kustomize/api from 0.20.1 to 0.21.1
+* Fix #7726: bump tektoncd/pipeline from 1.11.1 to 1.12.0
+* Fix #7552: bump tektoncd/triggers from 0.33.0 to 0.35.0
+* Fix #7556: bump eventing-kafka-broker from 0.46.2 to 0.48.1
+* Fix #7553: bump cert-manager from 1.19.4 to 1.20.0
+* Fix #7557: bump baremetal-operator/apis from 0.9.2 to 0.12.2
+* Fix #7544: bump cluster-api-provider-metal3 from 1.9.3 to 1.12.2
+* Fix #7543: bump prometheus-operator from 0.85.0 to 0.89.0
+* Fix #7542: bump open-cluster-management.io/api from 0.16.2 to 1.2.0
+* Fix #7753: bump open-cluster-management.io/api from 1.2.0 to 1.3.0
+* Fix #7541: bump gateway-api from 1.4.0 to 1.5.0
+* Fix #7538: bump cert-manager from 1.18.2 to 1.19.4
+* Fix #7583: bump operator-framework/api from 0.33.0 to 0.41.0
+* Fix #7589: bump prometheus-operator from 0.89.0 to 0.90.0
+* Fix #7736: bump prometheus-operator from 0.90.1 to 0.91.0
+* Fix #7578: bump tektoncd/pipeline from 1.9.0 to 1.10.2
+* Fix #7582: bump vertical-pod-autoscaler from 1.4.1 to 1.6.0
+* Fix #7659: bump vertx.version from 4.5.24 to 4.5.26
+* Fix #7731: bump vertx-5 version from 5.0.7 to 5.0.12
+
+#### New Features
+* Fix #7417: Support for Kubernetes v1.36 (ハル / Haru)
+* Fix #5495: Add more support for subresource operations with enhanced documentation and examples for the generic `subresource()` method
+* Fix #7451: Add support for server-side content negotiation (Table and PartialObjectMetadata responses)
+
+#### _**Note**_: Breaking changes
+* Fix #7417: `scheduling.k8s.io/v1alpha1` model classes removed (`Workload`, `WorkloadList`, `WorkloadSpec`, `PodGroup`, `PodGroupPolicy`, `BasicSchedulingPolicy`, `GangSchedulingPolicy`, `TypedLocalObjectReference`) — upstream rearchitected workload scheduling via KEP-5832
+* Fix #7544: cluster-api model classes moved from package `io.fabric8.kubernetes.api.model.clusterapi.v1beta1` to `io.fabric8.kubernetes.api.model.clusterapi.core.v1beta1` (following upstream cluster-api v1.11+ API reorganization)
+* Fix #7538: cert-manager model `ObjectReference` renamed to `IssuerReference` (following upstream rename in cert-manager v1.19.0)
+* Fix #7541: gateway-api model `v1beta1.ReferenceGrantFrom`, `v1beta1.ReferenceGrantSpec`, and `v1beta1.ReferenceGrantTo` removed (ReferenceGrant graduated to v1 upstream)
+* Fix #7723: knative model `internal.autoscaling.v1alpha1.PodScalableSpec.template` field removed (upstream removed the field in autoscaling.internal.knative.dev v1alpha1)
+* Fix #7580: kustomize model `Patch.options` field type changed from `Map<String, Boolean>` to `PatchArgs` (following upstream kustomize v0.21.0 PatchArgs API type addition)
+* Fix #7543: monitoring model `v1.AuthorizationValidationError`, `v1.OAuth2ValidationError`, `v1.ProbeTargetsValidationError`, and `v1.PrometheusTracingConfig` removed
+* Fix #7736: monitoring model `v1.ThanosSpec.grpcServerTlsConfig` and `v1.ThanosRulerSpec.grpcServerTlsConfig` field type changed from `TLSConfig` to the new `GRPCServerTLSConfig` (following upstream prometheus-operator v0.91.0)
+* Fix #7542: open-cluster-management model `operator.v1.WebhookConfiguration` removed (replaced by `DefaultWebhookConfiguration` and `HostedWebhookConfiguration` upstream)
+
+### 7.4.1 (2026-03-10)
+
+#### Dependency Upgrade
+* Fix #7408: bump vertx.version to 4.5.25
+* Fix #7107: bump Jackson version to 2.19.4
+
+### 7.6.1 (2026-03-05)
+
+#### Bugs
+* Fix #7460: Add explicit Automatic-Module-Name to all httpclient modules to fix invalid auto-derived JPMS module names and vertx/vertx-5 collision
+
+### 7.6.0 (2026-03-02)
+
+#### Bugs
+* Fix #5292: Cluster() configuration should use tlsServerName
+* Fix #7174: (httpclient) Fix HTTP client factory priority - VertxHttpClientFactory (default) now has priority -1, OkHttpClientFactory restored to priority 0
+* Fix #7174: (httpclient-vertx-5) Add runtime check for Vert.x 5 classes to provide clear error when Vert.x 4/5 conflict occurs
+* Fix #7174: (chaos-tests) Fix classpath conflict when testing with Vert.x 5 HTTP client
+* Fix #7415: (java-generator) Fix generic type erasure for array of enums with default values
+* Fix #7422: (okhttp) Remove internal API usage and fix deprecated OkHttp 5 calls
+* Fix #7446: making the timeout of BaseOperation.createOrReplace() configurable
+
+#### Improvements
+* Fix #1105: Add javadoc cross-linking for Fabric8 modules and external dependencies
+* Fix #5756: Use Editable interface instead of reflection to instantiate resource builders
+* Fix #7422: bump okhttp from 4.12.0 to 5.3.2
+* Fix #7252: call additionalConfig when building Vert.x HTTP clients with VertxHttpClientFactory
+
+#### Dependency Upgrade
+* Fix #7374: bump snakeyaml-engine from 2.10 to 3.0.1
+
+#### New Features
+* Fix #7385: Support for Kubernetes v1.35 (Timbernetes)
+* Fix #7174: Added Vert.x 5 HTTP client implementation with improved async handling and WebSocket separation
+* Fix #7402: Added Byte code level semver API compatibility report generation using Revapi
+
+#### _**Note**_: Breaking changes
+* Fix #5756: Resources edited with visitors must now implement `io.fabric8.kubernetes.api.builder.Editable`. All model classes provided by the client already implement this interface. User-provided custom resources that use visitor-based editing will need to implement `Editable` (trivial when a builder already exists).
+* Fix #7422: bump okhttp from 4.12.0 to 5.3.2. The versions are binary compatible, but the major version upgrade might cause side effects.
+
+#### _**Note**_: Vert.x HTTP Client Compatibility (Issue #7174)
+
+The `kubernetes-httpclient-vertx` (Vert.x 4.x) and `kubernetes-httpclient-vertx-5` (Vert.x 5.x) modules are **mutually exclusive**.
+They must not be included together in your project dependencies.
+Both modules provide an implementation of `HttpClient.Factory` and use the same `io.vertx` artifact coordinates but with incompatible major versions.
+
+**Problem**: If both modules are present on the classpath, Maven's dependency resolution may pick Vert.x 4.x JARs while the `Vertx5HttpClientFactory` is selected at runtime.
+This causes `NoClassDefFoundError` for Vert.x 5-specific classes like `io.vertx.core.impl.SysProps`.
+
+**Solution**: Ensure your project includes only ONE of these modules:
+- `kubernetes-httpclient-vertx` (default, uses Vert.x 4.x) - included transitively via `kubernetes-client`
+- `kubernetes-httpclient-vertx-5` (optional, uses Vert.x 5.x) - requires explicit dependency and exclusion of vertx-4
+
+When using Vert.x 5, exclude the default Vert.x 4 client and set the `vertx.version` property:
+```xml
+<properties>
+  <vertx.version>${vertx5.version}</vertx.version> <!-- or explicit 5.0.7 -->
+</properties>
+<dependencies>
+  <dependency>
+    <groupId>io.fabric8</groupId>
+    <artifactId>kubernetes-client</artifactId>
+    <exclusions>
+      <exclusion>
+        <groupId>io.fabric8</groupId>
+        <artifactId>kubernetes-httpclient-vertx</artifactId>
+      </exclusion>
+    </exclusions>
+  </dependency>
+  <dependency>
+    <groupId>io.fabric8</groupId>
+    <artifactId>kubernetes-httpclient-vertx-5</artifactId>
+  </dependency>
+</dependencies>
+```
+
+### 7.5.2 (2026-01-22)
+
+#### Dependency Upgrade
+* Fix #7408: bump vertx.version from 4.5.21 to 4.5.24
+
+### 7.5.1 (2026-01-15)
+
+#### Bugs
+* Fix #7400: Parent reference added in BOM 7.5.0
+
+### 7.5.0 (2026-01-09)
+
+#### Bugs
+* Fix #7160: Use the duration from current leader record, not from the config
+* Fix #7343: Leader election callbacks to be called only once (instead of 2)
+* Fix #7347: Ensure vert.x websockets handle multiple frames
+* Fix #7356: ensure request config is preserved when adapting to OpenShiftClient
+* Fix #7369: Fix typo in warning log messages
+* Fix #7373: (crd-generator) Improve SchemaCustomizer with @Repeatable support and better exception messages
+* Fix #7380: Go openAPI generator errors out when embedded structs have conflicting JSON field names
+* Fix #7388: Type filters fix for conflicting types - OpenAPI generator
+* Fix #7372: Service Port-Forwarding ignores Service port mapping
+
+#### Improvements
+* Fix #7277: fix BOM publish to Maven Central
+* Fix #7345: skip publishing test and example modules to Maven Central
+
+#### Dependency Upgrade
+* Fix #7266: bump jackson-bom from 2.19.2 to 2.20.0, fix overrides and handle jackson-annotations v2.20
+* Fix #7293: bump vertx.version from 4.5.14 to 4.5.21
+* Fix #7358: (openapi) update Gateway API from 1.2.1 to 1.4.0
+* Fix #7361: (openapi) update Istio from 1.27 to 1.28
+
+#### New Features
+* Fix #5081: Add support for streaming lists via Watchable.streamingList method
+* Fix #7048: Support for Kubernetes v1.34 (Of Wind & Will)
+* Fix #7371: Update Fabric8 OpenShift Model as per OpenShift 4.20
+* Fix #7355: (crd-generator) Add SchemaCustomizer annotation for advanced schema modification
+
+#### _**Note**_: Breaking changes
+* Fix #7048: **admissionregistration.v1beta1**: Removed `ValidatingAdmissionPolicy` and related classes (`ValidatingAdmissionPolicyBinding`, `AuditAnnotation`, `Validation`, `ValidatingAdmissionPolicyBindingSpec`) from `v1beta1` as they have graduated to GA in `admissionregistration.v1`. `MutatingAdmissionPolicy` has been promoted from `v1alpha1` to `v1beta1`. The `V1beta1AdmissionRegistrationAPIGroupDSL` and  `V1beta1AdmissionRegistrationAPIGroupClient` have been updated accordingly.
+  Users should migrate to `admissionregistration.v1.ValidatingAdmissionPolicy` for GA APIs.
+* Fix #7266: bump jackson-bom from 2.19.2 to 2.20.0, fix overrides and handle jackson-annotations v2.20
+* Fix #7388: **openshift-model-installer**: The `openshift-model-installer` module is now deprecated and will be removed in a future release. Please migrate away from using this module and its models.
+
+### 7.4.0 (2025-09-08)
+
+#### Bugs
+* Fix #3032: EnableKubernetesMockClient annotation works with Nested tests
+* Fix #7148: corrected octal format detection
+* Fix #7167: Allow Informer.isWatching to see underlying Watch state
+* Fix #7087: Avoid possible NPE in OkHttp websocket handling
+* Fix #7072: Changed rolling update handling to json merge patch to avoid 422 errors
+* Fix #7080: Avoid NPE in CRDGenerator if post-processor is set to null
+* Fix #7116: (java-generator) Use timezone format compatible with Kubernetes
+* Fix #7163: Ensure that streams are notified of errors
+* Fix #7092: (crd-generator) Add support for @Annotations and @Labels in CRD generation - CRD generator now includes annotations and labels specified via these annotations in the generated CRD metadata
+* Fix #7224: Fix KubeApiTest inheritance from base test class
+
+#### Improvements
+ * Fix #7217: refinements and expanded documentation for preserve unknown handling
+
+#### Dependency Upgrade
+
+#### New Features
+* Fix #7045: (java-generator)  Extend the existingJavaTypes to support use of existing enumerations
+
+#### _**Note**_: Breaking changes
+Fix #7204: Rationalized config constructors
+
+### 6.14.0 (2025-06-10)
+
+#### Bugs
+* Fix #7107: Jackson 2.19.0+ support
+
+#### _**Note**_: Breaking changes
+* Fix #7107: This release is not backwards-compatible with previous versions of Jackson, you'll need to use Jackson 2.19.0 in your project for a correct behavior of the Kubernetes Client.
+
+### 7.3.1 (2025-05-20)
+
+#### Bugs
+* Fix #7071: Buildable reference imports don't override local package class references
+
+### 7.3.0 (2025-05-15)
+
+#### Bugs
+* Fix #7036: Resolve serialization errors after Jackson 2.19.0 upgrade (breaks older versions)
+
+#### Dependency Upgrade
+* Fix #7036: Jackson upgraded from v2.18.3 to v2.19.0
+
+#### _**Note**_: Breaking changes
+* Fix #7036: This release is not backwards-compatible with previous versions of Jackson, you'll need to use Jackson 2.19.0 in your project for a correct behavior of the Kubernetes Client.
+
+### 7.2.0 (2025-04-30)
+
+#### Bugs
+* Fix #6750: KubernetesMockServer.reset resets lastRequest related variables
+* Fix #6829: Mixed-case enums are properly supported by the java-generator
+* Fix #6886: Remove invalid JUnit 4 references
+* Fix #6892: rolling().restart() doesn't remove preexistent pod template annotations
+* Fix #6906: Knative VolatileTime should be serialized as String
+* Fix #6908: The Default annotation and JsonProperty default value should accept JSON values
+* Fix #6917: Client does not authenticate correctly on OpenShift if the returned Location header is lower-case
+* Fix #6930: Add support for Boolean enums in the java-generator
+* Fix #6941: HasMetadata.getApiVersion no slash when empty group
+* Fix #6982: (java-generator) Double default field values with `d` suffix
+* Fix #6987: Kube API Test startup fails on readiness SSL check
+* Fix #7037: getKubernetesVersion works in Kubernetes v1.33.0
+
+#### Improvements
+* Fix #6763: (crd-generator) YAML output customization
+* Fix #6863: ensuring SerialExecutor does not throw RejectedExecutionException to prevent unnecessary error logs
+* Fix #6880: LogWatch interface provides listeners on close stream event
+* Fix #6971: Exposed Istio v1 models in Istio Client DSL
+* Fix #6998: Removed unneeded dependency on javax.annotation:javax.annotation-api
+
+#### Dependency Upgrade
+* Fix #6829: Sundrio was upgraded to 0.200.3. In some rare circumstances nested method names will need to be changed.
+
+#### New Features
+* Fix #6827: (crd-generator) Add CRDPostProcessor to process generated CRDs before they are written out
+* Fix #7025: Support for Kubernetes v1.33 (Octarine)
+
+### 7.1.0 (2025-01-30)
+
+#### Bugs
+* Fix #6725: (crd-generator) CRD generator missing type for GenericKubernetesResource
+* Fix #6747: Preventing websocket error logs when the client is closed
+* Fix #6781: Allowing ipv6 entries to work in NO_PROXY
+* Fix #6792: VertxHttpClient uses exclusive Vert.x instance by default
+
+#### New Features
+* Fix #5993: Support for Kubernetes v1.31 (elli)
+* Fix #6767: Support for Kubernetes v1.32 (penelope) 
+* Fix #6777: Added Javadoc comments to all generated models
+* Fix #6802: (java-generator) Added support for required spec and status
+
+### 6.13.5 (2025-01-18)
+
+#### Bugs
+* Fix #6781: Allowing ipv6 entries to work in NO_PROXY
+* Fix #6709: VertxHttpClientFactory reuses the same Vertx instance for each VertxHttpClient instance
+* Fix #6792: VertxHttpClient uses exclusive Vert.x instance by default
+
+### 7.0.1 (2024-12-18)
+
+#### Bugs
+* Fix #6709: VertxHttpClientFactory reuses the same Vertx instance for each VertxHttpClient instance
+
+### 7.0.0 (2024-12-03)
+
+#### Bugs
+* Fix #6038: Support for Gradle configuration cache
+* Fix #6214: Java generator does not recognize fields in CRDs other than metadata, spec, and status
+* Fix #6459: Pod log request sinceTime param correctly encoded
+* Fix #6632: Mock server creationTimestamp and deletionTimestamp formatted consistently (ISO 8601)
+* Fix #6654: (crd-generator) default values for CRD fields can be numeric or boolean
+
+#### Improvements
+* Fix #3069: (crd-generator) Add `@AdditionalPrinterColumn` to specify a printer column by JSON path.
+* Fix #6392: (crd-generator) Add `@AdditionalSelectableField` and `@SelectableField` to specify selectable fields.
+* Fix #5836: (crd-generator) Add `@Size` annotation to limit the size of strings, lists/arrays or maps
+* Fix #5868: (crd-generator) Add `exlusiveMinimum` / `exclusiveMaximum` support to `@Min` and `@Max`
+* Fix #5264: Remove deprecated `Config.errorMessages` field
+* Fix #6008: removing the optional dependency on bouncy castle
+* Fix #6407: sundrio builder-annotations is not available via bom import
+* Fix #6230: introduced Quantity.multiply(int) to allow for Quantity multiplication by an integer
+* Fix #6281: use GitHub binary repo for Kube API Tests
+* Fix #6282: Allow annotated types with Pattern, Min, and Max with Lists and Maps and CRD generation
+* Fix #5480: Move `io.fabric8:zjsonpatch` to KubernetesClient project
+* Fix #6240: Support for multiple files listed in the KUBECONFIG env var
+* Fix #6655: Support removing ResourceEventHandler for informers
+
+#### Dependency Upgrade
+* Fix #2632: Bumped OkHttp from 3.12.12 to 4.12.0
+* Fix #5965: Bumped sundrio.version from 0.103.1 to 0.200.0
+* Fix #6052: Removed dependency on no longer maintained com.github.mifmif:generex
+* Fix #6676: Removed tests and examples from the BOM
+
+#### New Features
+* Fix #5719: io.fabric8:mockwebserver is now based on Vert.x
+* Fix #5795: (crd-generator) Allow to configure categories
+* Fix #5944: (crd-generator) Add CRD-Generator Maven Plugin
+* Fix #5958: (crd-generator) Add CRD-Generator CLI Application
+* Fix #6145: Introduced `io.fabric8:kubernetes-model-validator` module to validate Kubernetes resources
+* Fix #6150: Config uses `proxy-url` in kubeconfig's cluster configuration
+
+#### _**Note**_: Breaking changes
+* Check detailed migration documentation for breaking changes in [7.0.0](./doc/MIGRATION-v7.md)
+* Fix #4659: Removed `SupportTestingClient` interface
+* Fix #5264: `Config.errorMessages` has been removed. Please use Kubernetes status messages directly.
+* Fix #5351: Removed deprecated `io.fabric8:openshift-server-mock` artifact
+* Fix #6081: Moved Java baseline from 8 (1.8) to 11
+* Fix #6138: Removed unused `io:fabric8:kubernetes-model` artifact
+* Fix #6140: withReadyWaitTimeout defaults to 0, which means no waiting
+* Fix #6156: Removed deprecated extension `io:fabric8:service-catalog`
+* Fix #6158: Removed deprecated methods from `io.fabric8.kubernetes.client.utils.IOHelpers` class
+* Fix #6159: Removed deprecated `io.fabric8.kubernetes.client.utils.Utils.getPluralFromKind` method
+* Fix #6361: Renamed SettableBeanPropertyDelegate to SettableBeanPropertyDelegating
+* Fix #6470: Switched default HTTP client from OkHttp to Vert.x (`kubernetes-httpclient-vertx`)
+* Fix #6603: Removed deprecated `io.fabric8.openshift.api.model.runtime.RawExtension` class
+* Fix #6605: Removed deprecated `ApiVersionUtil` classes in extension modules
+* Fix #6609: Removed deprecated `io.fabric8.crd.generator.CRDInfo.getVersion` method
+* Fix #6612: Removed deprecated `io.fabric8.kubernetes.client.Client.isAdaptable` method
+* Fix #6626: Removed deprecated methods from `io.fabric8.kubernetes.client.osgi.ManagedKubernetesClient` class
+* Fix #6627: Removed deprecated methods from `io.fabric8.kubernetes.client.CustomResource` class
+* Fix #6628: Removed deprecated `io.fabric8.kubernetes.client.CustomResourceList` class
+* Fix #6630: Removed deprecated `io.fabric8.kubernetes.client.utils.ReflectUtils` class
+* Fix #6455: (crd-generator) Changed format in `@PrinterColumn` to enum
+* Fix #6673: (crd-generator) Deprecation of CRD Generator v1
+* Fix #6676: Removed tests and examples from the BOM
+
+### 6.13.4 (2024-09-25)
+
+#### Bugs
+* Fix #6247: Support for proxy authentication from proxy URL user info
+* Fix #6342: UnmatchedFieldTypeModule prevents certain jackson features from working
+* Fix #6350: Allowing authenticated http proxy usage with Jetty, vertx, and JDK for https endpoints
+* Fix #6354: Prevent deadlock in okhttp AsyncBody.cancel
+* Fix #6366: Allow Retry-After header to be considered in retries
+
+### 6.13.3 (2024-08-13)
+
+#### Bugs
+* Fix #6249: Provide primitive type setters for ConfigBuilder
+
+### 6.13.2 (2024-08-09)
+
+#### Bugs
+* Fix #6066: Added support for missing `v1.APIVersions` in KubernetesClient
+* Fix #6110: VolumeSource (and other file mode fields) in Octal are correctly interpreted
+* Fix #6137: `ConfigBuilder.withAutoConfigure` is not working
+* Fix #6143: Expands the HTTP interceptor API to include a call back for failed connection attempts
+* Fix #6197: JettyHttp client error handling improvements.
+* Fix #6215: Suppressing rejected execution exception for port forwarder
+* Fix #6212: Improved reliability of file upload to Pod
+
+### 6.13.1 (2024-07-02)
+
+#### Bugs
+* Fix #6059: Swallow rejected execution from internal usage of the informer executor
+* Fix #6068: KubernetesMockServer provides incomplete Configuration while creating test Config for KubernetesClient
+* Fix #6085: model getters have same annotations as fields (breaks native)
+
+### 6.13.0 (2024-05-29)
+
+#### Bugs
+* Fix #5866: Addressed cycle in crd generation with Java 19+ and ZonedDateTime
+* Fix #5960: The serialization of time related types should be string
+
+#### Improvements
+* Fix #5605: proxy configs support proxy URLs without a scheme
+* Fix #5867: (crd-generator) Imply schemaFrom via JsonFormat shape (SchemaFrom takes precedence)
+* Fix #5867: (java-generator) Add JsonFormat shape to date-time
+* Fix #5878: (java-generator) Add implements Editable for extraAnnotations
+* Fix #5878: (java-generator) Update documentation to include dependencies
+* Fix #5953: Made informer watch starting deterministic with respect to list processing
+* Fix #5954: (crd-generator) Sort required properties to ensure deterministic output
+* Fix #5973: CacheImpl locking for reading indexes (Cache.byIndex|indexKeys|index) was reduced
+* Fix #6012: Add convenience methods on HasMetadata to help with SSA
+
+#### Dependency Upgrade
+* Fix #5695: Upgrade Fabric8 Kubernetes Model to Kubernetes v1.30.0
+
+#### _**Note**_: Breaking changes
+* Fix #5947: CRD generation using the v1beta1 version is deprecated. Please use only v1 instead.
+* Fix #5960: The KubernetesSerializer will now by default serialize time related types to strings - rather than object, integer, number, or arrays of integer / number. If you are using these types in a custom object and were not including JsonFormat annotations to adjust the serialization they were likely being serialized in a non-standard way that would not be usable other Kubernetes clients, nor match the generated custom resource definition if one was being produced. Please open an issue if you need the previous behavior for whatever reason - there is a workaround by creating a customized KubernetesSerializer.
+* `storagemigration.k8s.io/v1alpha1` `StorageVersionMigration` introduced in Kubernetes 1.30.0 is added to [kubernetes-model-storageclass](https://github.com/fabric8io/kubernetes-client/tree/main/kubernetes-model-generator/kubernetes-model-storageclass) module. A dedicated module hasn't been created for this new ApiGroup.
+* Fix #6006: Service Catalog extension is deprecated following its deprecation in Kubernetes.
+
+### 6.12.1  (2024-04-18)
+
+#### Bugs
+* Fix #5880: OpenID Connect token refreshed in loaded Config
+* Fix #5911: (crd-generator) Improve error message for detected cycles
+* Fix #5898: Kube API module resolvable from Maven Central
+
+### 6.12.0 (2024-04-12)
+
+#### Bugs
+* Fix #5845: (crd-generator) Fail generating if multiple versions are marked as stored
+* Fix #5847: Missing `Log4j2Plugins.dat` descriptor in Kubernetes Lookup
+* Fix #5853: (java-generator) Gracefully handle colliding enum definitions
+* Fix #5860: Corrections to java-generator gradle plugin extension
+* Fix #5817: NPE on EKS OIDC cluster when token needs to be refreshed
+
+#### Improvements
+* Fix #5843: Support existingJavaTypes extension in java-generator
+
+### 6.11.0 (2024-03-25)
+
+#### Bugs
+* Fix #5729: ensure that kind is set for generic resource lists
+* Fix #3032: JUnit5 Kubernetes Extension works with Nested tests
+* Fix #5759: Don't annotate KubeSchema and ValidationSchema classes
+* Fix #5781: Use UTF-8 for basic authentication
+* Fix #5508: (crd-generator) Ensure deterministic ordering of CustomResourceDefinitionVersions
+
+#### Improvements
+* Fix #5701: Owner reference validity check regarding scope and namespace
+* Fix #5353: added KubernetesClientBuilder.editOrNewConfig
+* Fix #5357: adding additional Quantity methods
+* Fix #5635: refined LeaderElector lifecycle and logging
+* Fix #5787: (crd-generator) add support for deprecated versions for generated CRDs
+* Fix #5788: (crd-generator) add support for Kubernetes validation rules 
+* Fix #5735: Replace usages of `UUID.randomUUID()` with UUID created via AtomicLong
+
+#### New Features
+* Fix #5636: Add new extension `open-virtual-networking` to manage resources in `k8s.ovn.org/v1` API group.
+* Fix #5711: Kube API Test - Kubernetes API Server JUnit Test Support
+* Fix #5772: Add openshift model `io.fabric8.openshift.api.model.DeploymentConfigRollback`
+* Fix #5718: Add a `kubernetes-log4j` module to lookup Kubernetes attributes in a Log4j Core configuration.
+
+#### _**Note**_: Breaking changes
+* KubeSchema and Validation Schema generated classes are no longer annotated with Jackson, Lombok, and Sundrio annotations.
+  This implies that builders will no longer be generated for these classes and that they won't have special deserialization/serialization behavior.
+
+### 6.10.0 (2024-01-10)
+
+#### Bugs
+* Fix #5527: Unable to transfer file to pod if `/tmp` is read-only
+* Fix #5580: (java-generator) Correctly handle defaults for IntOrString types
+* Fix #5584: Fix CRD generation when EnumMap is used
+* Fix #5626: Prevent memory accumulation from informer usage
+* Fix #5656: Enable EC private key usage for mTLS auth
+* Fix #5694: ExecCredential doesn't fail with unsupported command output
+
+#### Improvements
+* Fix #5429: moved crd generator annotations to generator-annotations instead of crd-generator-api. Using generator-annotations introduces no transitive dependencies.
+* Fix #5496: Added PodResource.patchReadinessGateStatus and a general subresource method to use any of the patch/edit/update methods with any subresource
+* Fix #5535: Add lombok and sundrio dependencies to the generated bom
+
+#### Dependency Upgrade
+* Fix #5485: Updated okio to version 1.17.6 to avoid CVE-2023-3635
+* Fix #5643: Updated Kubernetes Model to Kubernetes `v1.29.0`
+* Fix #5673: Updated `sigs.k8s.io/gateway-api` go dependency to v1.0.0
+* Fix #5691: Updated `github.com/cert-manager/cert-manager` to latest available version (`v1.14.0-alpha.0.0.20240105200543-3234974a3865`)
+
+#### New Features
+* Fix #5608 Support authentication with certificate in exec-credentials
+
+#### _**Note**_: Breaking changes
+- Deleted resources in Kubernetes 1.29.0  `flowcontrol.apiserver.k8s.io/v1alpha1`, please migrate to `flowcontrol.apiserver.k8s.io/v1` resources (available via `client.flowControl().v1()` DSL)
+  - `io.fabric8.kubernetes.api.model.flowcontrol.v1alpha1.FlowSchema` removed
+  - `io.fabric8.kubernetes.api.model.flowcontrol.v1alpha1.PriorityLevelConfiguration` removed
+- ClusterCIDR has been removed from Kubernetes 1.29.0 Networking Model
+  - `io.fabric8.kubernetes.api.model.networking.v1alpha1.ClusterCIDR` removed
+  - DSL entrypoint `client.network().v1alpha1().clusterCIDRs()` has been removed from KubernetesClient
+
+### 6.9.2 (2023-11-02)
+
+#### Bugs
+* Fix #5560: bump com.marcnuri.plugins:gradle-api-maven-plugin to v0.0.5, allows compilation behind a proxy
+* Fix #5564: remove redundant lombok.Setter and lombok.experimental.Accessors annotations
+* Fix #5565: bump sundrio to 0.101.3 to fix Visitor problems
+
+### 6.9.1 (2023-10-26)
+
+#### Bugs
+* Fix #5501: (crd-generator) Fix fallback value of `Default` annotation in presence of multiple accessors
+* Fix #5522: type inference fixed by bumping Sundrio to 0.101.2 (see https://github.com/sundrio/sundrio/pull/431)
+* Fix #5554: move certificates in kubernetes-client-api to avoid collisions with those from mockwebserver
+
+### 6.9.0 (2023-10-05)
+
+#### Bugs
+* Fix #5466: OperationSupport should not fail trying to parse Status
+* Fix #5382: (java-generator) Allow to deserialize more valid RFC3339 date-time and make the format customizable
+* Fix #5380: (java-generator) Avoid to emit Java Keywords as package names
+* Fix #5457: (java-generator) Correctly handle numeric enums
+* Fix #5379: ensuring informOnCondition and waitUntilCondition commple with exception when the client closes
+* Fix #5463: ensures that onStopLeading is called with releaseOnCancel even when leadership is already lost
+* Fix #5423: OkHttpClientImpl supports setting request method for empty payload requests
+
+#### Improvements
+* Fix #5316: support read-only system KeyStores with Kube CA Certs
+* Fix #5327: added proactive shutdown of informers on client close
+* Fix #5432: (java-generator) Add the possibility to always emit `additionalProperties` on generated POJOs
+* Fix #5410: (crd-generator) added support for `default`
+* Fix #5368: added support for additional ListOptions fields
+* Fix #5377: added a createOr and unlock function to provide a straight-forward replacement for createOrReplace.
+* Fix #4624: added Config.onlyHttpWatches to control whether watches should only use regular HTTP requests, and not attempt WebSocket connections.
+* Fix #5388: (crd-generator) Generate deterministic CRDs
+* Fix #5135: added per instance methods to create a builder - instead on new PodBuilder(pod), you may use pod.toBuilder()
+* Fix #5257: Add ErrorStreamMessage and StatusStreamMessage to ease mocking of pods/exec requests
+* Fix #5220: refinements and clarifications to the validation of names
+
+#### Dependency Upgrade
+* Fix #5286: Update Fabric8 OpenShift Model as per OpenShift 4.13.12 
+* Fix #5373: Gradle base API based on v8.2.1
+* Fix #5401: Upgrade Fabric8 Kubernetes Model to Kubernetes v1.28.2
+
+#### New Features
+* Fix #5430: Mock Web Server migrated to this repository
+
+#### _**Note**_: Breaking changes
+* Fix #5343: Removed `io.fabric8.kubernetes.model.annotation.PrinterColumn`, use `io.fabric8.crd.generator.annotation.PrinterColumn`
+* Fix #5368: ListOptions parameter ordering is now alphabetical.  If you are using non-crud mocking for lists with options, you may need to update your parameter order.
+* Fix #5391: Removed the vertx-uri-template dependency from the vertx client, if you need that for your application, then introduce your own dependency.
+* Fix #5220: KubernetesResourceUtil.isValidLabelOrAnnotation has been deprecated because the rules for labels and annotations are different
+
+### 6.8.1 (2023-08-14)
+
+#### Bugs
+* Fix #5382: (java-generator) Allow to deserialize more valid RFC3339 date-time and make the format customizable
+* Fix #5380: (java-generator) Avoid to emit Java Keywords as package names
+
+### 6.8.0 (2023-07-24)
+
+#### Bugs
+* Fix #4225: (crd-generator) Principled generation of enum values instead of considering more properties
+* Fix #5113: Clashing package names in trigger model dependencies
+* Fix #5186: Support for Pod uploads with big numbers
+* Fix #5221: Empty kube config file causes NPE
+* Fix #5281: Ensure the KubernetesCrudDispatcher's backing map is accessed w/lock
+* Fix #5298: Prevent requests needing authentication from causing a 403 response
+* Fix #5327: Ensured that the informer reconnect task terminates after client close
 
 #### Improvements
 * Fix #5166: Remove opinionated messages from Config's `errorMessages` and deprecate it
+* Fix #5233: Generalized SchemaSwap to allow for cycle expansion
+* Fix #5262: all built-in collections will omit empty in their serialized form.
+* Fix #5287: Add an option to filter the files processed by the java-generator, based on a suffix allowlist
+* Fix #5293: Mock server supports KubernetesClientBuilder customization
+* Fix #5315: Introduced `kubernetes-junit-jupiter-autodetect` to use with [automatic extension registration](https://junit.org/junit5/docs/current/user-guide/#extensions-registration-automatic)
+* Fix #5339: `@PrinterColumn` annotation has configuration field for priority
 
 #### Dependency Upgrade
+* Fix #5056: Update Kubernetes Model to v1.27.3
+* Fix #5140: Upgrade Fabric8 Knative Extension Model to v0.37.1
+* Fix #5308: sundrio was updated to the latest version.  FluentImpl classes were removed, along with methods that had been previously deprecated.  Some seldom used builder methods dealing manipulating buildable fields as a subtype such as withXXXField were removed in favor of using more general methods such as withField.
 
 #### New Features
 * Fix #5133: Support for using TokenRequest for existing ServiceAccount
 
 #### _**Note**_: Breaking changes
-* Fix #2718: KubernetesResourceUtil.isResourceReady was deprecated.  Use 
+* Fix #2718: KubernetesResourceUtil.isResourceReady was deprecated.  Use `client.resource(item).isReady()` or `Readiness.getInstance().isReady(item)` instead.
+* Fix #5171: Removed Camel-K extension, use [`org.apache.camel.k:camel-k-crds`](https://central.sonatype.com/artifact/org.apache.camel.k/camel-k-crds) instead.
+* Fix #5262: Built-in resources were in-consistent with respect to their serialization or empty collections.  In many circumstances this was confusing behavior.  In order to be consistent all built-in resources will omit empty collections by default.  This is a breaking change if you are relying on an empty collection in a json merge or a strategic merge where the list has a patchStrategy of atomic.  In these circumstances the empty collection will no longer be serialized.  You may instead use a json patch, server side apply instead, or modify the serialized form of the patch.
+* Fix #5279: (java-generator) Add native support for `date-time` fields, they are now mapped to native `java.time.ZonedDateTime`
+* Fix #5315: kubernetes-junit-jupiter no longer registers the NamespaceExtension and KubernetesExtension extensions to be used in combination with junit-platform.properties>`junit.jupiter.extensions.autodetection.enabled=true`configuration. If you wish to use these extensions and autodetect them, change your dependency to `kubernetes-junit-jupiter-autodetect`.
+* Deprecating `io.fabric8.kubernetes.model.annotation.PrinterColumn` in favor of: `io.fabric8.crd.generator.annotation.PrinterColumn`
+* Resource classes in `resource.k8s.io/v1alpha1` have been moved to `resource.k8s.io/v1alpha2` apiGroup in Kubernetes 1.27. Users are required to change package of the following classes:
+  - `io.fabric8.kubernetes.api.model.resource.v1alpha1.PodSchedulingContext` -> - `io.fabric8.kubernetes.api.model.resource.v1alpha2.PodSchedulingContext`
+  - `io.fabric8.kubernetes.api.model.resource.v1alpha1.ResourceClaim` -> - `io.fabric8.kubernetes.api.model.resource.v1alpha2.ResourceClaim`
+  - `io.fabric8.kubernetes.api.model.resource.v1alpha1.ResourceClaimTemplate` -> `io.fabric8.kubernetes.api.model.resource.v1alpha2.ResourceClaimTemplate`
+  - `io.fabric8.kubernetes.api.model.resource.v1alpha1.ResourceClass` -> `io.fabric8.kubernetes.api.model.resource.v1alpha2.ResourceClass`
 
 ### 6.7.2 (2023-06-15)
 
@@ -41,9 +684,9 @@
 * Fix #5117: corrected the trace httpclient logging of large response bodies
 * Fix #5125: TLS 1.3 only should be supported
 * Fix #5126: fallback to changeit only if null/empty does not work
-* Fix #5145: [java-generator] handle `additionalProperties: true` emitting a field of type `AnyType`
+* Fix #5145: (java-generator) handle `additionalProperties: true` emitting a field of type `AnyType`
 * Fix #5152: preventing JDK WebSocket errors from terminating watches and improving watch termination and its logging
-* Fix #5164: [java-generator] handle more special characters in field names
+* Fix #5164: (java-generator) handle more special characters in field names
 
 #### Improvements
 * Fix #1335: HttpClient Factory additionalConfig consistently applied for all client types
@@ -114,7 +757,7 @@ Fix #5121: RequestConfig is propagated to derived HttpClient instances
 * Fix #5022: adding additional buffering to ExecWatchInputStream
 * Fix #5052: add Quantity.fromNumericalAmount, the inverse of getNumericalAmount
 * Fix #5073: `NamespaceVisitFromServerGetWatchDeleteRecreateWaitApplicableListImpl` extends `ServerSideApplicable`
-* Fix #5080: minimizing debug logs related to the backoff interval 
+* Fix #5080: minimizing debug logs related to the backoff interval
 
 #### Dependency Upgrade
 * Fix #5006: Bump BouncyCastle to 1.72
@@ -233,7 +876,7 @@ Fix #5121: RequestConfig is propagated to derived HttpClient instances
 * Fix #4637: all pod operations that require a ready / succeeded pod may use withReadyWaitTimeout, which supersedes withLogWaitTimeout.
 * Fix #4654: Fix GatewayClass to not implement Namespaced interface
 * Fix #4670: the initial informer listing will use a resourceVersion of 0 to utilize the watch cache if possible.  This means that the initial cache state when the informer is returned, or the start future is completed, may not be as fresh as the previous behavior which forced the latest version.  It will of course become more consistent as the watch will already have been established.
-* Fix #4694: [java-generator] Option to override the package name of the generated code.
+* Fix #4694: (java-generator) Option to override the package name of the generated code.
 * Fix #4698: changes were made to improve authentication logic.  If a username and password are specified and you are using a base KuberentesClient, then that will always be used as a basic auth header value.  If a username and password are specified and you are using an OpenShiftClient, then a token will still be used if present, but upon an auth failure the username and password will be used to obtain a fresh token.  If a new token is obtained it will be saved in the kubeconfig if one were used to create the Config.
 * Fix #4720: interceptors close any response body if the response is not a 2xx response.
 * Fix #4734: @KubernetesTest annotation can be used in base test classes
@@ -288,7 +931,7 @@ Fix #5121: RequestConfig is propagated to derived HttpClient instances
 #### New Features
 * Fix #4136: added support for fieldValidation as a dsl method for POST/PUT/PATCH operations
 * Fix #3896: added dsl support for server side apply
-* Fix #4582: updated [client.secrets] createOrReplace document
+* Fix #4582: updated client.secrets createOrReplace document
 * Fix #4516: added support for blocking delete operations using the withTimeout methods: op.withTimeout(1, TimeUnit.MINUTE).delete() - will wait for up to 1 minute for the resources to be fully deleted. This makes for a more concise replacement of the deletingExisting method.
 
 #### _**Note**_: Breaking changes
@@ -328,7 +971,7 @@ Fix #5121: RequestConfig is propagated to derived HttpClient instances
 * Fix #3864: Change ManagedOpenShiftClient OSGi ConfigurationPolicy to REQUIRE
 * Fix #4414: RawExtension as default fall-back type for KubernetesResource deserialization
 * Fix #4470: Added timestamps support for deployment logs and other resources.
-* Fix #4476: \[crd-generator\] Support custom `Annotations` and `Labels` to be emitted in the CRD
+* Fix #4476: (crd-generator) Support custom `Annotations` and `Labels` to be emitted in the CRD
 
 #### Dependency Upgrade
 * Fix #4243: Update Tekton pipeline model to v0.39.0
@@ -609,7 +1252,7 @@ Please see the [migration guide](doc/MIGRATION-v6.md)
 * Fix #3535: ensure clientKeyAlgo is set properly when loading config YAML from `fromKubeconfig`
 * Fix #3598: applying cancel to the correct future for waitUntilCondition and waitUntilReady
 * Fix #3609: adding locking to prevent long running Watcher methods from causing reconnects with concurrent processing
-* Fix #3629: correcting the watch 200/503 exception handling 
+* Fix #3629: correcting the watch 200/503 exception handling
 * Fix #3606: Template getObjects doesn't throw NPE when objects is null
 * Fix #3620: throw a meaningful exception if no kind/plural is on a ResourceDefinitionContext, default plural if possible
 * Fix #3636: ensure proper handling of LogWatch closure wrt its streams
@@ -817,7 +1460,7 @@ Please see the [migration guide](doc/MIGRATION-v6.md)
 * Fix #3135: added mock crud support for patch status, and will return exceptions for unsupported patch types
 * Fix #3072: various changes to refine how threads are handled by informers.  Note that the SharedInformer.run call is now blocking when starting the informer.
 * Fix #3143: a new SharedInformerEventListener.onException(SharedIndexInformer, Exception) method is available to determine which informer could not start.
-* Fix #3170: made HttpClientUtils.createHttpClient(Config, Consumer<OkHttpClient.Builder>) public to allow overriding custom http client properties 
+* Fix #3170: made HttpClientUtils.createHttpClient(Config, Consumer<OkHttpClient.Builder>) public to allow overriding custom http client properties
 * Fix #3202: make pod upload connection and request timeouts configurable
 * Fix #3185: Introduce GenericKubernetesResource, used as delegate in RawCustomResourceOperationsImpl
 * Fix #3001: WatchConnectionManager logs that provide little information are now logged at a lower level
@@ -838,7 +1481,7 @@ Please see the [migration guide](doc/MIGRATION-v6.md)
 * Fix #3087: Support HTTP operation retry with exponential backoff (for status code >= 500)
 * Fix #3193:Add DSL support for `autoscaling.openshift.io` resources in OpenShiftClient
 * Fix #3209: Add DSL support for PodSecurityPolicySubjectReview, PodSecurityPolicyReview, PodSecurityPolicySelfSubjectReview in `security.openshift.io/v1` apiGroup to OpenShiftClient
-* Fix #3207: Add DSL support for OperatorCondition, Operator, PackageManifest in `operators.coreos.com` apiGroup to OpenShiftClient 
+* Fix #3207: Add DSL support for OperatorCondition, Operator, PackageManifest in `operators.coreos.com` apiGroup to OpenShiftClient
 * Fix #3201: Add support for `tuned.openshift.io` apiGroup in OpenShiftClient DSL
 * Fix #3205: Add DSL support for ConsolePlugin and ConsoleQuickStart in `console.openshift.io` apiGroup
 * Fix #3222: Add DSL support for `user.openshift.io/v1` Identity in OpenShiftClient DSL
@@ -856,7 +1499,7 @@ Please see the [migration guide](doc/MIGRATION-v6.md)
 
 ##### Util Changes:
 - #3197 `Utils.waitUntilReady` now accepts a Future, rather than a BlockingQueue
-- #3169 `Utils.shutdownExecutorService` removed in favor of direct usage of shutdownNow where appropriate.  
+- #3169 `Utils.shutdownExecutorService` removed in favor of direct usage of shutdownNow where appropriate.
   The stream pumper related classes were also simplified to utility methods on InputStreamPumper.
 
 ### 5.4.1 (2021-06-01)
@@ -920,7 +1563,7 @@ Please see the [migration guide](doc/MIGRATION-v6.md)
 * Fix #2701: Better support for patching in KuberntesClient
 * Fix #3034: Added a SharedInformer.isRunning method
 * Fix #3088: mock server will assume /status is a subresource, and other refinements to match kube behavior
-* Fix #3111: Add DSL Support for `config.openshift.io/v1` resources in OpenShiftClient 
+* Fix #3111: Add DSL Support for `config.openshift.io/v1` resources in OpenShiftClient
 
 #### _**Note**_: Breaking changes in the API
 ##### DSL Changes:
@@ -994,7 +1637,7 @@ Please see the [migration guide](doc/MIGRATION-v6.md)
 * Fix #2871: Change longFileMode to LONGFILE\_POSIX for creating tar in PodUpload, improve exception handling in PodUpload.
 * Fix #2746: SharedInformerFactory should use key formed from OperationContext
 * Fix #2736: Move CRD annotations to kubernetes-model-common module for greater coherence
-* Fix #2836: Make CRD generation usable at runtime, split the generator into api and apt modules, 
+* Fix #2836: Make CRD generation usable at runtime, split the generator into api and apt modules,
   the `crd-generator-apt` artifact corresponding to the previous `crd-generator` artifact, while the
   `crd-generator-api` artifact can be consumed directly to generate the CRDs at runtime.
 
@@ -1024,7 +1667,7 @@ Please see the [migration guide](doc/MIGRATION-v6.md)
 * Fix #2672: WaitUntilReady for Service resource throws IllegalArgumentException
 
 #### Improvements
-* Fix #2662: Allow option to containerize Go Model Schema generation builds 
+* Fix #2662: Allow option to containerize Go Model Schema generation builds
 * Fix #2717: Remove edit() methods from RawCustomResourceOperationsImpl taking InputStream arguments
 * Fix #2757: add `storage` and `served` to `Version` annotation
 * Fix #2759: add `ShortNames` annotation to specify short names for CRD generation
@@ -1095,7 +1738,7 @@ Please see the [migration guide](doc/MIGRATION-v6.md)
 #### Improvements
 
 * Fix #2723: Dependency cleanup
- - Remove javax.annotation-api 
+ - Remove javax.annotation-api
  - Remove jaxb-api
  - Remove jackson-module-jaxb-annotations
 * Fix #2744: Automatically instantiates spec and status fields on `CustomResource` when possible.
@@ -1135,21 +1778,21 @@ Please see the [migration guide](doc/MIGRATION-v6.md)
 * Fix #2611: Support for Custom Resource and Custom Resource Definitions has been improved
   - New annotations have been introduced for users to specify group, version, singular and plural
     properties for `CustomResource` instances
-  - `CustomResource` instances must now be annotated with `@Version` and `@Group` so that the 
+  - `CustomResource` instances must now be annotated with `@Version` and `@Group` so that the
     associated information can be automatically computed
-  - `HasMetadata` provides default implementations for `getApiVersion` and `getKind` based on the 
+  - `HasMetadata` provides default implementations for `getApiVersion` and `getKind` based on the
     presence (or not) of annotations on the target class
-  - Static methods have been introduced on `HasMetadata` and `CustomResource` to encapsulate the 
+  - Static methods have been introduced on `HasMetadata` and `CustomResource` to encapsulate the
     logic used to resolve `Kind`, `ApiVersion`, `Group`, `Version`, `Plural`, `Singular` and `CRD Name`
     properties
-  - New `v1CRDFromCustomResourceType` and `v1beta1CRDFromCustomResourceType` methods have been 
+  - New `v1CRDFromCustomResourceType` and `v1beta1CRDFromCustomResourceType` methods have been
     introduced on `CustomResourceDefinitionContext` to initialize a `CustomResourceDefinitionBuilder`
-    with the information provided by a specific `CustomResource` implementation, making it much 
+    with the information provided by a specific `CustomResource` implementation, making it much
     easier to create CRDs if you already have defined your custom resource type
-  - `CustomResource` is now parameterized by the spec and status types that it uses which further 
+  - `CustomResource` is now parameterized by the spec and status types that it uses which further
     removes boiler plate
 * Rename `@ApiVersion` and `@ApiGroup` to simply `@Version` and `@Group`, respectively. This was done
-  to unify annotations and also remove potential confusion between values provided to `@ApiVersion` 
+  to unify annotations and also remove potential confusion between values provided to `@ApiVersion`
   and what is returned by `HasMetadata#getApiVersion`
 
 ### 5.0.0-alpha-3 (2020-12-10)
@@ -1231,10 +1874,10 @@ _**Note**_: Breaking changes in the API
 * Fix #2452: Make Readiness.isReady publicly available from a wrapper method in KubernetesResourceUtil
 
 #### Dependency Upgrade
-* Bump Knative Serving to v0.17.2 & Knative Eventing to v0.17.3 
+* Bump Knative Serving to v0.17.2 & Knative Eventing to v0.17.3
 
 #### New Features
-* Fix #2340: Adding support for Knative Eventing Contrib 
+* Fix #2340: Adding support for Knative Eventing Contrib
 * Fix #2111: Support automatic refreshing for expired OIDC tokens
 * Fix #2146: Add Support for specifying CustomResourceDefinitionContext while initializing KubernetesServer
 * Fix #2314: Fetch logs should wait for the job's associated pod to be ready
@@ -1270,7 +1913,7 @@ _**Note**_ Minor breaking changes:
 
 #### Dependency Upgrade
 * Fix #2360: bump mockito-core from 3.4.0 to 3.4.2
-* Fix #2355: bump jandex from 2.1.3.Final to 2.2.0.Final 
+* Fix #2355: bump jandex from 2.1.3.Final to 2.2.0.Final
 * Fix #2353: chore: bump workflow action-setup versions + kubernetes to 1.18.6
 * Fix #2292: Update createOrReplace to do replace when create fails with conflict
 * Fix: Bump SnakeYaml to version 1.26 (as required for OSGi bundle for jackson-dataformat-yaml)
@@ -1298,7 +1941,7 @@ _**Note**_: Some classes have been moved to other packages:
 * Fix #2297: Resuscitate ProjectRequestHandler in openshift-client
 * Fix #2328: Failure in deserialization while watching events
 * Fix #2299: Improve error handling of RejectedExecutionException from ExecutorService
-* Fix KubernetesAttributesExctractor to extract metadata from unregistered custom resources, such when using Raw CustomResource API 
+* Fix KubernetesAttributesExctractor to extract metadata from unregistered custom resources, such when using Raw CustomResource API
 * Fix #2296: No adapter available for type:interface io.fabric8.kubernetes.client.dsl.V1APIGroupDSL
 * Fix #2269: Setting a grace period when deleting resource using `withPropagationPolicy()`
 * Fix #2342: watchLogs for deployment is broken
@@ -1327,7 +1970,7 @@ _**Note**_: Some classes have been moved to other packages:
 
 ### 4.10.2 (2020-06-02)
 #### Bugs
-* Fix #2251: Modify KubernetesDeserializer for handling classes with same name but different apiVersions 
+* Fix #2251: Modify KubernetesDeserializer for handling classes with same name but different apiVersions
 * Fix #2205: Event model classes from core v1 have been lost
 * Fix #2226: SharedIndexInformer for non-namespaced resources not working
 * Fix #2201: Uberjar doesn't contain model classes anymore
@@ -1357,7 +2000,7 @@ _**Note**_:
     ```
     public class Animals extends CustomResource implements Namespaced { ... }
     ```
-    You can also checkout an example in our test suite for this: [PodSet.java](https://github.com/fabric8io/kubernetes-client/blob/master/kubernetes-tests/src/test/java/io/fabric8/kubernetes/client/mock/crd/PodSet.java#L22)
+    You can also checkout an example in our test suite for this: [PodSet.java](https://github.com/fabric8io/kubernetes-client/blob/main/kubernetes-tests/src/test/java/io/fabric8/kubernetes/client/mock/crd/PodSet.java#L22)
 
 ### 4.10.1 (2020-05-06)
 #### Bugs
@@ -1390,7 +2033,7 @@ _**Note**_:
 
 #### New Features
 * Fix #2115: Keep tekton v1alpha1 api
-* Fix #2002: DSL Support for PodTemplate 
+* Fix #2002: DSL Support for PodTemplate
 * Fix #2015: Add Support for v1, v2beta1, and v2beta2 apiVersions in case of HorizontalPodAutoscaler
 
 ### 4.9.2 (2020-05-19)
@@ -1436,8 +2079,8 @@ _**Note**_:
 * Fix #2047: Readiness#isReady is unreliable for StatefulSet
 * Fix #1247: URL parameters are not escaped.
 * Fix #1961: Two SharedInformer issues related to kube-apiserver unavailable and relisting
-* Fix #2023: Class RawCustomResourceOperationsImpl can't handle HTTP responses with empty body coming from the k8s 
-cluster (Jackson deserialization error was throwed). This kind of response can be returned after executing operations 
+* Fix #2023: Class RawCustomResourceOperationsImpl can't handle HTTP responses with empty body coming from the k8s
+cluster (Jackson deserialization error was throwed). This kind of response can be returned after executing operations
 like the delete of a custom resource.
 * Fix #2017: Incorrect plural form for Endpoints kind
 * Fix #2053: Fixed parsing of exponential values. Added multiplication to the amount during parsing exponential values.
@@ -1727,7 +2370,7 @@ like the delete of a custom resource.
   * Fix #758: Deleting Deployments with `.cascading(true)` creates a new Replica Set
   * Fix #1515: HasMetadataOperation.periodicWatchUntilReady is broken
   * Fix #1550: MutatingWebhookConfigurationOperationsImpl should be a NonNamespaceOperation
-  
+
 #### Improvements
   * Added example for raw custom resources.
 

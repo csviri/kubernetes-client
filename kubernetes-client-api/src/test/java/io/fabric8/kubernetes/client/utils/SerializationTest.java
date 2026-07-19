@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,6 @@
 package io.fabric8.kubernetes.client.utils;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
@@ -28,7 +27,9 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import io.fabric8.kubernetes.api.model.AnyType;
 import io.fabric8.kubernetes.api.model.Config;
 import io.fabric8.kubernetes.api.model.ConfigMap;
+import io.fabric8.kubernetes.api.model.ConfigMapVolumeSource;
 import io.fabric8.kubernetes.api.model.GenericKubernetesResource;
+import io.fabric8.kubernetes.api.model.KeyToPath;
 import io.fabric8.kubernetes.api.model.KubernetesList;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.Namespace;
@@ -36,12 +37,18 @@ import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.PodSpec;
+import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.Toleration;
+import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinition;
 import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.JSONSchemaProps;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
+import io.fabric8.kubernetes.api.model.batch.v1.CronJob;
+import io.fabric8.kubernetes.api.model.batch.v1.CronJobSpec;
+import io.fabric8.kubernetes.api.model.batch.v1.JobSpec;
+import io.fabric8.kubernetes.api.model.batch.v1.JobTemplateSpec;
 import io.fabric8.kubernetes.api.model.coordination.v1.Lease;
 import io.fabric8.kubernetes.api.model.coordination.v1.LeaseSpec;
 import io.fabric8.kubernetes.api.model.runtime.RawExtension;
@@ -79,7 +86,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class SerializationTest {
 
   static class WithNull {
-    @JsonInclude(value = Include.ALWAYS)
+    @JsonInclude
     public Integer field;
   }
 
@@ -88,7 +95,7 @@ class SerializationTest {
   }
 
   @Test
-  void testNullSerialization() throws Exception {
+  void testNullSerialization() {
     assertEquals("---\nfield: null\n", Serialization.asYaml(new WithNull()));
     assertEquals("{\"field\":null}", Serialization.asJson(new WithNull()));
     assertEquals("--- {}\n", Serialization.asYaml(new WithoutNull()));
@@ -168,7 +175,8 @@ class SerializationTest {
         .hasFieldOrPropertyWithValue("spec.securityContext.runAsGroup", 1000L)
         .hasFieldOrPropertyWithValue("spec.securityContext.runAsUser", 1000L)
         .extracting(Pod::getSpec)
-        .returns(Arrays.asList(new Toleration("NoSchedule", "nodeType", "Equal", null, "build")), PodSpec::getTolerations)
+        .returns(Collections.singletonList(new Toleration("NoSchedule", "nodeType", "Equal", null, "build")),
+            PodSpec::getTolerations)
         .extracting(PodSpec::getContainers).asList()
         .hasSize(2)
         .extracting("name", "image", "resources.requests.cpu")
@@ -289,7 +297,9 @@ class SerializationTest {
   void unmarshalRawResource() {
     InputStream is = SerializationTest.class.getResourceAsStream("/serialization/invalid-resource.yml");
     RawExtension raw = Serialization.unmarshal(is);
-    ((Map) raw.getValue()).get("not-a").equals("resource");
+    @SuppressWarnings("unchecked")
+    Map<String, String> value = (Map<String, String>) raw.getValue();
+    assertThat(value).containsEntry("not-a", "resource");
   }
 
   @Test
@@ -308,6 +318,33 @@ class SerializationTest {
             new Tuple(GenericKubernetesResource.class, "custom.resource.example.com/v1", "Example", "a-custom-resource"),
             new Tuple(Namespace.class, "v1", "Namespace", "a-namespace"),
             new Tuple(Pod.class, "v1", "Pod", "a-pod"));
+  }
+
+  @Test
+  @DisplayName("unmarshal, when integer value has octal literal value, then octal literal value correctly parsed")
+  void unmarshal_whenIntegerValueHasOctalLiteralValue_thenCorrectlyDeserializeInteger() {
+    // When
+    final CronJob cronJob = Serialization.unmarshal(getClass().getResourceAsStream("/serialization/cronjob-octal.yml"),
+        CronJob.class);
+    // Then
+    assertThat(cronJob)
+        .extracting(CronJob::getSpec)
+        .extracting(CronJobSpec::getJobTemplate)
+        .extracting(JobTemplateSpec::getSpec)
+        .extracting(JobSpec::getTemplate)
+        .extracting(PodTemplateSpec::getSpec)
+        .extracting(PodSpec::getVolumes)
+        .asInstanceOf(InstanceOfAssertFactories.list(Volume.class))
+        .singleElement()
+        .extracting(Volume::getConfigMap)
+        .hasFieldOrPropertyWithValue("defaultMode", Integer.valueOf("0555", 8))
+        .hasFieldOrPropertyWithValue("name", "conf")
+        .extracting(ConfigMapVolumeSource::getItems)
+        .asInstanceOf(InstanceOfAssertFactories.list(KeyToPath.class))
+        .singleElement()
+        .hasFieldOrPropertyWithValue("key", "key1")
+        .hasFieldOrPropertyWithValue("path", "target")
+        .hasFieldOrPropertyWithValue("mode", Integer.valueOf("0555", 8));
   }
 
   @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "type")
@@ -384,13 +421,10 @@ class SerializationTest {
 
     // ensure that the extenion is preserved
     assertThat(Serialization.asYaml(config)).isEqualTo("---\n"
-        + "clusters: []\n"
-        + "contexts: []\n"
         + "extensions:\n"
         + "- extension:\n"
         + "    not: \"kubernetesresource\"\n"
-        + "  name: \"foo\"\n"
-        + "users: []\n");
+        + "  name: \"foo\"\n");
   }
 
   @JsonTypeResolver(io.fabric8.kubernetes.model.jackson.UnwrappedTypeResolverBuilder.class)
@@ -500,6 +534,17 @@ class SerializationTest {
     assertThat(yaml).isEqualTo("---\n"
         + "- \"x\"\n"
         + "- \"y\"\n");
+  }
+
+  @Test
+  @DisplayName("S3064: yamlMapper should return a fully initialized mapper with modules registered")
+  @SuppressWarnings("deprecation")
+  void yamlMapper_shouldReturnFullyInitializedMapper() {
+    com.fasterxml.jackson.databind.ObjectMapper mapper = Serialization.yamlMapper();
+    assertThat(mapper).isNotNull();
+    assertThat(mapper.getRegisteredModuleIds())
+        .as("YAML mapper must have GoCompatibilityModule registered (not partially constructed)")
+        .anyMatch(id -> id.toString().contains("GoCompatibility"));
   }
 
   @Test

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,6 +30,7 @@ public class WithRequestCallable<C extends Client> implements FunctionCallable<C
   }
 
   @Override
+  @SuppressWarnings("java:S2095") // newClient returns a transient view sharing the parent client's resources; closing it would close the underlying shared client
   public <O> O call(Function<C, O> function) {
     C newClient = (C) this.client.newClient(requestConfig).adapt(this.client.getClass());
     return function.apply(newClient);

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,10 +15,10 @@
  */
 package io.fabric8.kubernetes.client.mock;
 
-import io.fabric8.kubernetes.api.model.resource.v1alpha1.ResourceClaimTemplate;
-import io.fabric8.kubernetes.api.model.resource.v1alpha1.ResourceClaimTemplateBuilder;
-import io.fabric8.kubernetes.api.model.resource.v1alpha1.ResourceClaimTemplateList;
-import io.fabric8.kubernetes.api.model.resource.v1alpha1.ResourceClaimTemplateListBuilder;
+import io.fabric8.kubernetes.api.model.resource.v1alpha2.ResourceClaimTemplate;
+import io.fabric8.kubernetes.api.model.resource.v1alpha2.ResourceClaimTemplateBuilder;
+import io.fabric8.kubernetes.api.model.resource.v1alpha2.ResourceClaimTemplateList;
+import io.fabric8.kubernetes.api.model.resource.v1alpha2.ResourceClaimTemplateListBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
@@ -28,20 +28,20 @@ import java.net.HttpURLConnection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EnableKubernetesMockClient
+@EnableKubernetesMockClient(https = false)
 class ResourceClaimTemplateTest {
   private KubernetesClient client;
-  private KubernetesMockServer server;
+  KubernetesMockServer server;
 
   @Test
   void get() {
     // Given
-    server.expect().get().withPath("/apis/resource.k8s.io/v1alpha1/namespaces/test/resourceclaimtemplates/test-get")
+    server.expect().get().withPath("/apis/resource.k8s.io/v1alpha2/namespaces/test/resourceclaimtemplates/test-get")
         .andReturn(HttpURLConnection.HTTP_OK, createNewResourceClaimTemplate("test-get"))
         .once();
 
     // When
-    ResourceClaimTemplate resourceClaimTemplate = client.dynamicResourceAllocation().v1alpha1().resourceClaimTemplates()
+    ResourceClaimTemplate resourceClaimTemplate = client.dynamicResourceAllocation().v1alpha2().resourceClaimTemplates()
         .inNamespace("test").withName("test-get").get();
 
     // Then
@@ -53,14 +53,14 @@ class ResourceClaimTemplateTest {
   @Test
   void list() {
     // Given
-    server.expect().get().withPath("/apis/resource.k8s.io/v1alpha1/namespaces/test/resourceclaimtemplates")
+    server.expect().get().withPath("/apis/resource.k8s.io/v1alpha2/namespaces/test/resourceclaimtemplates")
         .andReturn(HttpURLConnection.HTTP_OK, new ResourceClaimTemplateListBuilder()
             .addToItems(createNewResourceClaimTemplate("test-list"))
             .build())
         .once();
 
     // When
-    ResourceClaimTemplateList resourceClaimList = client.dynamicResourceAllocation().v1alpha1().resourceClaimTemplates()
+    ResourceClaimTemplateList resourceClaimList = client.dynamicResourceAllocation().v1alpha2().resourceClaimTemplates()
         .inNamespace("test").list();
 
     // Then
@@ -73,13 +73,13 @@ class ResourceClaimTemplateTest {
   @Test
   void delete() {
     // Given
-    server.expect().delete().withPath("/apis/resource.k8s.io/v1alpha1/namespaces/test/resourceclaimtemplates/cluster")
+    server.expect().delete().withPath("/apis/resource.k8s.io/v1alpha2/namespaces/test/resourceclaimtemplates/cluster")
         .andReturn(HttpURLConnection.HTTP_OK, createNewResourceClaimTemplate("cluster"))
         .once();
 
     // When
-    boolean isDeleted = client.dynamicResourceAllocation().v1alpha1().resourceClaimTemplates().inNamespace("test")
-        .withName("cluster").delete().size() == 1;
+    boolean isDeleted = client.dynamicResourceAllocation().v1alpha2().resourceClaimTemplates().inNamespace("test")
+        .withName("cluster").withGracePeriod(0).delete().size() == 1;
 
     // Then
     assertThat(isDeleted).isTrue();

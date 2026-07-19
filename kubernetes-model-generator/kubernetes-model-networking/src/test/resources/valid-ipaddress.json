@@ -1,0 +1,15 @@
+{
+  "kind": "IPAddress",
+  "apiVersion": "networking.k8s.io/v1alpha1",
+  "metadata": {
+    "name": "192.168.1.5"
+  },
+  "spec": {
+    "parentRef": {
+      "group": "apps",
+      "resource": "Deployment",
+      "namespace": "default",
+      "name": "test-deploy"
+    }
+  }
+}

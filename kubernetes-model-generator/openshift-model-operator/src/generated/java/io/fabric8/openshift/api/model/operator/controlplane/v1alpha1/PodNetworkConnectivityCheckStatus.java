@@ -2,9 +2,10 @@
 package io.fabric8.openshift.api.model.operator.controlplane.v1alpha1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -12,7 +13,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
@@ -22,19 +26,17 @@ import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "conditions",
     "failures",
     "outages",
@@ -42,7 +44,6 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -56,40 +57,37 @@ import lombok.experimental.Accessors;
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class PodNetworkConnectivityCheckStatus implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class PodNetworkConnectivityCheckStatus implements Editable<PodNetworkConnectivityCheckStatusBuilder>, KubernetesResource
 {
 
     @JsonProperty("conditions")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<PodNetworkConnectivityCheckCondition> conditions = new ArrayList<PodNetworkConnectivityCheckCondition>();
+    private List<PodNetworkConnectivityCheckCondition> conditions = new ArrayList<>();
     @JsonProperty("failures")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<LogEntry> failures = new ArrayList<LogEntry>();
+    private List<LogEntry> failures = new ArrayList<>();
     @JsonProperty("outages")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<OutageEntry> outages = new ArrayList<OutageEntry>();
+    private List<OutageEntry> outages = new ArrayList<>();
     @JsonProperty("successes")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<LogEntry> successes = new ArrayList<LogEntry>();
+    private List<LogEntry> successes = new ArrayList<>();
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public PodNetworkConnectivityCheckStatus() {
     }
 
-    /**
-     * 
-     * @param failures
-     * @param successes
-     * @param outages
-     * @param conditions
-     */
     public PodNetworkConnectivityCheckStatus(List<PodNetworkConnectivityCheckCondition> conditions, List<LogEntry> failures, List<OutageEntry> outages, List<LogEntry> successes) {
         super();
         this.conditions = conditions;
@@ -98,47 +96,86 @@ public class PodNetworkConnectivityCheckStatus implements KubernetesResource
         this.successes = successes;
     }
 
+    /**
+     * conditions summarize the status of the check
+     */
     @JsonProperty("conditions")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<PodNetworkConnectivityCheckCondition> getConditions() {
         return conditions;
     }
 
+    /**
+     * conditions summarize the status of the check
+     */
     @JsonProperty("conditions")
     public void setConditions(List<PodNetworkConnectivityCheckCondition> conditions) {
         this.conditions = conditions;
     }
 
+    /**
+     * failures contains logs of unsuccessful check actions
+     */
     @JsonProperty("failures")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<LogEntry> getFailures() {
         return failures;
     }
 
+    /**
+     * failures contains logs of unsuccessful check actions
+     */
     @JsonProperty("failures")
     public void setFailures(List<LogEntry> failures) {
         this.failures = failures;
     }
 
+    /**
+     * outages contains logs of time periods of outages
+     */
     @JsonProperty("outages")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<OutageEntry> getOutages() {
         return outages;
     }
 
+    /**
+     * outages contains logs of time periods of outages
+     */
     @JsonProperty("outages")
     public void setOutages(List<OutageEntry> outages) {
         this.outages = outages;
     }
 
+    /**
+     * successes contains logs successful check actions
+     */
     @JsonProperty("successes")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<LogEntry> getSuccesses() {
         return successes;
     }
 
+    /**
+     * successes contains logs successful check actions
+     */
     @JsonProperty("successes")
     public void setSuccesses(List<LogEntry> successes) {
         this.successes = successes;
     }
 
+    @JsonIgnore
+    public PodNetworkConnectivityCheckStatusBuilder edit() {
+        return new PodNetworkConnectivityCheckStatusBuilder(this);
+    }
+
+    @JsonIgnore
+    public PodNetworkConnectivityCheckStatusBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -146,6 +183,10 @@ public class PodNetworkConnectivityCheckStatus implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

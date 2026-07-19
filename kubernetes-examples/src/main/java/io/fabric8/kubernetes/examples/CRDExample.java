@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -185,6 +185,9 @@ public class CRDExample {
 
       watch.close();
     } catch (KubernetesClientException e) {
+      logger.error(e.getMessage(), e);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       logger.error(e.getMessage(), e);
     } catch (Exception e) {
       logger.error(e.getMessage(), e);

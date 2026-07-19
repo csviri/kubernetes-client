@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,7 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class KubernetesMockServerTest {
 
-  private KubernetesMockServer server;
+  KubernetesMockServer server;
   private KubernetesClient client;
 
   @BeforeEach
@@ -69,5 +69,43 @@ class KubernetesMockServerTest {
     server.clearExpectations();
     // Then
     assertThat(client.getKubernetesVersion()).isNull();
+  }
+
+  @Test
+  @DisplayName("reset, removes expectation")
+  void resetRemovesExpectation() {
+    // Given
+    server.expect().get().withPath("/test").andReturn(200, "OK").always();
+    assertThat(client.raw("/test")).isEqualTo("OK");
+    // When
+    server.reset();
+    // Then
+    assertThat(client.raw("/test")).isNull();
+  }
+
+  @Test
+  @DisplayName("reset, sets request count to 0")
+  void resetSetsRequestCountToZero() {
+    // Given
+    server.expect().get().withPath("/test").andReturn(200, "OK").always();
+    client.raw("/test");
+    assertThat(server.getRequestCount()).isEqualTo(1);
+    // When
+    server.reset();
+    // Then
+    assertThat(server.getRequestCount()).isEqualTo(0);
+  }
+
+  @Test
+  @DisplayName("reset, resets last request")
+  void resetResetsLastRequest() throws Exception {
+    // Given
+    server.expect().get().withPath("/test").andReturn(200, "OK").always();
+    client.raw("/test");
+    assertThat(server.getLastRequest()).isNotNull();
+    // When
+    server.reset();
+    // Then
+    assertThat(server.getLastRequest()).isNull();
   }
 }

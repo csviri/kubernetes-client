@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,8 @@
  */
 package io.fabric8.openshift.client.server.mock;
 
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.openshift.api.model.operator.v1.Storage;
 import io.fabric8.openshift.api.model.operator.v1.StorageBuilder;
 import io.fabric8.openshift.api.model.operator.v1.StorageList;
@@ -26,10 +28,10 @@ import java.net.HttpURLConnection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class StorageTest {
   private OpenShiftClient client;
-  private OpenShiftMockServer server;
+  KubernetesMockServer server;
 
   @Test
   void get() {
@@ -74,7 +76,7 @@ class StorageTest {
         .once();
 
     // When
-    boolean isDeleted = client.operator().storages().withName("cluster").delete().size() == 1;
+    boolean isDeleted = client.operator().storages().withName("cluster").withGracePeriod(0).delete().size() == 1;
 
     // Then
     assertThat(isDeleted).isTrue();

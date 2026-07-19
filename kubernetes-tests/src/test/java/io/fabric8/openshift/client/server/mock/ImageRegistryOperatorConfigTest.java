@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,11 +15,12 @@
  */
 package io.fabric8.openshift.client.server.mock;
 
-import io.fabric8.kubernetes.api.model.Duration;
-import io.fabric8.openshift.api.model.miscellaneous.imageregistry.operator.v1.Config;
-import io.fabric8.openshift.api.model.miscellaneous.imageregistry.operator.v1.ConfigBuilder;
-import io.fabric8.openshift.api.model.miscellaneous.imageregistry.operator.v1.ConfigList;
-import io.fabric8.openshift.api.model.miscellaneous.imageregistry.operator.v1.ConfigListBuilder;
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
+import io.fabric8.openshift.api.model.operator.imageregistry.v1.Config;
+import io.fabric8.openshift.api.model.operator.imageregistry.v1.ConfigBuilder;
+import io.fabric8.openshift.api.model.operator.imageregistry.v1.ConfigList;
+import io.fabric8.openshift.api.model.operator.imageregistry.v1.ConfigListBuilder;
 import io.fabric8.openshift.client.OpenShiftClient;
 import org.junit.jupiter.api.Test;
 
@@ -28,10 +29,10 @@ import java.text.ParseException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class ImageRegistryOperatorConfigTest {
   private OpenShiftClient client;
-  private OpenShiftMockServer server;
+  KubernetesMockServer server;
 
   @Test
   void get() throws ParseException {
@@ -76,7 +77,7 @@ class ImageRegistryOperatorConfigTest {
         .once();
 
     // When
-    boolean isDeleted = client.imageRegistryOperatorConfigs().withName("cluster").delete().size() == 1;
+    boolean isDeleted = client.imageRegistryOperatorConfigs().withName("cluster").withGracePeriod(0).delete().size() == 1;
 
     // Then
     assertThat(isDeleted).isTrue();
@@ -94,10 +95,10 @@ class ImageRegistryOperatorConfigTest {
         .withReplicas(1)
         .withNewRequests()
         .withNewRead()
-        .withMaxWaitInQueue(Duration.parse("0s"))
+        .withMaxWaitInQueue("0s")
         .endRead()
         .withNewWrite()
-        .withMaxWaitInQueue(Duration.parse("0s"))
+        .withMaxWaitInQueue("0s")
         .endWrite()
         .endRequests()
         .withRolloutStrategy("RollingUpdate")

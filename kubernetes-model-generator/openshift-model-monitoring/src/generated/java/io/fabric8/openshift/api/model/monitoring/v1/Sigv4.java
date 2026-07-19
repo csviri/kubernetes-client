@@ -1,8 +1,9 @@
 
 package io.fabric8.openshift.api.model.monitoring.v1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,39 +11,43 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
 import io.fabric8.kubernetes.api.model.LocalObjectReference;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
-import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.SecretKeySelector;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * Sigv4 defines AWS's Signature Verification 4 signing process to sign requests.
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "accessKey",
+    "externalId",
     "profile",
     "region",
     "roleArn",
-    "secretKey"
+    "secretKey",
+    "useFIPSSTSEndpoint"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -54,15 +59,22 @@ import lombok.experimental.Accessors;
     @BuildableReference(PodTemplateSpec.class),
     @BuildableReference(ResourceRequirements.class),
     @BuildableReference(IntOrString.class),
-    @BuildableReference(ObjectReference.class),
+    @BuildableReference(io.fabric8.kubernetes.api.model.ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class Sigv4 implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class Sigv4 implements Editable<Sigv4Builder>, KubernetesResource
 {
 
     @JsonProperty("accessKey")
     private SecretKeySelector accessKey;
+    @JsonProperty("externalId")
+    private String externalId;
     @JsonProperty("profile")
     private String profile;
     @JsonProperty("region")
@@ -71,84 +83,152 @@ public class Sigv4 implements KubernetesResource
     private String roleArn;
     @JsonProperty("secretKey")
     private SecretKeySelector secretKey;
+    @JsonProperty("useFIPSSTSEndpoint")
+    private Boolean useFIPSSTSEndpoint;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public Sigv4() {
     }
 
-    /**
-     * 
-     * @param secretKey
-     * @param accessKey
-     * @param roleArn
-     * @param profile
-     * @param region
-     */
-    public Sigv4(SecretKeySelector accessKey, String profile, String region, String roleArn, SecretKeySelector secretKey) {
+    public Sigv4(SecretKeySelector accessKey, String externalId, String profile, String region, String roleArn, SecretKeySelector secretKey, Boolean useFIPSSTSEndpoint) {
         super();
         this.accessKey = accessKey;
+        this.externalId = externalId;
         this.profile = profile;
         this.region = region;
         this.roleArn = roleArn;
         this.secretKey = secretKey;
+        this.useFIPSSTSEndpoint = useFIPSSTSEndpoint;
     }
 
+    /**
+     * Sigv4 defines AWS's Signature Verification 4 signing process to sign requests.
+     */
     @JsonProperty("accessKey")
     public SecretKeySelector getAccessKey() {
         return accessKey;
     }
 
+    /**
+     * Sigv4 defines AWS's Signature Verification 4 signing process to sign requests.
+     */
     @JsonProperty("accessKey")
     public void setAccessKey(SecretKeySelector accessKey) {
         this.accessKey = accessKey;
     }
 
+    /**
+     * externalId defines the external ID used when assuming an AWS role. Can only be used with roleArn. It requires Prometheus &gt;= v3.11.0 or Alertmanager &gt;= v0.33.0. Currently not supported by Thanos.
+     */
+    @JsonProperty("externalId")
+    public String getExternalId() {
+        return externalId;
+    }
+
+    /**
+     * externalId defines the external ID used when assuming an AWS role. Can only be used with roleArn. It requires Prometheus &gt;= v3.11.0 or Alertmanager &gt;= v0.33.0. Currently not supported by Thanos.
+     */
+    @JsonProperty("externalId")
+    public void setExternalId(String externalId) {
+        this.externalId = externalId;
+    }
+
+    /**
+     * profile defines the named AWS profile used to authenticate.
+     */
     @JsonProperty("profile")
     public String getProfile() {
         return profile;
     }
 
+    /**
+     * profile defines the named AWS profile used to authenticate.
+     */
     @JsonProperty("profile")
     public void setProfile(String profile) {
         this.profile = profile;
     }
 
+    /**
+     * region defines the AWS region. If blank, the region from the default credentials chain used.
+     */
     @JsonProperty("region")
     public String getRegion() {
         return region;
     }
 
+    /**
+     * region defines the AWS region. If blank, the region from the default credentials chain used.
+     */
     @JsonProperty("region")
     public void setRegion(String region) {
         this.region = region;
     }
 
+    /**
+     * roleArn defines the named AWS profile used to authenticate.
+     */
     @JsonProperty("roleArn")
     public String getRoleArn() {
         return roleArn;
     }
 
+    /**
+     * roleArn defines the named AWS profile used to authenticate.
+     */
     @JsonProperty("roleArn")
     public void setRoleArn(String roleArn) {
         this.roleArn = roleArn;
     }
 
+    /**
+     * Sigv4 defines AWS's Signature Verification 4 signing process to sign requests.
+     */
     @JsonProperty("secretKey")
     public SecretKeySelector getSecretKey() {
         return secretKey;
     }
 
+    /**
+     * Sigv4 defines AWS's Signature Verification 4 signing process to sign requests.
+     */
     @JsonProperty("secretKey")
     public void setSecretKey(SecretKeySelector secretKey) {
         this.secretKey = secretKey;
     }
 
+    /**
+     * useFIPSSTSEndpoint defines the FIPS mode for the AWS STS endpoint. It requires Prometheus &gt;= v2.54.0.
+     */
+    @JsonProperty("useFIPSSTSEndpoint")
+    public Boolean getUseFIPSSTSEndpoint() {
+        return useFIPSSTSEndpoint;
+    }
+
+    /**
+     * useFIPSSTSEndpoint defines the FIPS mode for the AWS STS endpoint. It requires Prometheus &gt;= v2.54.0.
+     */
+    @JsonProperty("useFIPSSTSEndpoint")
+    public void setUseFIPSSTSEndpoint(Boolean useFIPSSTSEndpoint) {
+        this.useFIPSSTSEndpoint = useFIPSSTSEndpoint;
+    }
+
+    @JsonIgnore
+    public Sigv4Builder edit() {
+        return new Sigv4Builder(this);
+    }
+
+    @JsonIgnore
+    public Sigv4Builder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -156,6 +236,10 @@ public class Sigv4 implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

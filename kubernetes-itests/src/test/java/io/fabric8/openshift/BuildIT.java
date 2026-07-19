@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.openshift;
 
 import io.fabric8.junit.jupiter.api.KubernetesTest;
@@ -33,6 +32,7 @@ import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -41,11 +41,12 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import static io.fabric8.kubernetes.client.utils.Utils.generateId;
 import static org.assertj.core.api.Assertions.assertThat;
 
+@Tag("OSCI")
 @KubernetesTest(createEphemeralNamespace = false)
 @RequireK8sSupport(Build.class)
 class BuildIT {
@@ -60,7 +61,7 @@ class BuildIT {
 
   @BeforeEach
   void setUp() {
-    final String id = UUID.randomUUID().toString().replace("-", "");
+    final String id = generateId().toString().replace("-", "");
     imageStreamName = id + "-is";
     imageStreamTag = imageStreamName + ":latest";
     buildConfigName = id + "-bc";

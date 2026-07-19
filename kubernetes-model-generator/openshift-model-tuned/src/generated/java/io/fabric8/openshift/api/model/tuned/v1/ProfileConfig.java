@@ -1,8 +1,9 @@
 
 package io.fabric8.openshift.api.model.tuned.v1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,7 +11,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
@@ -20,25 +24,25 @@ import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "debug",
-    "tunedProfile"
+    "providerName",
+    "tunedConfig",
+    "tunedProfile",
+    "verbosity"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -52,57 +56,130 @@ import lombok.experimental.Accessors;
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class ProfileConfig implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class ProfileConfig implements Editable<ProfileConfigBuilder>, KubernetesResource
 {
 
     @JsonProperty("debug")
     private Boolean debug;
+    @JsonProperty("providerName")
+    private String providerName;
+    @JsonProperty("tunedConfig")
+    private TuneDConfig tunedConfig;
     @JsonProperty("tunedProfile")
     private String tunedProfile;
+    @JsonProperty("verbosity")
+    private Integer verbosity;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public ProfileConfig() {
     }
 
-    /**
-     * 
-     * @param tunedProfile
-     * @param debug
-     */
-    public ProfileConfig(Boolean debug, String tunedProfile) {
+    public ProfileConfig(Boolean debug, String providerName, TuneDConfig tunedConfig, String tunedProfile, Integer verbosity) {
         super();
         this.debug = debug;
+        this.providerName = providerName;
+        this.tunedConfig = tunedConfig;
         this.tunedProfile = tunedProfile;
+        this.verbosity = verbosity;
     }
 
+    /**
+     * option to debug TuneD daemon execution
+     */
     @JsonProperty("debug")
     public Boolean getDebug() {
         return debug;
     }
 
+    /**
+     * option to debug TuneD daemon execution
+     */
     @JsonProperty("debug")
     public void setDebug(Boolean debug) {
         this.debug = debug;
     }
 
+    /**
+     * Name of the cloud provider as taken from the Node providerID: &lt;ProviderName&gt;://&lt;ProviderSpecificNodeID&gt;
+     */
+    @JsonProperty("providerName")
+    public String getProviderName() {
+        return providerName;
+    }
+
+    /**
+     * Name of the cloud provider as taken from the Node providerID: &lt;ProviderName&gt;://&lt;ProviderSpecificNodeID&gt;
+     */
+    @JsonProperty("providerName")
+    public void setProviderName(String providerName) {
+        this.providerName = providerName;
+    }
+
+    @JsonProperty("tunedConfig")
+    public TuneDConfig getTunedConfig() {
+        return tunedConfig;
+    }
+
+    @JsonProperty("tunedConfig")
+    public void setTunedConfig(TuneDConfig tunedConfig) {
+        this.tunedConfig = tunedConfig;
+    }
+
+    /**
+     * TuneD profile to apply
+     */
     @JsonProperty("tunedProfile")
     public String getTunedProfile() {
         return tunedProfile;
     }
 
+    /**
+     * TuneD profile to apply
+     */
     @JsonProperty("tunedProfile")
     public void setTunedProfile(String tunedProfile) {
         this.tunedProfile = tunedProfile;
     }
 
+    /**
+     * klog logging verbosity
+     */
+    @JsonProperty("verbosity")
+    public Integer getVerbosity() {
+        return verbosity;
+    }
+
+    /**
+     * klog logging verbosity
+     */
+    @JsonProperty("verbosity")
+    public void setVerbosity(Integer verbosity) {
+        this.verbosity = verbosity;
+    }
+
+    @JsonIgnore
+    public ProfileConfigBuilder edit() {
+        return new ProfileConfigBuilder(this);
+    }
+
+    @JsonIgnore
+    public ProfileConfigBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -110,6 +187,10 @@ public class ProfileConfig implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

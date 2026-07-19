@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,10 +16,10 @@
 package io.fabric8.openshift.client.dsl.internal.core;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.mifmif.common.regex.Generex;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.KubernetesList;
 import io.fabric8.kubernetes.api.model.KubernetesListBuilder;
+import io.fabric8.kubernetes.api.model.KubernetesResourceList;
 import io.fabric8.kubernetes.client.Client;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
@@ -50,6 +50,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static io.fabric8.openshift.client.OpenShiftAPIGroups.TEMPLATE;
 
@@ -117,9 +118,16 @@ public class TemplateOperationsImpl
           .post(JSON, getKubernetesSerialization().asJson(t))
           .url(getProcessUrl());
       t = handleResponse(requestBuilder);
-      KubernetesList l = new KubernetesList();
-      l.setItems(t.getObjects());
-      return l;
+      final KubernetesListBuilder klb = new KubernetesListBuilder();
+      for (Object object : t.getObjects()) {
+        if (object instanceof HasMetadata) {
+          klb.addToItems((HasMetadata) object);
+        }
+      }
+      return klb.build();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw KubernetesClientException.launderThrowable(forOperationType("process"), e);
     } catch (Exception e) {
       throw KubernetesClientException.launderThrowable(forOperationType("process"), e);
     }
@@ -166,14 +174,19 @@ public class TemplateOperationsImpl
   public KubernetesList processLocally(Map<String, String> valuesMap) {
     Template t = processParameters(getItemOrRequireFromServer());
 
+    final KubernetesListBuilder klb = new KubernetesListBuilder();
+    for (Object object : t.getObjects()) {
+      if (object instanceof HasMetadata) {
+        klb.addToItems((HasMetadata) object);
+      } else if (object instanceof KubernetesResourceList) {
+        for (HasMetadata listItem : ((KubernetesResourceList<HasMetadata>) object).getItems()) {
+          klb.addToItems(listItem);
+        }
+      }
+    }
+    String json = getKubernetesSerialization().asJson(klb.build());
     List<Parameter> parameters = t.getParameters();
-    KubernetesList list = new KubernetesListBuilder()
-        .withItems(t.getObjects())
-        .build();
-
-    String json = getKubernetesSerialization().asJson(list);
     String last = null;
-
     if (parameters != null && !parameters.isEmpty()) {
       while (!Objects.equals(last, json)) {
         last = json;
@@ -185,8 +198,8 @@ public class TemplateOperationsImpl
           } else if (Utils.isNotNullOrEmpty(parameter.getValue())) {
             parameterValue = parameter.getValue();
           } else if (EXPRESSION.equals(parameter.getGenerate())) {
-            Generex generex = new Generex(parameter.getFrom());
-            parameterValue = generex.random();
+            ExpressionValueGenerator valueGenerator = new ExpressionValueGenerator(ThreadLocalRandom.current());
+            parameterValue = valueGenerator.generateValue(parameter.getFrom());
           } else if (parameter.getRequired() == null || !parameter.getRequired()) {
             parameterValue = "";
           } else {

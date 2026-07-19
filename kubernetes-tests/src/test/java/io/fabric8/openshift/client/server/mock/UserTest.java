@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,15 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.openshift.client.server.mock;
 
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.openshift.api.model.User;
 import io.fabric8.openshift.api.model.UserBuilder;
 import io.fabric8.openshift.api.model.UserList;
 import io.fabric8.openshift.api.model.UserListBuilder;
 import io.fabric8.openshift.client.NamespacedOpenShiftClient;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -30,16 +30,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class UserTest {
 
-  OpenShiftMockServer server;
+  KubernetesMockServer server;
   NamespacedOpenShiftClient client;
-
-  @BeforeEach
-  void setUp() {
-    client = server.createOpenShiftClient();
-  }
 
   @Test
   void testList() {
@@ -84,12 +79,12 @@ class UserTest {
     server.expect().withPath("/apis/user.openshift.io/v1/users/user1").andReturn(200, new UserBuilder().build()).once();
     server.expect().withPath("/apis/user.openshift.io/v1/users/User2").andReturn(200, new UserBuilder().build()).once();
 
-    boolean deleted = client.users().withName("user1").delete().size() == 1;
+    boolean deleted = client.users().withName("user1").withGracePeriod(0).delete().size() == 1;
 
-    deleted = client.users().withName("User2").delete().size() == 1;
+    deleted = client.users().withName("User2").withGracePeriod(0).delete().size() == 1;
     assertTrue(deleted);
 
-    deleted = client.users().withName("User3").delete().size() == 1;
+    deleted = client.users().withName("User3").withGracePeriod(0).delete().size() == 1;
     assertFalse(deleted);
   }
 }

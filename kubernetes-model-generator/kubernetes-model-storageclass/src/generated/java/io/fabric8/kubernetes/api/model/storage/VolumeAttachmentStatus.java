@@ -1,9 +1,9 @@
 
 package io.fabric8.kubernetes.api.model.storage;
 
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -11,7 +11,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
@@ -21,19 +24,20 @@ import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * VolumeAttachmentStatus is the status of a VolumeAttachment request.
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "attachError",
     "attached",
     "attachmentMetadata",
@@ -41,7 +45,6 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -55,9 +58,14 @@ import lombok.experimental.Accessors;
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class VolumeAttachmentStatus implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class VolumeAttachmentStatus implements Editable<VolumeAttachmentStatusBuilder>, KubernetesResource
 {
 
     @JsonProperty("attachError")
@@ -66,26 +74,18 @@ public class VolumeAttachmentStatus implements KubernetesResource
     private Boolean attached;
     @JsonProperty("attachmentMetadata")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private Map<String, String> attachmentMetadata = new LinkedHashMap<String, String>();
+    private Map<String, String> attachmentMetadata = new LinkedHashMap<>();
     @JsonProperty("detachError")
     private VolumeError detachError;
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public VolumeAttachmentStatus() {
     }
 
-    /**
-     * 
-     * @param attachmentMetadata
-     * @param detachError
-     * @param attachError
-     * @param attached
-     */
     public VolumeAttachmentStatus(VolumeError attachError, Boolean attached, Map<String, String> attachmentMetadata, VolumeError detachError) {
         super();
         this.attachError = attachError;
@@ -94,54 +94,94 @@ public class VolumeAttachmentStatus implements KubernetesResource
         this.detachError = detachError;
     }
 
+    /**
+     * VolumeAttachmentStatus is the status of a VolumeAttachment request.
+     */
     @JsonProperty("attachError")
     public VolumeError getAttachError() {
         return attachError;
     }
 
+    /**
+     * VolumeAttachmentStatus is the status of a VolumeAttachment request.
+     */
     @JsonProperty("attachError")
     public void setAttachError(VolumeError attachError) {
         this.attachError = attachError;
     }
 
+    /**
+     * attached indicates the volume is successfully attached. This field must only be set by the entity completing the attach operation, i.e. the external-attacher.
+     */
     @JsonProperty("attached")
     public Boolean getAttached() {
         return attached;
     }
 
+    /**
+     * attached indicates the volume is successfully attached. This field must only be set by the entity completing the attach operation, i.e. the external-attacher.
+     */
     @JsonProperty("attached")
     public void setAttached(Boolean attached) {
         this.attached = attached;
     }
 
+    /**
+     * attachmentMetadata is populated with any information returned by the attach operation, upon successful attach, that must be passed into subsequent WaitForAttach or Mount calls. This field must only be set by the entity completing the attach operation, i.e. the external-attacher.
+     */
     @JsonProperty("attachmentMetadata")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public Map<String, String> getAttachmentMetadata() {
         return attachmentMetadata;
     }
 
+    /**
+     * attachmentMetadata is populated with any information returned by the attach operation, upon successful attach, that must be passed into subsequent WaitForAttach or Mount calls. This field must only be set by the entity completing the attach operation, i.e. the external-attacher.
+     */
     @JsonProperty("attachmentMetadata")
     public void setAttachmentMetadata(Map<String, String> attachmentMetadata) {
         this.attachmentMetadata = attachmentMetadata;
     }
 
+    /**
+     * VolumeAttachmentStatus is the status of a VolumeAttachment request.
+     */
     @JsonProperty("detachError")
     public VolumeError getDetachError() {
         return detachError;
     }
 
+    /**
+     * VolumeAttachmentStatus is the status of a VolumeAttachment request.
+     */
     @JsonProperty("detachError")
     public void setDetachError(VolumeError detachError) {
         this.detachError = detachError;
     }
 
+    @JsonIgnore
+    public VolumeAttachmentStatusBuilder edit() {
+        return new VolumeAttachmentStatusBuilder(this);
+    }
+
+    @JsonIgnore
+    public VolumeAttachmentStatusBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
-    public Map<java.lang.String, Object> getAdditionalProperties() {
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 
     @JsonAnySetter
-    public void setAdditionalProperty(java.lang.String name, Object value) {
+    public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,9 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.openshift.client.server.mock;
 
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.openshift.api.model.OAuthClient;
 import io.fabric8.openshift.api.model.OAuthClientBuilder;
 import io.fabric8.openshift.api.model.OAuthClientList;
@@ -29,10 +30,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class OAuthClientTest {
 
-  OpenShiftMockServer server;
+  KubernetesMockServer server;
   OpenShiftClient client;
 
   @Test
@@ -75,12 +76,12 @@ class OAuthClientTest {
     server.expect().withPath("/apis/oauth.openshift.io/v1/oauthclients/client2")
         .andReturn(200, new OAuthClientBuilder().build()).once();
 
-    boolean deleted = client.oAuthClients().withName("client1").delete().size() == 1;
+    boolean deleted = client.oAuthClients().withName("client1").withGracePeriod(0).delete().size() == 1;
 
-    deleted = client.oAuthClients().withName("client2").delete().size() == 1;
+    deleted = client.oAuthClients().withName("client2").withGracePeriod(0).delete().size() == 1;
     assertTrue(deleted);
 
-    deleted = client.oAuthClients().withName("client3").delete().size() == 1;
+    deleted = client.oAuthClients().withName("client3").withGracePeriod(0).delete().size() == 1;
     assertFalse(deleted);
   }
 }

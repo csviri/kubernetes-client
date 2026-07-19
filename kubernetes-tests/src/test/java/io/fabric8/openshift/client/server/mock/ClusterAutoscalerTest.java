@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,10 +15,12 @@
  */
 package io.fabric8.openshift.client.server.mock;
 
-import io.fabric8.openshift.api.model.clusterautoscaling.v1.ClusterAutoscaler;
-import io.fabric8.openshift.api.model.clusterautoscaling.v1.ClusterAutoscalerBuilder;
-import io.fabric8.openshift.api.model.clusterautoscaling.v1.ClusterAutoscalerList;
-import io.fabric8.openshift.api.model.clusterautoscaling.v1.ClusterAutoscalerListBuilder;
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
+import io.fabric8.openshift.api.model.autoscaling.v1.ClusterAutoscaler;
+import io.fabric8.openshift.api.model.autoscaling.v1.ClusterAutoscalerBuilder;
+import io.fabric8.openshift.api.model.autoscaling.v1.ClusterAutoscalerList;
+import io.fabric8.openshift.api.model.autoscaling.v1.ClusterAutoscalerListBuilder;
 import io.fabric8.openshift.client.OpenShiftClient;
 import org.junit.jupiter.api.Test;
 
@@ -26,9 +28,9 @@ import java.net.HttpURLConnection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class ClusterAutoscalerTest {
-  private OpenShiftMockServer server;
+  KubernetesMockServer server;
   private OpenShiftClient client;
 
   @Test
@@ -39,7 +41,7 @@ class ClusterAutoscalerTest {
         .once();
 
     // When
-    ClusterAutoscaler clusterAutoscaler = client.clusterAutoscaling().v1().clusterAutoscalers().withName("test-get").get();
+    ClusterAutoscaler clusterAutoscaler = client.openShiftAutoscaling().v1().clusterAutoscalers().withName("test-get").get();
 
     // Then
     assertThat(clusterAutoscaler)
@@ -57,7 +59,7 @@ class ClusterAutoscalerTest {
         .once();
 
     // When
-    ClusterAutoscalerList clusterAutoscalerList = client.clusterAutoscaling().v1().clusterAutoscalers().list();
+    ClusterAutoscalerList clusterAutoscalerList = client.openShiftAutoscaling().v1().clusterAutoscalers().list();
 
     // Then
     assertThat(clusterAutoscalerList).isNotNull();
@@ -74,7 +76,8 @@ class ClusterAutoscalerTest {
         .once();
 
     // When
-    boolean isDeleted = client.clusterAutoscaling().v1().clusterAutoscalers().withName("cluster").delete().size() == 1;
+    boolean isDeleted = client.openShiftAutoscaling().v1().clusterAutoscalers().withName("cluster").withGracePeriod(0).delete()
+        .size() == 1;
 
     // Then
     assertThat(isDeleted).isTrue();

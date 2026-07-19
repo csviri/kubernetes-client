@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,7 +33,10 @@ public interface Resource<T> extends
     WatchAndWaitable<T>,
     WritableOperation<T>,
     DryRunable<WritableOperation<T>>,
-    Informable<T> {
+    Informable<T>,
+    CreateOrReplaceDeletable<T>,
+    MetadataGettable,
+    TableGettable {
 
   /**
    * deletes dependent resources. Sets `orphanDependents` field to `false` when set `true`

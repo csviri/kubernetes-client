@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,15 +15,15 @@
  */
 package io.fabric8.istio.test.v1beta1;
 
-import io.fabric8.istio.api.networking.v1beta1.PortBuilder;
+import io.fabric8.istio.api.api.networking.v1alpha3.ServiceEntryLocation;
+import io.fabric8.istio.api.api.networking.v1alpha3.ServicePortBuilder;
 import io.fabric8.istio.api.networking.v1beta1.ServiceEntry;
 import io.fabric8.istio.api.networking.v1beta1.ServiceEntryBuilder;
-import io.fabric8.istio.api.networking.v1beta1.ServiceEntryLocation;
 import io.fabric8.istio.client.IstioClient;
 import io.fabric8.kubernetes.api.model.DeletionPropagation;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
-import okhttp3.mockwebserver.RecordedRequest;
+import io.fabric8.mockwebserver.http.RecordedRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -63,7 +63,7 @@ class ServiceEntryTest {
         .withNewSpec()
         .withHosts("api.dropboxapi.com", "www.googleapis.com")
         .withLocation(ServiceEntryLocation.MESH_INTERNAL)
-        .withPorts(new PortBuilder().withName("https").withProtocol("TLS").withNumber(443).build())
+        .withPorts(new ServicePortBuilder().withName("https").withProtocol("TLS").withNumber(443L).build())
         .endSpec()
         .build();
 

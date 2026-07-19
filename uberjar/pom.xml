@@ -21,7 +21,7 @@
   <parent>
     <artifactId>kubernetes-client-project</artifactId>
     <groupId>io.fabric8</groupId>
-    <version>6.8-SNAPSHOT</version>
+    <version>999-SNAPSHOT</version>
   </parent>
 
   <artifactId>kubernetes-openshift-uberjar</artifactId>
@@ -140,7 +140,7 @@
     </dependency>
     <dependency>
       <groupId>io.fabric8</groupId>
-      <artifactId>openshift-model-clusterautoscaling</artifactId>
+      <artifactId>openshift-model-autoscaling</artifactId>
     </dependency>
     <dependency>
       <groupId>io.fabric8</groupId>
@@ -160,7 +160,7 @@
     </dependency>
     <dependency>
       <groupId>io.fabric8</groupId>
-      <artifactId>openshift-model-machineconfig</artifactId>
+      <artifactId>openshift-model-machineconfiguration</artifactId>
     </dependency>
     <dependency>
       <groupId>io.fabric8</groupId>
@@ -196,21 +196,11 @@
 
     <dependency>
       <groupId>io.fabric8</groupId>
-      <artifactId>openshift-server-mock</artifactId>
+      <artifactId>zjsonpatch</artifactId>
       <version>${project.version}</version>
     </dependency>
 
     <!-- Legal Transitives -->
-    <dependency>
-      <groupId>com.squareup.okhttp3</groupId>
-      <artifactId>okhttp</artifactId>
-      <version>${okhttp.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.squareup.okhttp3</groupId>
-      <artifactId>logging-interceptor</artifactId>
-      <version>${okhttp.version}</version>
-    </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
@@ -233,18 +223,6 @@
     </dependency>
 
     <dependency>
-      <groupId>io.fabric8</groupId>
-      <artifactId>zjsonpatch</artifactId>
-      <version>${zjsonpatch.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>com.github.mifmif</groupId>
-      <artifactId>generex</artifactId>
-      <version>${generex.version}</version>
-    </dependency>
-
-    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>
       <scope>test</scope>
@@ -256,7 +234,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>${maven.shade.plugin.version}</version>
         <executions>
           <execution>
             <id>uberjar</id>
@@ -268,7 +245,6 @@
               <artifactSet>
                 <includes>
                   <include>io.fabric8:kubernetes-model-common</include>
-                  <include>io.fabric8:kubernetes-model-jsonschema2pojo</include>
                   <include>io.fabric8:kubernetes-model</include>
                   <include>io.fabric8:kubernetes-model-core</include>
                   <include>io.fabric8:kubernetes-model-rbac</include>
@@ -292,12 +268,12 @@
                   <include>io.fabric8:kubernetes-model-storageclass</include>
                   <include>io.fabric8:kubernetes-model-resource</include>
                   <include>io.fabric8:openshift-model</include>
-                  <include>io.fabric8:openshift-model-clusterautoscaling</include>
+                  <include>io.fabric8:openshift-model-autoscaling</include>
                   <include>io.fabric8:openshift-model-console</include>
                   <include>io.fabric8:openshift-model-config</include>
                   <include>io.fabric8:openshift-model-operator</include>
                   <include>io.fabric8:openshift-model-operatorhub</include>
-                  <include>io.fabric8:openshift-model-machineconfig</include>
+                  <include>io.fabric8:openshift-model-machineconfiguration</include>
                   <include>io.fabric8:openshift-model-machine</include>
                   <include>io.fabric8:openshift-model-miscellaneous</include>
                   <include>io.fabric8:openshift-model-monitoring</include>
@@ -309,7 +285,6 @@
                   <include>io.fabric8:kubernetes-client</include>
                   <include>io.fabric8:kubernetes-server-mock</include>
                   <include>io.fabric8:openshift-client</include>
-                  <include>io.fabric8:openshift-server-mock</include>
                 </includes>
               </artifactSet>
               <transformers>
@@ -329,7 +304,6 @@
               <artifactSet>
                 <includes>
                   <include>io.fabric8:kubernetes-model-common</include>
-                  <include>io.fabric8:kubernetes-model-jsonschema2pojo</include>
                   <include>io.fabric8:kubernetes-model</include>
                   <include>io.fabric8:kubernetes-model-core</include>
                   <include>io.fabric8:kubernetes-model-rbac</include>
@@ -353,12 +327,12 @@
                   <include>io.fabric8:kubernetes-model-storageclass</include>
                   <include>io.fabric8:kubernetes-model-resource</include>
                   <include>io.fabric8:openshift-model</include>
-                  <include>io.fabric8:openshift-model-clusterautoscaling</include>
+                  <include>io.fabric8:openshift-model-autoscaling</include>
                   <include>io.fabric8:openshift-model-console</include>
                   <include>io.fabric8:openshift-model-config</include>
                   <include>io.fabric8:openshift-model-operator</include>
                   <include>io.fabric8:openshift-model-operatorhub</include>
-                  <include>io.fabric8:openshift-model-machineconfig</include>
+                  <include>io.fabric8:openshift-model-machineconfiguration</include>
                   <include>io.fabric8:openshift-model-miscellaneous</include>
                   <include>io.fabric8:openshift-model-machine</include>
                   <include>io.fabric8:openshift-model-monitoring</include>
@@ -370,7 +344,6 @@
                   <include>io.fabric8:kubernetes-client</include>
                   <include>io.fabric8:kubernetes-server-mock</include>
                   <include>io.fabric8:openshift-client</include>
-                  <include>io.fabric8:openshift-server-mock</include>
                 </includes>
               </artifactSet>
               <relocations>

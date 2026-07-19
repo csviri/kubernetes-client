@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,7 +24,7 @@ import io.fabric8.kubernetes.api.model.Pod;
  *
  * @see <a href="https://kubernetes.io/docs/concepts/workloads/pods/ephemeral-containers/">About Ephemeral Containers</a>
  * @see <a href=
- *      "hhttps://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#-strong-ephemeralcontainers-operations-pod-v1-core-strong-">Ephemeral
+ *      "https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#-strong-ephemeralcontainers-operations-pod-v1-core-strong-">Ephemeral
  *      Containers Operations</a>
  */
 public interface EphemeralContainersResource extends EditReplacePatchable<Pod> {

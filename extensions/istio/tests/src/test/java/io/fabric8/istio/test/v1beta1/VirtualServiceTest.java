@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,18 +15,19 @@
  */
 package io.fabric8.istio.test.v1beta1;
 
-import io.fabric8.istio.api.networking.v1beta1.Destination;
-import io.fabric8.istio.api.networking.v1beta1.HTTPFaultInjectionAbort;
-import io.fabric8.istio.api.networking.v1beta1.HTTPFaultInjectionAbortHttpStatus;
-import io.fabric8.istio.api.networking.v1beta1.HTTPMatchRequestBuilder;
-import io.fabric8.istio.api.networking.v1beta1.HTTPRewriteBuilder;
-import io.fabric8.istio.api.networking.v1beta1.HTTPRoute;
-import io.fabric8.istio.api.networking.v1beta1.HTTPRouteBuilder;
-import io.fabric8.istio.api.networking.v1beta1.HTTPRouteDestination;
-import io.fabric8.istio.api.networking.v1beta1.HTTPRouteDestinationBuilder;
-import io.fabric8.istio.api.networking.v1beta1.StringMatch;
-import io.fabric8.istio.api.networking.v1beta1.StringMatchPrefix;
-import io.fabric8.istio.api.networking.v1beta1.StringMatchRegex;
+import io.fabric8.istio.api.api.networking.v1alpha3.Destination;
+import io.fabric8.istio.api.api.networking.v1alpha3.HTTPFaultInjectionAbort;
+import io.fabric8.istio.api.api.networking.v1alpha3.HTTPFaultInjectionAbortHttpStatus;
+import io.fabric8.istio.api.api.networking.v1alpha3.HTTPMatchRequestBuilder;
+import io.fabric8.istio.api.api.networking.v1alpha3.HTTPRewriteBuilder;
+import io.fabric8.istio.api.api.networking.v1alpha3.HTTPRoute;
+import io.fabric8.istio.api.api.networking.v1alpha3.HTTPRouteBuilder;
+import io.fabric8.istio.api.api.networking.v1alpha3.HTTPRouteDestination;
+import io.fabric8.istio.api.api.networking.v1alpha3.HTTPRouteDestinationBuilder;
+import io.fabric8.istio.api.api.networking.v1alpha3.StringMatch;
+import io.fabric8.istio.api.api.networking.v1alpha3.StringMatchBuilder;
+import io.fabric8.istio.api.api.networking.v1alpha3.StringMatchPrefix;
+import io.fabric8.istio.api.api.networking.v1alpha3.StringMatchRegex;
 import io.fabric8.istio.api.networking.v1beta1.VirtualService;
 import io.fabric8.istio.api.networking.v1beta1.VirtualServiceBuilder;
 import io.fabric8.istio.client.IstioClient;
@@ -34,7 +35,7 @@ import io.fabric8.kubernetes.api.model.DeletionPropagation;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.kubernetes.client.utils.Serialization;
-import okhttp3.mockwebserver.RecordedRequest;
+import io.fabric8.mockwebserver.http.RecordedRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.snakeyaml.engine.v2.api.Load;
@@ -82,12 +83,18 @@ class VirtualServiceTest {
         .withHttp(
             new HTTPRouteBuilder().withName("reviews-v2-routes")
                 .withMatch(
-                    new HTTPMatchRequestBuilder().withUri(new StringMatch(new StringMatchPrefix("/wpcatalog"))).build(),
-                    new HTTPMatchRequestBuilder().withUri(new StringMatch(new StringMatchPrefix("/consumercatalog"))).build())
+                    new HTTPMatchRequestBuilder()
+                        .withUri(new StringMatchBuilder().withMatchType(new StringMatchPrefix("/wpcatalog")).build()).build(),
+                    new HTTPMatchRequestBuilder()
+                        .withUri(new StringMatchBuilder().withMatchType(new StringMatchPrefix("/consumercatalog")).build())
+                        .build())
                 .withRewrite(new HTTPRewriteBuilder().withUri("/newcatalog").build())
                 .withRoute(
                     new HTTPRouteDestinationBuilder()
-                        .withDestination(new Destination("reviews.prod.svc.cluster.local", null, "v2"))
+                        .withNewDestination()
+                        .withHost("reviews.prod.svc.cluster.local")
+                        .withSubset("v2")
+                        .endDestination()
                         .build())
                 .build())
         .endSpec()
@@ -338,13 +345,13 @@ spec:
         .addNewHttp()
         .addNewRoute()
         .withNewDestination().withHost(reviewsHost).withSubset("v2").withNewPort()
-        .withNumber(9090).endPort().endDestination()
+        .withNumber(9090L).endPort().endDestination()
         .endRoute()
         .endHttp()
         .addNewHttp()
         .addNewRoute()
         .withNewDestination().withHost(reviewsHost).withSubset("v1").withNewPort()
-        .withNumber(9090).endPort().endDestination()
+        .withNumber(9090L).endPort().endDestination()
         .endRoute()
         .endHttp()
         .endSpec()

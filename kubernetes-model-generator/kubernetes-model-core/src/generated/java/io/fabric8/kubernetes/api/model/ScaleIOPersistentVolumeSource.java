@@ -1,8 +1,9 @@
 
 package io.fabric8.kubernetes.api.model;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,18 +11,18 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.sundr.builder.annotations.Buildable;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * ScaleIOPersistentVolumeSource represents a persistent ScaleIO volume
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "fsType",
     "gateway",
     "protectionDomain",
@@ -35,13 +36,13 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
 })
-@Buildable(editableEnabled = false, validationEnabled = false, generateBuilderPackage = true, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
-public class ScaleIOPersistentVolumeSource implements KubernetesResource
+@Buildable(editableEnabled = false, validationEnabled = false, generateBuilderPackage = false, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class ScaleIOPersistentVolumeSource implements Editable<ScaleIOPersistentVolumeSourceBuilder>, KubernetesResource
 {
 
     @JsonProperty("fsType")
@@ -65,28 +66,14 @@ public class ScaleIOPersistentVolumeSource implements KubernetesResource
     @JsonProperty("volumeName")
     private String volumeName;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public ScaleIOPersistentVolumeSource() {
     }
 
-    /**
-     * 
-     * @param system
-     * @param protectionDomain
-     * @param sslEnabled
-     * @param storageMode
-     * @param volumeName
-     * @param secretRef
-     * @param readOnly
-     * @param fsType
-     * @param storagePool
-     * @param gateway
-     */
     public ScaleIOPersistentVolumeSource(String fsType, String gateway, String protectionDomain, Boolean readOnly, SecretReference secretRef, Boolean sslEnabled, String storageMode, String storagePool, String system, String volumeName) {
         super();
         this.fsType = fsType;
@@ -101,107 +88,178 @@ public class ScaleIOPersistentVolumeSource implements KubernetesResource
         this.volumeName = volumeName;
     }
 
+    /**
+     * fsType is the filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. "ext4", "xfs", "ntfs". Default is "xfs"
+     */
     @JsonProperty("fsType")
     public String getFsType() {
         return fsType;
     }
 
+    /**
+     * fsType is the filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. "ext4", "xfs", "ntfs". Default is "xfs"
+     */
     @JsonProperty("fsType")
     public void setFsType(String fsType) {
         this.fsType = fsType;
     }
 
+    /**
+     * gateway is the host address of the ScaleIO API Gateway.
+     */
     @JsonProperty("gateway")
     public String getGateway() {
         return gateway;
     }
 
+    /**
+     * gateway is the host address of the ScaleIO API Gateway.
+     */
     @JsonProperty("gateway")
     public void setGateway(String gateway) {
         this.gateway = gateway;
     }
 
+    /**
+     * protectionDomain is the name of the ScaleIO Protection Domain for the configured storage.
+     */
     @JsonProperty("protectionDomain")
     public String getProtectionDomain() {
         return protectionDomain;
     }
 
+    /**
+     * protectionDomain is the name of the ScaleIO Protection Domain for the configured storage.
+     */
     @JsonProperty("protectionDomain")
     public void setProtectionDomain(String protectionDomain) {
         this.protectionDomain = protectionDomain;
     }
 
+    /**
+     * readOnly defaults to false (read/write). ReadOnly here will force the ReadOnly setting in VolumeMounts.
+     */
     @JsonProperty("readOnly")
     public Boolean getReadOnly() {
         return readOnly;
     }
 
+    /**
+     * readOnly defaults to false (read/write). ReadOnly here will force the ReadOnly setting in VolumeMounts.
+     */
     @JsonProperty("readOnly")
     public void setReadOnly(Boolean readOnly) {
         this.readOnly = readOnly;
     }
 
+    /**
+     * ScaleIOPersistentVolumeSource represents a persistent ScaleIO volume
+     */
     @JsonProperty("secretRef")
     public SecretReference getSecretRef() {
         return secretRef;
     }
 
+    /**
+     * ScaleIOPersistentVolumeSource represents a persistent ScaleIO volume
+     */
     @JsonProperty("secretRef")
     public void setSecretRef(SecretReference secretRef) {
         this.secretRef = secretRef;
     }
 
+    /**
+     * sslEnabled is the flag to enable/disable SSL communication with Gateway, default false
+     */
     @JsonProperty("sslEnabled")
     public Boolean getSslEnabled() {
         return sslEnabled;
     }
 
+    /**
+     * sslEnabled is the flag to enable/disable SSL communication with Gateway, default false
+     */
     @JsonProperty("sslEnabled")
     public void setSslEnabled(Boolean sslEnabled) {
         this.sslEnabled = sslEnabled;
     }
 
+    /**
+     * storageMode indicates whether the storage for a volume should be ThickProvisioned or ThinProvisioned. Default is ThinProvisioned.
+     */
     @JsonProperty("storageMode")
     public String getStorageMode() {
         return storageMode;
     }
 
+    /**
+     * storageMode indicates whether the storage for a volume should be ThickProvisioned or ThinProvisioned. Default is ThinProvisioned.
+     */
     @JsonProperty("storageMode")
     public void setStorageMode(String storageMode) {
         this.storageMode = storageMode;
     }
 
+    /**
+     * storagePool is the ScaleIO Storage Pool associated with the protection domain.
+     */
     @JsonProperty("storagePool")
     public String getStoragePool() {
         return storagePool;
     }
 
+    /**
+     * storagePool is the ScaleIO Storage Pool associated with the protection domain.
+     */
     @JsonProperty("storagePool")
     public void setStoragePool(String storagePool) {
         this.storagePool = storagePool;
     }
 
+    /**
+     * system is the name of the storage system as configured in ScaleIO.
+     */
     @JsonProperty("system")
     public String getSystem() {
         return system;
     }
 
+    /**
+     * system is the name of the storage system as configured in ScaleIO.
+     */
     @JsonProperty("system")
     public void setSystem(String system) {
         this.system = system;
     }
 
+    /**
+     * volumeName is the name of a volume already created in the ScaleIO system that is associated with this volume source.
+     */
     @JsonProperty("volumeName")
     public String getVolumeName() {
         return volumeName;
     }
 
+    /**
+     * volumeName is the name of a volume already created in the ScaleIO system that is associated with this volume source.
+     */
     @JsonProperty("volumeName")
     public void setVolumeName(String volumeName) {
         this.volumeName = volumeName;
     }
 
+    @JsonIgnore
+    public ScaleIOPersistentVolumeSourceBuilder edit() {
+        return new ScaleIOPersistentVolumeSourceBuilder(this);
+    }
+
+    @JsonIgnore
+    public ScaleIOPersistentVolumeSourceBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -209,6 +267,10 @@ public class ScaleIOPersistentVolumeSource implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

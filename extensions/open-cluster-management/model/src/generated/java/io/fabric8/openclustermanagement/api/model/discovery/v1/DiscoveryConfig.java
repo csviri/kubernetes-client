@@ -1,0 +1,210 @@
+
+package io.fabric8.openclustermanagement.api.model.discovery.v1;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+import javax.annotation.processing.Generated;
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.HasMetadata;
+import io.fabric8.kubernetes.api.model.IntOrString;
+import io.fabric8.kubernetes.api.model.LabelSelector;
+import io.fabric8.kubernetes.api.model.LocalObjectReference;
+import io.fabric8.kubernetes.api.model.Namespaced;
+import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.api.model.ObjectReference;
+import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
+import io.fabric8.kubernetes.api.model.PodTemplateSpec;
+import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
+import io.fabric8.kubernetes.model.annotation.Group;
+import io.fabric8.kubernetes.model.annotation.Version;
+import io.sundr.builder.annotations.Buildable;
+import io.sundr.builder.annotations.BuildableReference;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+import lombok.experimental.Accessors;
+
+/**
+ * DiscoveryConfig is the Schema for the discoveryconfigs API
+ */
+@JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonPropertyOrder({
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec",
+    "status"
+})
+@ToString
+@EqualsAndHashCode
+@Accessors(prefix = {
+    "_",
+    ""
+})
+@Buildable(editableEnabled = false, validationEnabled = false, generateBuilderPackage = false, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder", refs = {
+    @BuildableReference(ObjectMeta.class),
+    @BuildableReference(LabelSelector.class),
+    @BuildableReference(Container.class),
+    @BuildableReference(PodTemplateSpec.class),
+    @BuildableReference(ResourceRequirements.class),
+    @BuildableReference(IntOrString.class),
+    @BuildableReference(ObjectReference.class),
+    @BuildableReference(LocalObjectReference.class),
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
+})
+@Version("v1")
+@Group("discovery.open-cluster-management.io")
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class DiscoveryConfig implements Editable<DiscoveryConfigBuilder>, HasMetadata, Namespaced
+{
+
+    @JsonProperty("apiVersion")
+    private String apiVersion = "discovery.open-cluster-management.io/v1";
+    @JsonProperty("kind")
+    private String kind = "DiscoveryConfig";
+    @JsonProperty("metadata")
+    private ObjectMeta metadata;
+    @JsonProperty("spec")
+    private DiscoveryConfigSpec spec;
+    @JsonProperty("status")
+    private DiscoveryConfigStatus status;
+    @JsonIgnore
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
+
+    /**
+     * No args constructor for use in serialization
+     */
+    public DiscoveryConfig() {
+    }
+
+    public DiscoveryConfig(String apiVersion, String kind, ObjectMeta metadata, DiscoveryConfigSpec spec, DiscoveryConfigStatus status) {
+        super();
+        this.apiVersion = apiVersion;
+        this.kind = kind;
+        this.metadata = metadata;
+        this.spec = spec;
+        this.status = status;
+    }
+
+    /**
+     * APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+     */
+    @JsonProperty("apiVersion")
+    public String getApiVersion() {
+        return apiVersion;
+    }
+
+    /**
+     * APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+     */
+    @JsonProperty("apiVersion")
+    public void setApiVersion(String apiVersion) {
+        this.apiVersion = apiVersion;
+    }
+
+    /**
+     * Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+     */
+    @JsonProperty("kind")
+    public String getKind() {
+        return kind;
+    }
+
+    /**
+     * Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+     */
+    @JsonProperty("kind")
+    public void setKind(String kind) {
+        this.kind = kind;
+    }
+
+    /**
+     * DiscoveryConfig is the Schema for the discoveryconfigs API
+     */
+    @JsonProperty("metadata")
+    public ObjectMeta getMetadata() {
+        return metadata;
+    }
+
+    /**
+     * DiscoveryConfig is the Schema for the discoveryconfigs API
+     */
+    @JsonProperty("metadata")
+    public void setMetadata(ObjectMeta metadata) {
+        this.metadata = metadata;
+    }
+
+    /**
+     * DiscoveryConfig is the Schema for the discoveryconfigs API
+     */
+    @JsonProperty("spec")
+    public DiscoveryConfigSpec getSpec() {
+        return spec;
+    }
+
+    /**
+     * DiscoveryConfig is the Schema for the discoveryconfigs API
+     */
+    @JsonProperty("spec")
+    public void setSpec(DiscoveryConfigSpec spec) {
+        this.spec = spec;
+    }
+
+    /**
+     * DiscoveryConfig is the Schema for the discoveryconfigs API
+     */
+    @JsonProperty("status")
+    public DiscoveryConfigStatus getStatus() {
+        return status;
+    }
+
+    /**
+     * DiscoveryConfig is the Schema for the discoveryconfigs API
+     */
+    @JsonProperty("status")
+    public void setStatus(DiscoveryConfigStatus status) {
+        this.status = status;
+    }
+
+    @JsonIgnore
+    public DiscoveryConfigBuilder edit() {
+        return new DiscoveryConfigBuilder(this);
+    }
+
+    @JsonIgnore
+    public DiscoveryConfigBuilder toBuilder() {
+        return edit();
+    }
+
+    @JsonAnyGetter
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
+        return this.additionalProperties;
+    }
+
+    @JsonAnySetter
+    public void setAdditionalProperty(String name, Object value) {
+        this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
+    }
+
+}

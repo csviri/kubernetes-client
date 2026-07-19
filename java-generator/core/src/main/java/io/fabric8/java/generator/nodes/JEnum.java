@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,36 +21,65 @@ import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.body.*;
 import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.stmt.BlockStmt;
+import com.github.javaparser.ast.stmt.IfStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
+import com.github.javaparser.ast.stmt.Statement;
+import com.github.javaparser.utils.StringEscapeUtils;
 import io.fabric8.java.generator.Config;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.stream.Collectors;
 
+import static io.fabric8.java.generator.nodes.Keywords.JAVA_LANG_LONG;
 import static io.fabric8.java.generator.nodes.Keywords.JAVA_LANG_STRING;
+import static io.fabric8.java.generator.nodes.Keywords.JAVA_PRIMITIVE_BOOLEAN;
 
 public class JEnum extends AbstractJSONSchema2Pojo {
 
   private static final String VALUE = "value";
 
   private final String type;
-  // TODO: handle number enum
-  private final List<String> values;
+  private final String underlyingType;
+  private final Set<String> values; //Let's prevent duplicates
 
-  public JEnum(String type, List<JsonNode> values, Config config, String description, final boolean isNullable,
-      JsonNode defaultValue) {
+  // Used for matching against existing types.
+  private final String pkgPrefixedType;
+
+  public JEnum(String pkg, String type, String underlyingType, List<JsonNode> values, Config config, String description,
+      final boolean isNullable, JsonNode defaultValue) {
     super(config, description, isNullable, defaultValue, null);
     this.type = AbstractJSONSchema2Pojo.sanitizeString(
         type.substring(0, 1).toUpperCase() + type.substring(1));
-    this.values = values.stream().map(JsonNode::asText).collect(Collectors.toList());
+    this.underlyingType = underlyingType;
+    //Tests assume order so let's use LinkedHashSet instead of just using Collectors.toSet()
+    this.values = values.stream().map(JsonNode::asText).collect(Collectors.toCollection(LinkedHashSet::new));
+    this.pkgPrefixedType = createPackagePrefixedType(pkg, this.type);
+  }
+
+  /**
+   * @deprecated use {@link #JEnum(String, String, String, List, Config, String, boolean, JsonNode)}
+   */
+  @Deprecated
+  public JEnum(String type, String underlyingType, List<JsonNode> values, Config config, String description,
+      final boolean isNullable, JsonNode defaultValue) {
+    this(null, type, underlyingType, values, config, description, isNullable, defaultValue);
+  }
+
+  private String createPackagePrefixedType(String pkg, String type) {
+    String p = (pkg == null) ? "" : pkg.trim();
+    String pkgPrefix = (p.isEmpty()) ? p : p + ".";
+    return pkgPrefix + type;
   }
 
   @Override
   public String getType() {
-    return this.type;
+    return config.getExistingJavaTypes().getOrDefault(this.pkgPrefixedType, this.type);
   }
 
   private String sanitizeEnumEntry(final String str) {
@@ -65,14 +94,34 @@ public class JEnum extends AbstractJSONSchema2Pojo {
     }
   }
 
+  private Statement generateBooleanCreator(boolean hasTrue, boolean hasFalse) {
+    IfStmt result = new IfStmt();
+    result.setCondition(new NameExpr("value"));
+    if (hasTrue) {
+      result.setThenStmt(new ReturnStmt(new NameExpr(this.type + ".TRUE")));
+    } else {
+      result.setThenStmt(new ReturnStmt(new NullLiteralExpr()));
+    }
+    if (hasFalse) {
+      result.setElseStmt(new ReturnStmt(new NameExpr(this.type + ".FALSE")));
+    } else {
+      result.setElseStmt(new ReturnStmt(new NullLiteralExpr()));
+    }
+    return result;
+  }
+
   @Override
   public GeneratorResult generateJava() {
+    if (config.getExistingJavaTypes().containsKey(pkgPrefixedType)) {
+      return new GeneratorResult(Collections.emptyList());
+    }
+
     CompilationUnit cu = new CompilationUnit();
     EnumDeclaration en = cu.addEnum(this.type);
 
-    en.addField(JAVA_LANG_STRING, VALUE);
+    en.addField(underlyingType, VALUE);
     ConstructorDeclaration cd = en.addConstructor();
-    cd.addParameter(JAVA_LANG_STRING, VALUE);
+    cd.addParameter(underlyingType, VALUE);
     cd.createBody();
 
     cd.setBody(
@@ -85,31 +134,75 @@ public class JEnum extends AbstractJSONSchema2Pojo {
 
     MethodDeclaration getValue = en
         .addMethod("getValue", Modifier.Keyword.PUBLIC);
-    getValue.setType(JAVA_LANG_STRING);
+    getValue.setType(underlyingType);
     getValue
         .setBody(new BlockStmt().addStatement(new ReturnStmt(VALUE)));
     getValue.addAnnotation("com.fasterxml.jackson.annotation.JsonValue");
 
-    for (String k : this.values) {
-      String constantName;
+    if (underlyingType.equals(JAVA_PRIMITIVE_BOOLEAN)) {
+      MethodDeclaration fromValue = en
+          .addMethod("fromValue", Modifier.Keyword.PUBLIC, Modifier.Keyword.STATIC);
+      fromValue.setType(this.type);
+      fromValue.addParameter(JAVA_PRIMITIVE_BOOLEAN, "value");
+      fromValue.addAnnotation("com.fasterxml.jackson.annotation.JsonCreator");
+
+      boolean hasTrue = false;
+      boolean hasFalse = false;
+      for (String v : values) {
+        boolean value = Boolean.valueOf(v);
+        if (value) {
+          hasTrue = true;
+        } else {
+          hasFalse = true;
+        }
+      }
+
+      fromValue.setBody(new BlockStmt().addStatement(
+          generateBooleanCreator(hasTrue, hasFalse)));
+    }
+
+    Set<String> constantNames = new HashSet<>(values.size());
+    for (String k : values) {
+      StringBuilder constantNameBuilder = new StringBuilder();
       try {
         // If the value can be parsed as an Integer
         Integer.valueOf(k);
         // Prepend
-        constantName = "V_" + sanitizeEnumEntry(sanitizeString(k));
+        constantNameBuilder.append("V_" + sanitizeEnumEntry(sanitizeString(k)));
       } catch (Exception e) {
-        constantName = sanitizeEnumEntry(sanitizeString(k));
+        constantNameBuilder.append(sanitizeEnumEntry(sanitizeString(k)));
       }
-      String originalName = AbstractJSONSchema2Pojo.escapeQuotes(k);
+      // enums with colliding names are bad practice, we should make sure that the resulting code compiles,
+      // but we don't need fancy heuristics for the naming let's just prepend an underscore until it works
+      while (constantNames.contains(constantNameBuilder.toString())) {
+        String tmp = constantNameBuilder.toString();
+        constantNameBuilder.setLength(0);
+        constantNameBuilder.append("_" + tmp);
+      }
+      String constantName = constantNameBuilder.toString();
+      constantNames.add(constantName);
+
+      // Schema-controlled string values must be emitted as fully escaped Java string literals so a
+      // value carrying a Unicode-escaped quote cannot break out of the literal once javac decodes
+      // it. Non-string (numeric) values are emitted as numeric literals and validated structurally.
+      Expression valueArgument;
+      if (underlyingType.equals(JAVA_LANG_STRING)) {
+        valueArgument = new StringLiteralExpr(StringEscapeUtils.escapeJava(k));
+      } else if (underlyingType.equals(JAVA_LANG_LONG) && !k.endsWith("L")) {
+        valueArgument = new IntegerLiteralExpr(k + "L");
+      } else {
+        valueArgument = new IntegerLiteralExpr(k);
+      }
 
       EnumConstantDeclaration decl = new EnumConstantDeclaration();
       decl.addAnnotation(
           new SingleMemberAnnotationExpr(
               new Name("com.fasterxml.jackson.annotation.JsonProperty"),
-              new StringLiteralExpr(originalName)));
+              new StringLiteralExpr(StringEscapeUtils.escapeJava(k))));
       decl.setName(constantName);
-      decl.addArgument(new StringLiteralExpr(originalName));
+      decl.addArgument(valueArgument);
       en.addEntry(decl);
+
     }
 
     return new GeneratorResult(

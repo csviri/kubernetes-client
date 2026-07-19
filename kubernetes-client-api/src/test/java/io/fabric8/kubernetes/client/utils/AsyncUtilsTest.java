@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -66,7 +66,10 @@ class AsyncUtilsTest {
   void withTimeout_applicableTimeout() {
     final CompletableFuture<Void> future = new CompletableFuture<>();
     withTimeout(future, Duration.ofMillis(1));
-    Awaitility.await().atMost(Duration.ofMillis(101)).until(future::isDone);
+    Awaitility.await()
+        .pollInterval(Duration.ofMillis(10))
+        .atMost(Duration.ofSeconds(5))
+        .until(future::isDone);
     assertThatThrownBy(() -> future.getNow(null))
         .isInstanceOf(CompletionException.class)
         .hasCauseInstanceOf(TimeoutException.class);
@@ -79,7 +82,7 @@ class AsyncUtilsTest {
     final Supplier<CompletableFuture<Void>> action = CompletableFuture::new;
     final CompletableFuture<Void> onCancel = new CompletableFuture<>();
     final ExponentialBackoffIntervalCalculator retryIntervalCalculator = new ExponentialBackoffIntervalCalculator(1, 1);
-    final AsyncUtils.ShouldRetry<Void> shouldRetry = (v, t, retryInterval) -> true;
+    final AsyncUtils.ShouldRetry<Void> shouldRetry = (v, t, retryInterval) -> retryInterval;
     // When
     final CompletableFuture<Void> result = retryWithExponentialBackoff(action, onCancel::complete, Duration.ofMillis(1),
         retryIntervalCalculator, shouldRetry);
@@ -98,10 +101,10 @@ class AsyncUtilsTest {
     final Supplier<CompletableFuture<Void>> actionSupplier = () -> action;
     final CompletableFuture<Void> onCancel = new CompletableFuture<>();
     final ExponentialBackoffIntervalCalculator retryIntervalCalculator = new ExponentialBackoffIntervalCalculator(1, 0);
-    final AsyncUtils.ShouldRetry<Void> shouldRetry = (v, t, retryInterval) -> false;
+    final AsyncUtils.ShouldRetry<Void> shouldRetry = (v, t, retryInterval) -> -1;
     // When
     final CompletableFuture<Void> result = retryWithExponentialBackoff(actionSupplier, onCancel::complete,
-        Duration.ofMillis(100), retryIntervalCalculator, shouldRetry);
+        Duration.ZERO, retryIntervalCalculator, shouldRetry);
     result.cancel(false);
     action.complete(null);
     // Then
@@ -119,10 +122,10 @@ class AsyncUtilsTest {
     final Supplier<CompletableFuture<Boolean>> actionSupplier = () -> action;
     final CompletableFuture<Boolean> onCancel = new CompletableFuture<>();
     final ExponentialBackoffIntervalCalculator retryIntervalCalculator = new ExponentialBackoffIntervalCalculator(1, 1);
-    final AsyncUtils.ShouldRetry<Boolean> shouldRetry = (v, t, retryInterval) -> true;
+    final AsyncUtils.ShouldRetry<Boolean> shouldRetry = (v, t, retryInterval) -> retryInterval;
     // When
     CompletableFuture<Boolean> result = retryWithExponentialBackoff(actionSupplier, onCancel::complete,
-        Duration.ofMillis(100), retryIntervalCalculator, shouldRetry);
+        Duration.ZERO, retryIntervalCalculator, shouldRetry);
     action.complete(true);
     result.get(150, TimeUnit.MILLISECONDS);
     // Then
@@ -140,10 +143,10 @@ class AsyncUtilsTest {
     final Supplier<CompletableFuture<Void>> actionSupplier = () -> action;
     final CompletableFuture<Void> onCancel = new CompletableFuture<>();
     final ExponentialBackoffIntervalCalculator retryIntervalCalculator = new ExponentialBackoffIntervalCalculator(1, 0);
-    final AsyncUtils.ShouldRetry<Void> shouldRetry = (v, t, retryInterval) -> false;
+    final AsyncUtils.ShouldRetry<Void> shouldRetry = (v, t, retryInterval) -> -1;
     // When
     final CompletableFuture<Void> result = retryWithExponentialBackoff(actionSupplier, onCancel::complete,
-        Duration.ofMillis(100), retryIntervalCalculator, shouldRetry);
+        Duration.ZERO, retryIntervalCalculator, shouldRetry);
     action.complete(null);
     // Then
     assertThat(onCancel).isNotDone();

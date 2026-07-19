@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,8 @@
 package io.fabric8.crd.example.joke;
 
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import io.fabric8.kubernetes.model.annotation.PrinterColumn;
+import io.fabric8.crd.generator.annotation.PrinterColumn;
+import io.fabric8.crd.generator.annotation.PrinterColumnFormat;
 
 public class JokeRequestSpec {
 
@@ -39,13 +40,16 @@ public class JokeRequestSpec {
     explicit
   }
 
-  @PrinterColumn(name = "jokeCategory")
+  @PrinterColumn(name = "jokeCategory", priority = 1)
   @JsonPropertyDescription("category-description")
   private Category category = Category.Any;
   @PrinterColumn(name = "excludedTopics")
   private ExcludedTopic[] excluded = new ExcludedTopic[] { ExcludedTopic.nsfw, ExcludedTopic.racist,
       ExcludedTopic.sexist };
   private boolean safe;
+
+  @PrinterColumn(format = PrinterColumnFormat.DATE_TIME)
+  private String createdAt;
 
   public Category getCategory() {
     return category;
@@ -69,5 +73,13 @@ public class JokeRequestSpec {
 
   public void setSafe(boolean safe) {
     this.safe = safe;
+  }
+
+  public String getCreatedAt() {
+    return createdAt;
+  }
+
+  public void setCreatedAt(String createdAt) {
+    this.createdAt = createdAt;
   }
 }

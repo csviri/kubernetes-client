@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,13 +18,20 @@ package io.fabric8.crd.generator;
 import io.fabric8.crd.example.basic.Basic;
 import io.fabric8.crd.example.basic.BasicSpec;
 import io.fabric8.crd.example.basic.BasicStatus;
+import io.fabric8.crd.example.complex.Complex;
 import io.fabric8.crd.example.cyclic.Cyclic;
 import io.fabric8.crd.example.cyclic.CyclicList;
-import io.fabric8.crd.example.inherited.*;
+import io.fabric8.crd.example.deprecated.v2.DeprecationExample;
+import io.fabric8.crd.example.inherited.BaseSpec;
+import io.fabric8.crd.example.inherited.BaseStatus;
+import io.fabric8.crd.example.inherited.Child;
+import io.fabric8.crd.example.inherited.ChildSpec;
+import io.fabric8.crd.example.inherited.ChildStatus;
 import io.fabric8.crd.example.joke.Joke;
 import io.fabric8.crd.example.joke.JokeRequest;
 import io.fabric8.crd.example.joke.JokeRequestSpec;
 import io.fabric8.crd.example.joke.JokeRequestStatus;
+import io.fabric8.crd.example.k8svalidation.K8sValidation;
 import io.fabric8.crd.example.map.ContainingMaps;
 import io.fabric8.crd.example.map.ContainingMapsSpec;
 import io.fabric8.crd.example.multiple.v1.Multiple;
@@ -35,10 +42,17 @@ import io.fabric8.crd.example.simplest.SimplestSpec;
 import io.fabric8.crd.example.simplest.SimplestStatus;
 import io.fabric8.crd.generator.CRDGenerator.AbstractCRDOutput;
 import io.fabric8.crd.generator.utils.Types;
-import io.fabric8.kubernetes.api.model.apiextensions.v1.*;
+import io.fabric8.kubernetes.api.model.apiextensions.v1.CustomResourceColumnDefinition;
+import io.fabric8.kubernetes.api.model.apiextensions.v1.CustomResourceDefinition;
+import io.fabric8.kubernetes.api.model.apiextensions.v1.CustomResourceDefinitionNames;
+import io.fabric8.kubernetes.api.model.apiextensions.v1.CustomResourceDefinitionSpec;
+import io.fabric8.kubernetes.api.model.apiextensions.v1.CustomResourceDefinitionVersion;
+import io.fabric8.kubernetes.api.model.apiextensions.v1.CustomResourceValidation;
+import io.fabric8.kubernetes.api.model.apiextensions.v1.JSONSchemaProps;
 import io.fabric8.kubernetes.client.CustomResource;
 import io.fabric8.kubernetes.client.utils.Serialization;
 import io.fabric8.kubernetes.model.Scope;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.opentest4j.AssertionFailedError;
 import org.slf4j.Logger;
@@ -46,14 +60,22 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
+import java.io.File;
+import java.net.URL;
+import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static io.fabric8.crd.generator.CRDGeneratorAssertions.assertFileEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CRDGeneratorTest {
 
@@ -138,9 +160,13 @@ class CRDGeneratorTest {
     assertEquals(0, generator.generate());
     assertEquals(0, generator.detailedGenerate().numberOfGeneratedCRDs());
 
+    final List<String> versions = new ArrayList<>(2);
+    versions.add("v1");
+    versions.add("v1beta1");
+
     final CRDGenerationInfo info = generator
         .customResourceClasses(Simplest.class, Child.class, Joke.class, JokeRequest.class)
-        .forCRDVersions("v1", "v1beta1")
+        .forCRDVersions(versions)
         .withOutput(output).detailedGenerate();
 
     assertEquals(4 * 2, info.numberOfGeneratedCRDs());
@@ -184,14 +210,61 @@ class CRDGeneratorTest {
     CustomResourceDefinitionSpec spec = definition.getSpec();
     final List<CustomResourceDefinitionVersion> versions = spec.getVersions();
     assertEquals(2, versions.size());
-    assertTrue(versions.stream().filter(v -> v.getName().equals("v1")).count() == 1);
-    assertTrue(versions.stream().filter(v -> v.getName().equals("v2")).count() == 1);
+    assertEquals(1, versions.stream().filter(v -> v.getName().equals("v1")).count());
+    assertEquals(1, versions.stream().filter(v -> v.getName().equals("v2")).count());
 
     Class<?>[] mustContainTraversedClasses = { Multiple.class, MultipleSpec.class,
         io.fabric8.crd.example.multiple.v2.Multiple.class, io.fabric8.crd.example.multiple.v2.MultipleSpec.class };
     final Set<String> dependentClassNames = infos.get(specVersion).getDependentClassNames();
     Arrays.stream(mustContainTraversedClasses).map(Class::getCanonicalName)
         .forEach(c -> assertTrue(dependentClassNames.contains(c), "should contain " + c));
+  }
+
+  @Test
+  void checkDeprecated() {
+    CRDGenerator generator = newCRDGenerator();
+    final String specVersion = "v1";
+    final CRDGenerationInfo info = generator
+        .customResourceClasses(
+            io.fabric8.crd.example.deprecated.v1beta1.DeprecationExample.class,
+            io.fabric8.crd.example.deprecated.v1.DeprecationExample.class,
+            DeprecationExample.class)
+        .forCRDVersions(specVersion)
+        .withOutput(output)
+        .detailedGenerate();
+
+    assertEquals(1, info.numberOfGeneratedCRDs());
+    final Map<String, Map<String, CRDInfo>> details = info.getCRDDetailsPerNameAndVersion();
+    assertEquals(1, details.size());
+    // check multiple versions for same CR
+    final String crdName = CustomResource.getCRDName(DeprecationExample.class);
+    assertTrue(details.containsKey(crdName));
+    final Map<String, CRDInfo> infos = info.getCRDInfos(crdName);
+    assertEquals(1, infos.size());
+    assertTrue(infos.containsKey(specVersion));
+
+    final String outputName = CRDGenerator.getOutputName(crdName, specVersion);
+    CustomResourceDefinition definition = output.definition(outputName);
+    assertNotNull(definition);
+    assertEquals("apiextensions.k8s.io/" + specVersion, definition.getApiVersion());
+
+    CustomResourceDefinitionSpec spec = definition.getSpec();
+    final List<CustomResourceDefinitionVersion> versions = spec.getVersions();
+    assertEquals(3, versions.size());
+    assertEquals(1, versions.stream().filter(v -> v.getName().equals("v1beta1")).count());
+    assertEquals(1, versions.stream().filter(v -> v.getName().equals("v1")).count());
+    assertEquals(1, versions.stream().filter(v -> v.getName().equals("v2")).count());
+
+    CustomResourceDefinitionVersion v1Beta1 = versions.stream().filter(v -> v.getName().equals("v1beta1")).findFirst().get();
+    CustomResourceDefinitionVersion v1 = versions.stream().filter(v -> v.getName().equals("v1")).findFirst().get();
+    CustomResourceDefinitionVersion v2 = versions.stream().filter(v -> v.getName().equals("v2")).findFirst().get();
+    assertTrue(v1Beta1.getDeprecated());
+    assertEquals("sample.fabric8.io/v1beta1 DeprecationExample is deprecated; Migrate to sample.fabric8.io/v2",
+        v1Beta1.getDeprecationWarning());
+    assertTrue(v1.getDeprecated());
+    assertNull(v1.getDeprecationWarning());
+    assertNull(v2.getDeprecated());
+    assertNull(v2.getDeprecationWarning());
   }
 
   @Test
@@ -214,7 +287,7 @@ class CRDGeneratorTest {
 
     assertThrows(
         IllegalArgumentException.class,
-        () -> generator.detailedGenerate(),
+        generator::detailedGenerate,
         "An IllegalArgument Exception hasn't been thrown when generating a CRD with cyclic references");
   }
 
@@ -232,7 +305,7 @@ class CRDGeneratorTest {
 
     assertThrows(
         IllegalArgumentException.class,
-        () -> generator.detailedGenerate(),
+        generator::detailedGenerate,
         "An IllegalArgument Exception hasn't been thrown when generating a CRD with cyclic references");
   }
 
@@ -353,25 +426,34 @@ class CRDGeneratorTest {
       // printer columns should be ordered in the alphabetical order of their json path
       final List<CustomResourceColumnDefinition> printerColumns = version
           .getAdditionalPrinterColumns();
-      assertEquals(3, printerColumns.size());
+      assertEquals(4, printerColumns.size());
       CustomResourceColumnDefinition columnDefinition = printerColumns.get(0);
       assertEquals("string", columnDefinition.getType());
       assertEquals(".spec.category", columnDefinition.getJsonPath());
       assertEquals("jokeCategory", columnDefinition.getName());
+      assertEquals(1, columnDefinition.getPriority());
       columnDefinition = printerColumns.get(1);
+      assertEquals("string", columnDefinition.getType());
+      assertEquals(".spec.createdAt", columnDefinition.getJsonPath());
+      assertEquals("CREATEDAT", columnDefinition.getName());
+      assertEquals("date-time", columnDefinition.getFormat());
+      assertEquals(0, columnDefinition.getPriority());
+      columnDefinition = printerColumns.get(2);
       assertEquals("string", columnDefinition.getType());
       assertEquals(".spec.excluded", columnDefinition.getJsonPath());
       assertEquals("excludedTopics", columnDefinition.getName());
-      columnDefinition = printerColumns.get(2);
+      assertEquals(0, columnDefinition.getPriority());
+      columnDefinition = printerColumns.get(3);
       assertEquals("string", columnDefinition.getType());
       assertEquals(".status.category", columnDefinition.getJsonPath());
       assertEquals("jokeCategory", columnDefinition.getName());
+      assertEquals(0, columnDefinition.getPriority());
       CustomResourceValidation schema = version.getSchema();
       assertNotNull(schema);
       Map<String, JSONSchemaProps> properties = schema.getOpenAPIV3Schema().getProperties();
       assertEquals(2, properties.size());
       Map<String, JSONSchemaProps> specProps = properties.get("spec").getProperties();
-      assertEquals(3, specProps.size());
+      assertEquals(4, specProps.size());
       assertEquals("boolean", specProps.get("safe").getType());
       JSONSchemaProps category = specProps.get("category");
       assertEquals("string", category.getType());
@@ -399,6 +481,104 @@ class CRDGeneratorTest {
       Map<String, JSONSchemaProps> status = properties.get("status").getProperties();
       assertEquals("string", status.get("message").getType());
     });
+  }
+
+  @Test
+  void checkGenerationIsDeterministic() throws Exception {
+    // generated CRD
+    final File outputDir = Files.createTempDirectory("crd-").toFile();
+    final String crdName = CustomResourceInfo.fromClass(Complex.class).crdName();
+    final CRDGenerationInfo crdInfo = newCRDGenerator()
+        .inOutputDir(outputDir)
+        .forCRDVersions("v1", "v1beta1")
+        .customResourceClasses(Complex.class)
+        .detailedGenerate();
+    final File crdFile = new File(crdInfo.getCRDInfos(crdName).get("v1").getFilePath());
+    final File crdFileV1Beta1 = new File(crdInfo.getCRDInfos(crdName).get("v1beta1").getFilePath());
+
+    // expected CRD
+    final URL crdResource = CRDGeneratorTest.class.getResource("/" + crdFile.getName());
+    final URL crdResourceV1Beta1 = CRDGeneratorTest.class.getResource("/" + crdFileV1Beta1.getName());
+
+    assertNotNull(crdResource);
+    assertNotNull(crdResourceV1Beta1);
+    final File expectedCrdFile = new File(crdResource.getFile());
+    final File expectedCrdFileV1Beta1 = new File(crdResourceV1Beta1.getFile());
+    assertFileEquals(expectedCrdFile, crdFile);
+    assertFileEquals(expectedCrdFileV1Beta1, crdFileV1Beta1);
+
+    // only delete the generated files if the test is successful
+    assertTrue(crdFile.delete());
+    assertTrue(crdFileV1Beta1.delete());
+    assertTrue(outputDir.delete());
+  }
+
+  @RepeatedTest(value = 10)
+  void checkGenerationMultipleVersionsOfCRDsIsDeterministic() throws Exception {
+    // generated CRD
+    final File outputDir = Files.createTempDirectory("crd-").toFile();
+    final CustomResourceInfo infoV1 = CustomResourceInfo.fromClass(Multiple.class);
+    final CustomResourceInfo infoV2 = CustomResourceInfo.fromClass(io.fabric8.crd.example.multiple.v2.Multiple.class);
+    assertEquals(infoV1.crdName(), infoV2.crdName());
+    final String crdName = infoV1.crdName();
+
+    final CRDGenerationInfo crdInfo = newCRDGenerator()
+        .inOutputDir(outputDir)
+        .customResourceClasses(Multiple.class,
+            io.fabric8.crd.example.multiple.v2.Multiple.class)
+        .forCRDVersions("v1", "v1beta1")
+        .detailedGenerate();
+
+    final File crdFile = new File(crdInfo.getCRDInfos(crdName).get("v1").getFilePath());
+    final File crdFileV1Beta1 = new File(crdInfo.getCRDInfos(crdName).get("v1beta1").getFilePath());
+
+    // expected CRD
+    final URL crdResource = CRDGeneratorTest.class.getResource("/" + crdFile.getName());
+    final URL crdResourceV1Beta1 = CRDGeneratorTest.class.getResource("/" + crdFileV1Beta1.getName());
+    assertNotNull(crdResource);
+    assertNotNull(crdResourceV1Beta1);
+
+    final File expectedCrdFile = new File(crdResource.getFile());
+    final File expectedCrdFileV1Beta1 = new File(crdResourceV1Beta1.getFile());
+    assertFileEquals(expectedCrdFile, crdFile);
+    assertFileEquals(expectedCrdFileV1Beta1, crdFileV1Beta1);
+
+    // only delete the generated files if the test is successful
+    assertTrue(crdFile.delete());
+    assertTrue(crdFileV1Beta1.delete());
+    assertTrue(outputDir.delete());
+  }
+
+  @Test
+  void checkK8sValidationRules() throws Exception {
+    // generated CRD
+    final File outputDir = Files.createTempDirectory("crd-").toFile();
+    final String crdName = CustomResourceInfo.fromClass(K8sValidation.class).crdName();
+
+    final CRDGenerationInfo crdInfo = newCRDGenerator()
+        .inOutputDir(outputDir)
+        .customResourceClasses(K8sValidation.class)
+        .forCRDVersions("v1", "v1beta1")
+        .detailedGenerate();
+
+    final File crdFile = new File(crdInfo.getCRDInfos(crdName).get("v1").getFilePath());
+    final File crdFileV1Beta1 = new File(crdInfo.getCRDInfos(crdName).get("v1beta1").getFilePath());
+
+    // expected CRD
+    final URL crdResource = CRDGeneratorTest.class.getResource("/" + crdFile.getName());
+    final URL crdResourceV1Beta1 = CRDGeneratorTest.class.getResource("/" + crdFileV1Beta1.getName());
+    assertNotNull(crdResource);
+    assertNotNull(crdResourceV1Beta1);
+
+    final File expectedCrdFile = new File(crdResource.getFile());
+    final File expectedCrdFileV1Beta1 = new File(crdResourceV1Beta1.getFile());
+    assertFileEquals(expectedCrdFile, crdFile);
+    assertFileEquals(expectedCrdFileV1Beta1, crdFileV1Beta1);
+
+    // only delete the generated files if the test is successful
+    assertTrue(crdFile.delete());
+    assertTrue(crdFileV1Beta1.delete());
+    assertTrue(outputDir.delete());
   }
 
   private CustomResourceDefinitionVersion checkCRD(Class<? extends CustomResource<?, ?>> customResource, String kind,
@@ -466,12 +646,12 @@ class CRDGeneratorTest {
 
   private static class TestCRDOutput extends AbstractCRDOutput<ByteArrayOutputStream> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(TestCRDOutput.class);
+    private static final Logger logger = LoggerFactory.getLogger(TestCRDOutput.class);
     private final static Class<CustomResourceDefinition> crdClass = CustomResourceDefinition.class;
     private final Map<String, CustomResourceInfo> infos = new ConcurrentHashMap<>();
 
     @Override
-    protected ByteArrayOutputStream createStreamFor(String crdName) throws IOException {
+    protected ByteArrayOutputStream createStreamFor(String crdName) {
       return new ByteArrayOutputStream();
     }
 
@@ -489,7 +669,7 @@ class CRDGeneratorTest {
 
     void outputCRD(Class<? extends CustomResource<?, ?>> customResource) {
       String s = getStreamFor(keyFor(customResource)).toString();
-      LOGGER.debug(s);
+      logger.debug(s);
     }
   }
 }

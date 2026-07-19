@@ -2,9 +2,10 @@
 package io.fabric8.openshift.api.model;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -12,26 +13,31 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.LabelSelector;
-import io.fabric8.kubernetes.api.model.LocalObjectReference;
+import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.fabric8.kubernetes.model.annotation.Group;
 import io.fabric8.kubernetes.model.annotation.Version;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
-import io.sundr.transform.annotations.TemplateTransformation;
-import io.sundr.transform.annotations.TemplateTransformations;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * OAuthClient describes an OAuth client<br><p> <br><p> Compatibility level 1: Stable within a major release for a minimum of 12 months or 3 minor releases (whichever is longer).
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
@@ -49,28 +55,29 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
 })
 @Buildable(editableEnabled = false, validationEnabled = false, generateBuilderPackage = false, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder", refs = {
-    @BuildableReference(io.fabric8.kubernetes.api.model.ObjectMeta.class),
+    @BuildableReference(ObjectMeta.class),
     @BuildableReference(LabelSelector.class),
     @BuildableReference(Container.class),
     @BuildableReference(PodTemplateSpec.class),
     @BuildableReference(ResourceRequirements.class),
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
-    @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
-})
-@TemplateTransformations({
-    @TemplateTransformation(value = "/manifest.vm", outputPath = "META-INF/services/io.fabric8.kubernetes.api.model.KubernetesResource", gather = true)
+    @BuildableReference(io.fabric8.kubernetes.api.model.LocalObjectReference.class),
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
 @Version("v1")
 @Group("oauth.openshift.io")
-public class OAuthClient implements HasMetadata
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class OAuthClient implements Editable<OAuthClientBuilder>, HasMetadata
 {
 
     @JsonProperty("accessTokenInactivityTimeoutSeconds")
@@ -79,60 +86,35 @@ public class OAuthClient implements HasMetadata
     private Integer accessTokenMaxAgeSeconds;
     @JsonProperty("additionalSecrets")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<String> additionalSecrets = new ArrayList<String>();
-    /**
-     * 
-     * (Required)
-     * 
-     */
+    private List<String> additionalSecrets = new ArrayList<>();
     @JsonProperty("apiVersion")
     private String apiVersion = "oauth.openshift.io/v1";
     @JsonProperty("grantMethod")
     private String grantMethod;
-    /**
-     * 
-     * (Required)
-     * 
-     */
     @JsonProperty("kind")
     private String kind = "OAuthClient";
     @JsonProperty("metadata")
-    private io.fabric8.kubernetes.api.model.ObjectMeta metadata;
+    private ObjectMeta metadata;
     @JsonProperty("redirectURIs")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<String> redirectURIs = new ArrayList<String>();
+    private List<String> redirectURIs = new ArrayList<>();
     @JsonProperty("respondWithChallenges")
     private Boolean respondWithChallenges;
     @JsonProperty("scopeRestrictions")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<ScopeRestriction> scopeRestrictions = new ArrayList<ScopeRestriction>();
+    private List<ScopeRestriction> scopeRestrictions = new ArrayList<>();
     @JsonProperty("secret")
     private String secret;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public OAuthClient() {
     }
 
-    /**
-     * 
-     * @param additionalSecrets
-     * @param metadata
-     * @param respondWithChallenges
-     * @param apiVersion
-     * @param scopeRestrictions
-     * @param kind
-     * @param accessTokenInactivityTimeoutSeconds
-     * @param grantMethod
-     * @param accessTokenMaxAgeSeconds
-     * @param secret
-     * @param redirectURIs
-     */
-    public OAuthClient(Integer accessTokenInactivityTimeoutSeconds, Integer accessTokenMaxAgeSeconds, List<String> additionalSecrets, String apiVersion, String grantMethod, String kind, io.fabric8.kubernetes.api.model.ObjectMeta metadata, List<String> redirectURIs, Boolean respondWithChallenges, List<ScopeRestriction> scopeRestrictions, String secret) {
+    public OAuthClient(Integer accessTokenInactivityTimeoutSeconds, Integer accessTokenMaxAgeSeconds, List<String> additionalSecrets, String apiVersion, String grantMethod, String kind, ObjectMeta metadata, List<String> redirectURIs, Boolean respondWithChallenges, List<ScopeRestriction> scopeRestrictions, String secret) {
         super();
         this.accessTokenInactivityTimeoutSeconds = accessTokenInactivityTimeoutSeconds;
         this.accessTokenMaxAgeSeconds = accessTokenMaxAgeSeconds;
@@ -147,40 +129,57 @@ public class OAuthClient implements HasMetadata
         this.secret = secret;
     }
 
+    /**
+     * accessTokenInactivityTimeoutSeconds overrides the default token inactivity timeout for tokens granted to this client. The value represents the maximum amount of time that can occur between consecutive uses of the token. Tokens become invalid if they are not used within this temporal window. The user will need to acquire a new token to regain access once a token times out. This value needs to be set only if the default set in configuration is not appropriate for this client. Valid values are: - 0: Tokens for this client never time out - X: Tokens time out if there is no activity for X seconds The current minimum allowed value for X is 300 (5 minutes)<br><p> <br><p> WARNING: existing tokens' timeout will not be affected (lowered) by changing this value
+     */
     @JsonProperty("accessTokenInactivityTimeoutSeconds")
     public Integer getAccessTokenInactivityTimeoutSeconds() {
         return accessTokenInactivityTimeoutSeconds;
     }
 
+    /**
+     * accessTokenInactivityTimeoutSeconds overrides the default token inactivity timeout for tokens granted to this client. The value represents the maximum amount of time that can occur between consecutive uses of the token. Tokens become invalid if they are not used within this temporal window. The user will need to acquire a new token to regain access once a token times out. This value needs to be set only if the default set in configuration is not appropriate for this client. Valid values are: - 0: Tokens for this client never time out - X: Tokens time out if there is no activity for X seconds The current minimum allowed value for X is 300 (5 minutes)<br><p> <br><p> WARNING: existing tokens' timeout will not be affected (lowered) by changing this value
+     */
     @JsonProperty("accessTokenInactivityTimeoutSeconds")
     public void setAccessTokenInactivityTimeoutSeconds(Integer accessTokenInactivityTimeoutSeconds) {
         this.accessTokenInactivityTimeoutSeconds = accessTokenInactivityTimeoutSeconds;
     }
 
+    /**
+     * accessTokenMaxAgeSeconds overrides the default access token max age for tokens granted to this client. 0 means no expiration.
+     */
     @JsonProperty("accessTokenMaxAgeSeconds")
     public Integer getAccessTokenMaxAgeSeconds() {
         return accessTokenMaxAgeSeconds;
     }
 
+    /**
+     * accessTokenMaxAgeSeconds overrides the default access token max age for tokens granted to this client. 0 means no expiration.
+     */
     @JsonProperty("accessTokenMaxAgeSeconds")
     public void setAccessTokenMaxAgeSeconds(Integer accessTokenMaxAgeSeconds) {
         this.accessTokenMaxAgeSeconds = accessTokenMaxAgeSeconds;
     }
 
+    /**
+     * additionalSecrets holds other secrets that may be used to identify the client.  This is useful for rotation and for service account token validation
+     */
     @JsonProperty("additionalSecrets")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<String> getAdditionalSecrets() {
         return additionalSecrets;
     }
 
+    /**
+     * additionalSecrets holds other secrets that may be used to identify the client.  This is useful for rotation and for service account token validation
+     */
     @JsonProperty("additionalSecrets")
     public void setAdditionalSecrets(List<String> additionalSecrets) {
         this.additionalSecrets = additionalSecrets;
     }
 
     /**
-     * 
-     * (Required)
-     * 
+     * APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
      */
     @JsonProperty("apiVersion")
     public String getApiVersion() {
@@ -188,29 +187,31 @@ public class OAuthClient implements HasMetadata
     }
 
     /**
-     * 
-     * (Required)
-     * 
+     * APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
      */
     @JsonProperty("apiVersion")
     public void setApiVersion(String apiVersion) {
         this.apiVersion = apiVersion;
     }
 
+    /**
+     * grantMethod is a required field which determines how to handle grants for this client. Valid grant handling methods are:<br><p>  - auto:   always approves grant requests, useful for trusted clients<br><p>  - prompt: prompts the end user for approval of grant requests, useful for third-party clients
+     */
     @JsonProperty("grantMethod")
     public String getGrantMethod() {
         return grantMethod;
     }
 
+    /**
+     * grantMethod is a required field which determines how to handle grants for this client. Valid grant handling methods are:<br><p>  - auto:   always approves grant requests, useful for trusted clients<br><p>  - prompt: prompts the end user for approval of grant requests, useful for third-party clients
+     */
     @JsonProperty("grantMethod")
     public void setGrantMethod(String grantMethod) {
         this.grantMethod = grantMethod;
     }
 
     /**
-     * 
-     * (Required)
-     * 
+     * Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
      */
     @JsonProperty("kind")
     public String getKind() {
@@ -218,66 +219,107 @@ public class OAuthClient implements HasMetadata
     }
 
     /**
-     * 
-     * (Required)
-     * 
+     * Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
      */
     @JsonProperty("kind")
     public void setKind(String kind) {
         this.kind = kind;
     }
 
+    /**
+     * OAuthClient describes an OAuth client<br><p> <br><p> Compatibility level 1: Stable within a major release for a minimum of 12 months or 3 minor releases (whichever is longer).
+     */
     @JsonProperty("metadata")
-    public io.fabric8.kubernetes.api.model.ObjectMeta getMetadata() {
+    public ObjectMeta getMetadata() {
         return metadata;
     }
 
+    /**
+     * OAuthClient describes an OAuth client<br><p> <br><p> Compatibility level 1: Stable within a major release for a minimum of 12 months or 3 minor releases (whichever is longer).
+     */
     @JsonProperty("metadata")
-    public void setMetadata(io.fabric8.kubernetes.api.model.ObjectMeta metadata) {
+    public void setMetadata(ObjectMeta metadata) {
         this.metadata = metadata;
     }
 
+    /**
+     * redirectURIs is the valid redirection URIs associated with a client
+     */
     @JsonProperty("redirectURIs")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<String> getRedirectURIs() {
         return redirectURIs;
     }
 
+    /**
+     * redirectURIs is the valid redirection URIs associated with a client
+     */
     @JsonProperty("redirectURIs")
     public void setRedirectURIs(List<String> redirectURIs) {
         this.redirectURIs = redirectURIs;
     }
 
+    /**
+     * respondWithChallenges indicates whether the client wants authentication needed responses made in the form of challenges instead of redirects
+     */
     @JsonProperty("respondWithChallenges")
     public Boolean getRespondWithChallenges() {
         return respondWithChallenges;
     }
 
+    /**
+     * respondWithChallenges indicates whether the client wants authentication needed responses made in the form of challenges instead of redirects
+     */
     @JsonProperty("respondWithChallenges")
     public void setRespondWithChallenges(Boolean respondWithChallenges) {
         this.respondWithChallenges = respondWithChallenges;
     }
 
+    /**
+     * scopeRestrictions describes which scopes this client can request.  Each requested scope is checked against each restriction.  If any restriction matches, then the scope is allowed. If no restriction matches, then the scope is denied.
+     */
     @JsonProperty("scopeRestrictions")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<ScopeRestriction> getScopeRestrictions() {
         return scopeRestrictions;
     }
 
+    /**
+     * scopeRestrictions describes which scopes this client can request.  Each requested scope is checked against each restriction.  If any restriction matches, then the scope is allowed. If no restriction matches, then the scope is denied.
+     */
     @JsonProperty("scopeRestrictions")
     public void setScopeRestrictions(List<ScopeRestriction> scopeRestrictions) {
         this.scopeRestrictions = scopeRestrictions;
     }
 
+    /**
+     * secret is the unique secret associated with a client
+     */
     @JsonProperty("secret")
     public String getSecret() {
         return secret;
     }
 
+    /**
+     * secret is the unique secret associated with a client
+     */
     @JsonProperty("secret")
     public void setSecret(String secret) {
         this.secret = secret;
     }
 
+    @JsonIgnore
+    public OAuthClientBuilder edit() {
+        return new OAuthClientBuilder(this);
+    }
+
+    @JsonIgnore
+    public OAuthClientBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -285,6 +327,10 @@ public class OAuthClient implements HasMetadata
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

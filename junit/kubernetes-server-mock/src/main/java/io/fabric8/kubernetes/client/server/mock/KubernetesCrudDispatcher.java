@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,16 +30,18 @@ import io.fabric8.mockwebserver.Context;
 import io.fabric8.mockwebserver.crud.Attribute;
 import io.fabric8.mockwebserver.crud.AttributeSet;
 import io.fabric8.mockwebserver.crud.CrudDispatcher;
-import okhttp3.mockwebserver.MockResponse;
-import okhttp3.mockwebserver.RecordedRequest;
-import okhttp3.mockwebserver.SocketPolicy;
+import io.fabric8.mockwebserver.http.MockResponse;
+import io.fabric8.mockwebserver.http.RecordedRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -48,12 +50,14 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Supplier;
 
 public class KubernetesCrudDispatcher extends CrudDispatcher implements KubernetesCrudPersistence, CustomResourceAware {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(KubernetesCrudDispatcher.class);
+  private static final Logger logger = LoggerFactory.getLogger(KubernetesCrudDispatcher.class);
   private final Set<WatchEventsListener> watchEventListeners;
   private final CustomResourceDefinitionProcessor crdProcessor;
   private final KubernetesAttributesExtractor kubernetesAttributesExtractor;
@@ -80,18 +84,17 @@ public class KubernetesCrudDispatcher extends CrudDispatcher implements Kubernet
     postHandler = new PostHandler(this.kubernetesAttributesExtractor, this);
     putHandler = new PutHandler(this);
     patchHandler = new PatchHandler(this);
-    crdContexts.stream().forEach(this::expectCustomResource);
+    crdContexts.forEach(this::expectCustomResource);
   }
 
   MockResponse process(RecordedRequest request, KubernetesCrudDispatcherHandler handler) {
-    lock.writeLock().lock();
-    try {
-      return handler.handle(request);
-    } catch (KubernetesCrudDispatcherException e) {
-      return new MockResponse().setResponseCode(e.getCode()).setBody(e.toStatusBody());
-    } finally {
-      lock.writeLock().unlock();
-    }
+    return withLock(lock.writeLock(), () -> {
+      try {
+        return handler.handle(request);
+      } catch (KubernetesCrudDispatcherException e) {
+        return new MockResponse().setResponseCode(e.getCode()).setBody(e.toStatusBody());
+      }
+    });
   }
 
   /**
@@ -124,15 +127,12 @@ public class KubernetesCrudDispatcher extends CrudDispatcher implements Kubernet
    */
   @Override
   public MockResponse handleGet(String path) {
-    lock.readLock().lock();
-    try {
+    return withLock(lock.readLock(), () -> {
       if (detectWatchMode(path)) {
         return handleWatch(path);
       }
       return handle(path, null);
-    } finally {
-      lock.readLock().unlock();
-    }
+    });
   }
 
   private interface EventProcessor {
@@ -147,7 +147,7 @@ public class KubernetesCrudDispatcher extends CrudDispatcher implements Kubernet
     new ArrayList<>(map.entrySet()).stream()
         .filter(entry -> entry.getKey().matches(query))
         .forEach(entry -> {
-          LOGGER.debug("Entry found for query {} : {}", query, entry);
+          logger.debug("Entry found for query {} : {}", query, entry);
           items.add(entry.getValue());
           if (eventProcessor != null) {
             eventProcessor.processEvent(path, query, entry.getKey());
@@ -195,12 +195,7 @@ public class KubernetesCrudDispatcher extends CrudDispatcher implements Kubernet
    */
   @Override
   public MockResponse handleDelete(String path) {
-    lock.writeLock().lock();
-    try {
-      return handle(path, this::processDelete);
-    } finally {
-      lock.writeLock().unlock();
-    }
+    return withLock(lock.writeLock(), () -> handle(path, this::processDelete));
   }
 
   private void processDelete(String path, AttributeSet pathAttributes, AttributeSet oldAttributes) {
@@ -213,7 +208,8 @@ public class KubernetesCrudDispatcher extends CrudDispatcher implements Kubernet
     }
     if (!resource.isMarkedForDeletion()) {
       // Mark the resource as deleted, but don't remove it yet (wait for finalizer-removal).
-      resource.getMetadata().setDeletionTimestamp(LocalDateTime.now().toString());
+      resource.getMetadata().setDeletionTimestamp(
+          ZonedDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.SECONDS).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
       resource.getMetadata().setResourceVersion(String.valueOf(requestResourceVersion()));
       String updatedResource = Serialization.asJson(resource);
       processEvent(path, pathAttributes, oldAttributes, resource, updatedResource);
@@ -234,6 +230,7 @@ public class KubernetesCrudDispatcher extends CrudDispatcher implements Kubernet
 
   @Override
   public Map.Entry<AttributeSet, String> findResource(AttributeSet attributes) {
+    // A lock (either read or write) has already been acquired by the point this method is invoked
     return map.entrySet().stream()
         .filter(entry -> entry.getKey().matches(attributes))
         .findFirst().orElse(null);
@@ -247,6 +244,7 @@ public class KubernetesCrudDispatcher extends CrudDispatcher implements Kubernet
   @Override
   public void processEvent(String path, AttributeSet pathAttributes, AttributeSet oldAttributes,
       GenericKubernetesResource resource, String newState) {
+    // A write lock has already been acquired by the point this method is invoked
     String existing = map.remove(oldAttributes);
     AttributeSet newAttributes = null;
     if (newState != null) {
@@ -292,12 +290,11 @@ public class KubernetesCrudDispatcher extends CrudDispatcher implements Kubernet
     if (resourceName != null) {
       query = query.add(new Attribute("name", resourceName));
     }
-    WatchEventsListener watchEventListener = new WatchEventsListener(context, query, watchEventListeners, LOGGER,
-        watch -> map.entrySet().stream()
+    WatchEventsListener watchEventListener = new WatchEventsListener(context, query, watchEventListeners, logger,
+        watch -> withLock(lock.readLock(), () -> map.entrySet().stream()
             .filter(entry -> watch.attributeMatches(entry.getKey()))
-            .forEach(entry -> watch.sendWebSocketResponse(entry.getValue(), Action.ADDED)));
+            .forEach(entry -> watch.sendWebSocketResponse(entry.getValue(), Action.ADDED))));
     watchEventListeners.add(watchEventListener);
-    mockResponse.setSocketPolicy(SocketPolicy.KEEP_OPEN);
     return mockResponse.withWebSocketUpgrade(watchEventListener);
   }
 
@@ -306,7 +303,7 @@ public class KubernetesCrudDispatcher extends CrudDispatcher implements Kubernet
     try {
       queryString = new URI(path).getQuery();
     } catch (URISyntaxException e) {
-      LOGGER.debug("incorrect URI string: [{}]", path);
+      logger.debug("incorrect URI string: [{}]", path);
       return false;
     }
     if (queryString != null && !queryString.isEmpty()) {
@@ -320,7 +317,7 @@ public class KubernetesCrudDispatcher extends CrudDispatcher implements Kubernet
     try {
       queryString = new URI(path).getQuery();
     } catch (URISyntaxException e) {
-      LOGGER.debug("Incorrect URI string: [{}]", path);
+      logger.debug("Incorrect URI string: [{}]", path);
       return null;
     }
 
@@ -340,7 +337,7 @@ public class KubernetesCrudDispatcher extends CrudDispatcher implements Kubernet
 
   @Override
   public void reset() {
-    map.clear();
+    withLock(lock.writeLock(), map::clear);
     // what about the initial crds? That should likely be deprecated
     this.crdProcessor.reset();
   }
@@ -348,5 +345,40 @@ public class KubernetesCrudDispatcher extends CrudDispatcher implements Kubernet
   @Override
   public void expectCustomResource(CustomResourceDefinitionContext rdc) {
     this.crdProcessor.addCrdContext(rdc);
+  }
+
+  /**
+   * Run the given task after acquiring the lock.
+   *
+   * @param lock a lock to be acquired
+   * @param task runnable task to execute with the acquired lock
+   */
+  private void withLock(Lock lock, Runnable task) {
+    withLock(lock, () -> {
+      task.run();
+      return null;
+    });
+  }
+
+  /**
+   * Retrieve the value provided by the supplier after acquiring the lock.
+   *
+   * @param <T> the type supplied by source
+   * @param lock a lock to be acquired
+   * @param source supplier giving a return value
+   * @return the value given by the source supplier
+   */
+  private <T> T withLock(Lock lock, Supplier<T> source) {
+    lock.lock();
+    try {
+      locked(lock);
+      return source.get();
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  protected void locked(Lock lock) {
+    // For testing
   }
 }

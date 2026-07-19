@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.vertx;
 
 import io.fabric8.kubernetes.client.http.HttpClient;
@@ -41,6 +40,7 @@ class HttpBodyStreamTest {
 
   private Vertx vertx;
   private HttpServer server;
+  private int port;
   private volatile Handler<HttpServerRequest> requestHandler;
   private HttpClient.Factory clientFactory = new VertxHttpClientFactory();
 
@@ -55,7 +55,8 @@ class HttpBodyStreamTest {
         req.response().setStatusCode(404).end();
       }
     });
-    server.listen(8080).toCompletionStage().toCompletableFuture().get(20, TimeUnit.SECONDS);
+    server.listen(0).toCompletionStage().toCompletableFuture().get(20, TimeUnit.SECONDS);
+    port = server.actualPort();
   }
 
   @AfterEach
@@ -91,7 +92,7 @@ class HttpBodyStreamTest {
     HttpClient.Builder builder = clientFactory.newBuilder();
     HttpClient client = builder.build();
 
-    HttpRequest request = client.newHttpRequestBuilder().uri("http://localhost:8080").post("text/plain", new InputStream() {
+    HttpRequest request = client.newHttpRequestBuilder().uri("http://localhost:" + port).post("text/plain", new InputStream() {
       @Override
       public int read() throws IOException {
         int ret = data.get();
@@ -113,7 +114,7 @@ class HttpBodyStreamTest {
     HttpClient.Builder builder = clientFactory.newBuilder();
     HttpClient client = builder.build();
 
-    HttpRequest request = client.newHttpRequestBuilder().uri("http://localhost:8080").post("text/plain", new InputStream() {
+    HttpRequest request = client.newHttpRequestBuilder().uri("http://localhost:" + port).post("text/plain", new InputStream() {
       int bytesSent = 0;
 
       @Override
@@ -174,7 +175,7 @@ class HttpBodyStreamTest {
       }
     };
 
-    HttpRequest request = client.newHttpRequestBuilder().uri("http://localhost:8080").post("text/plain", is, -1).build();
+    HttpRequest request = client.newHttpRequestBuilder().uri("http://localhost:" + port).post("text/plain", is, -1).build();
     HttpResponse<String> resp = client.sendAsync(request, String.class).get(10, TimeUnit.SECONDS);
     int val = Integer.parseInt(resp.body());
     assertEquals(contentLength, val);

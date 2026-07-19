@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -63,9 +63,29 @@ public class GenerateJavaSources implements Runnable {
       "--skip-generated-annotations" }, description = "Skip emitting the @javax.annotation.processing.Generated annotation on the generated sources", required = false, hidden = true)
   Boolean skipGeneratedAnnotations = null;
 
+  @Option(names = { "-always-preserve-unknown",
+      "--always-preserve-unknown" }, description = "Always preserve unknown fields in the generated classes by emitting an additionalProperties field", required = false, hidden = false)
+  Boolean alwaysPreserveUnkown = null;
+
   @Option(names = { "-package-overrides",
       "--package-overrides" }, description = "Apply the overrides to the package names", required = false)
   Map<String, String> packageOverrides = null;
+
+  @Option(names = { "-files-suffixes",
+      "--files-suffixes" }, description = "Filter the source files with the specific suffixes", required = false)
+  List<String> filesSuffixes = null;
+
+  @Option(names = { "-serialization-datetime-format",
+      "--serialization-datetime-format" }, description = "DateTime format used for Serialization of fields of type `date-time`", required = false)
+  String serializationDateTimeFormat = null;
+
+  @Option(names = { "-deserialization-datetime-format",
+      "--deserialization-datetime-format" }, description = "DateTime format used for Deserialization of fields of type `date-time`", required = false)
+  String deserializationDateTimeFormat = null;
+
+  @Option(names = { "-existing-java-types",
+      "--existing-java-types" }, description = "Mapping from fully qualified generated type to fully qualified existing Java type", required = false)
+  Map<String, String> existingJavaTypes = null;
 
   @Override
   public void run() {
@@ -74,7 +94,12 @@ public class GenerateJavaSources implements Runnable {
         uppercaseEnum,
         addExtraAnnotations,
         !noGeneratedAnnotations,
-        packageOverrides);
+        alwaysPreserveUnkown,
+        packageOverrides,
+        filesSuffixes,
+        serializationDateTimeFormat,
+        deserializationDateTimeFormat,
+        existingJavaTypes);
 
     List<JavaGenerator> runners = new ArrayList<>();
 

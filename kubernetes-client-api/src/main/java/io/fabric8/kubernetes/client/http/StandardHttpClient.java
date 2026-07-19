@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.http;
 
 import io.fabric8.kubernetes.client.RequestConfig;
@@ -28,20 +27,28 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.ByteBuffer;
+import java.security.cert.CertPathBuilderException;
+import java.security.cert.CertPathValidatorException;
+import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+
+import javax.net.ssl.SSLPeerUnverifiedException;
 
 public abstract class StandardHttpClient<C extends HttpClient, F extends HttpClient.Factory, T extends StandardHttpClientBuilder<C, F, ?>>
     implements HttpClient, RequestTags {
@@ -49,12 +56,14 @@ public abstract class StandardHttpClient<C extends HttpClient, F extends HttpCli
   // pads the fail-safe timeout to ensure we don't inadvertently timeout a request
   private static final long MAX_ADDITIONAL_REQUEST_TIMEOUT = TimeUnit.SECONDS.toMillis(5);
 
-  private static final Logger LOG = LoggerFactory.getLogger(StandardHttpClient.class);
+  private static final Logger logger = LoggerFactory.getLogger(StandardHttpClient.class);
 
   protected StandardHttpClientBuilder<C, F, T> builder;
+  protected AtomicBoolean closed;
 
-  protected StandardHttpClient(StandardHttpClientBuilder<C, F, T> builder) {
+  protected StandardHttpClient(StandardHttpClientBuilder<C, F, T> builder, AtomicBoolean closed) {
     this.builder = builder;
+    this.closed = closed;
   }
 
   public abstract CompletableFuture<WebSocketResponse> buildWebSocketDirect(
@@ -150,7 +159,6 @@ public abstract class StandardHttpClient<C extends HttpClient, F extends HttpCli
   private <V> CompletableFuture<V> retryWithExponentialBackoff(
       StandardHttpRequest request, Supplier<CompletableFuture<V>> action, java.util.function.Consumer<V> onCancel,
       Function<V, HttpResponse<?>> responseExtractor) {
-    final URI uri = request.uri();
     final RequestConfig requestConfig = getTag(RequestConfig.class);
     final ExponentialBackoffIntervalCalculator retryIntervalCalculator = ExponentialBackoffIntervalCalculator
         .from(requestConfig);
@@ -162,33 +170,83 @@ public abstract class StandardHttpClient<C extends HttpClient, F extends HttpCli
     }
     return AsyncUtils.retryWithExponentialBackoff(action, onCancel, timeout, retryIntervalCalculator,
         (response, throwable, retryInterval) -> {
-          if (response != null) {
-            HttpResponse<?> httpResponse = responseExtractor.apply(response);
-            if (httpResponse != null) {
-              final int code = httpResponse.code();
-              if (code == 429 || code >= 500) {
-                retryInterval = Math.max(retryAfterMillis(httpResponse), retryInterval);
-                LOG.debug(
-                    "HTTP operation on url: {} should be retried as the response code was {}, retrying after {} millis",
-                    uri, code, retryInterval);
-                return true;
-              }
-            }
-          } else {
-            if (throwable instanceof CompletionException) {
-              throwable = throwable.getCause();
-            }
-            if (throwable instanceof IOException) {
-              // TODO: may not be specific enough - incorrect ssl settings for example will get caught here
-              LOG.debug(
-                  String.format("HTTP operation on url: %s should be retried after %d millis because of IOException",
-                      uri, retryInterval),
-                  throwable);
-              return true;
-            }
-          }
-          return false;
+          return shouldRetry(request, responseExtractor, response, throwable, retryInterval);
         });
+  }
+
+  <V> long shouldRetry(StandardHttpRequest request, Function<V, HttpResponse<?>> responseExtractor, V response,
+      Throwable throwable, long retryInterval) {
+    if (response != null) {
+      HttpResponse<?> httpResponse = responseExtractor.apply(response);
+      if (httpResponse != null) {
+        final int code = httpResponse.code();
+        if (code == 429 || code >= 500) {
+          retryInterval = Math.max(retryAfterMillis(httpResponse), retryInterval);
+          logger.debug(
+              "HTTP operation on url: {} should be retried as the response code was {}, retrying after {} millis",
+              request.uri(), code, retryInterval);
+          return retryInterval;
+        }
+      }
+    } else {
+      final Throwable actualCause = unwrapCompletionException(throwable);
+      builder.interceptors.forEach((s, interceptor) -> interceptor.afterConnectionFailure(request, actualCause));
+      if (actualCause instanceof IOException) {
+        if (isTerminalTlsTrustFailure(actualCause)) {
+          logger.debug(
+              String.format(
+                  "HTTP operation on url: %s will not be retried because the TLS trust failure is deterministic",
+                  request.uri()),
+              actualCause);
+          return -1;
+        }
+        logger.debug(
+            String.format("HTTP operation on url: %s should be retried after %d millis because of IOException",
+                request.uri(), retryInterval),
+            actualCause);
+        return retryInterval;
+      }
+    }
+    return -1;
+  }
+
+  static Throwable unwrapCompletionException(Throwable throwable) {
+    final Throwable actualCause;
+    if (throwable instanceof CompletionException) {
+      actualCause = throwable.getCause();
+    } else {
+      actualCause = throwable;
+    }
+    return actualCause;
+  }
+
+  static boolean isTerminalTlsTrustFailure(Throwable throwable) {
+    if (throwable == null) {
+      return false;
+    }
+    Set<Throwable> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+    return containsTlsTrustFailure(throwable, visited);
+  }
+
+  private static boolean containsTlsTrustFailure(Throwable throwable, Set<Throwable> visited) {
+    if (throwable == null || !visited.add(throwable)) {
+      return false;
+    }
+    if (throwable instanceof CertificateException
+        || throwable instanceof CertPathValidatorException
+        || throwable instanceof CertPathBuilderException
+        || throwable instanceof SSLPeerUnverifiedException) {
+      return true;
+    }
+    if (containsTlsTrustFailure(throwable.getCause(), visited)) {
+      return true;
+    }
+    for (Throwable suppressed : throwable.getSuppressed()) {
+      if (containsTlsTrustFailure(suppressed, visited)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   static long retryAfterMillis(HttpResponse<?> httpResponse) {
@@ -278,6 +336,24 @@ public abstract class StandardHttpClient<C extends HttpClient, F extends HttpCli
   @Override
   public <V> V getTag(Class<V> type) {
     return type.cast(builder.tags.get(type));
+  }
+
+  @Override
+  final public void close() {
+    if (closed.compareAndSet(false, true)) {
+      doClose();
+    }
+  }
+
+  protected abstract void doClose();
+
+  @Override
+  public boolean isClosed() {
+    return closed.get();
+  }
+
+  public AtomicBoolean getClosed() {
+    return closed;
   }
 
 }

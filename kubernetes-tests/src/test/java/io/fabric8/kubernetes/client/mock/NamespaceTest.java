@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.mock;
 
 import io.fabric8.kubernetes.api.model.HasMetadata;
@@ -37,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnableKubernetesMockClient
+@EnableKubernetesMockClient(https = false)
 public class NamespaceTest {
 
   KubernetesMockServer server;
@@ -123,7 +122,7 @@ public class NamespaceTest {
   @Test
   public void testDelete() {
     server.expect().withPath("/api/v1/namespaces/namespace1").andReturn(200, new NamespaceBuilder().build()).once();
-    boolean deleted = client.namespaces().withName("namespace1").delete().size() == 1;
+    boolean deleted = client.namespaces().withName("namespace1").withGracePeriod(0).delete().size() == 1;
     assertTrue(deleted);
   }
 

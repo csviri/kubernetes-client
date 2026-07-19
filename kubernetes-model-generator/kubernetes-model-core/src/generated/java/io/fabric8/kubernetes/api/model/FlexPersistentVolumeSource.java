@@ -1,9 +1,9 @@
 
 package io.fabric8.kubernetes.api.model;
 
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -11,18 +11,18 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.sundr.builder.annotations.Buildable;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * FlexPersistentVolumeSource represents a generic persistent volume resource that is provisioned/attached using an exec based plugin.
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "driver",
     "fsType",
     "options",
@@ -31,45 +31,36 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
 })
-@Buildable(editableEnabled = false, validationEnabled = false, generateBuilderPackage = true, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
-public class FlexPersistentVolumeSource implements KubernetesResource
+@Buildable(editableEnabled = false, validationEnabled = false, generateBuilderPackage = false, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class FlexPersistentVolumeSource implements Editable<FlexPersistentVolumeSourceBuilder>, KubernetesResource
 {
 
     @JsonProperty("driver")
-    private java.lang.String driver;
+    private String driver;
     @JsonProperty("fsType")
-    private java.lang.String fsType;
+    private String fsType;
     @JsonProperty("options")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private Map<String, String> options = new LinkedHashMap<String, String>();
+    private Map<String, String> options = new LinkedHashMap<>();
     @JsonProperty("readOnly")
     private Boolean readOnly;
     @JsonProperty("secretRef")
     private SecretReference secretRef;
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public FlexPersistentVolumeSource() {
     }
 
-    /**
-     * 
-     * @param driver
-     * @param options
-     * @param secretRef
-     * @param readOnly
-     * @param fsType
-     */
-    public FlexPersistentVolumeSource(java.lang.String driver, java.lang.String fsType, Map<String, String> options, Boolean readOnly, SecretReference secretRef) {
+    public FlexPersistentVolumeSource(String driver, String fsType, Map<String, String> options, Boolean readOnly, SecretReference secretRef) {
         super();
         this.driver = driver;
         this.fsType = fsType;
@@ -78,64 +69,110 @@ public class FlexPersistentVolumeSource implements KubernetesResource
         this.secretRef = secretRef;
     }
 
+    /**
+     * driver is the name of the driver to use for this volume.
+     */
     @JsonProperty("driver")
-    public java.lang.String getDriver() {
+    public String getDriver() {
         return driver;
     }
 
+    /**
+     * driver is the name of the driver to use for this volume.
+     */
     @JsonProperty("driver")
-    public void setDriver(java.lang.String driver) {
+    public void setDriver(String driver) {
         this.driver = driver;
     }
 
+    /**
+     * fsType is the Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. "ext4", "xfs", "ntfs". The default filesystem depends on FlexVolume script.
+     */
     @JsonProperty("fsType")
-    public java.lang.String getFsType() {
+    public String getFsType() {
         return fsType;
     }
 
+    /**
+     * fsType is the Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. "ext4", "xfs", "ntfs". The default filesystem depends on FlexVolume script.
+     */
     @JsonProperty("fsType")
-    public void setFsType(java.lang.String fsType) {
+    public void setFsType(String fsType) {
         this.fsType = fsType;
     }
 
+    /**
+     * options is Optional: this field holds extra command options if any.
+     */
     @JsonProperty("options")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public Map<String, String> getOptions() {
         return options;
     }
 
+    /**
+     * options is Optional: this field holds extra command options if any.
+     */
     @JsonProperty("options")
     public void setOptions(Map<String, String> options) {
         this.options = options;
     }
 
+    /**
+     * readOnly is Optional: defaults to false (read/write). ReadOnly here will force the ReadOnly setting in VolumeMounts.
+     */
     @JsonProperty("readOnly")
     public Boolean getReadOnly() {
         return readOnly;
     }
 
+    /**
+     * readOnly is Optional: defaults to false (read/write). ReadOnly here will force the ReadOnly setting in VolumeMounts.
+     */
     @JsonProperty("readOnly")
     public void setReadOnly(Boolean readOnly) {
         this.readOnly = readOnly;
     }
 
+    /**
+     * FlexPersistentVolumeSource represents a generic persistent volume resource that is provisioned/attached using an exec based plugin.
+     */
     @JsonProperty("secretRef")
     public SecretReference getSecretRef() {
         return secretRef;
     }
 
+    /**
+     * FlexPersistentVolumeSource represents a generic persistent volume resource that is provisioned/attached using an exec based plugin.
+     */
     @JsonProperty("secretRef")
     public void setSecretRef(SecretReference secretRef) {
         this.secretRef = secretRef;
     }
 
+    @JsonIgnore
+    public FlexPersistentVolumeSourceBuilder edit() {
+        return new FlexPersistentVolumeSourceBuilder(this);
+    }
+
+    @JsonIgnore
+    public FlexPersistentVolumeSourceBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
-    public Map<java.lang.String, Object> getAdditionalProperties() {
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 
     @JsonAnySetter
-    public void setAdditionalProperty(java.lang.String name, Object value) {
+    public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

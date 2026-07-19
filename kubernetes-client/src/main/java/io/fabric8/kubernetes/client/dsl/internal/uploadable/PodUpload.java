@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,15 +33,16 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.UUID;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import static io.fabric8.kubernetes.client.dsl.internal.core.v1.PodOperationsImpl.shellQuote;
+import static io.fabric8.kubernetes.client.utils.Utils.generateId;
 
 public class PodUpload {
 
-  private static final Logger LOG = LoggerFactory.getLogger(PodUpload.class);
+  private static final Logger logger = LoggerFactory.getLogger(PodUpload.class);
 
   private static final String TAR_PATH_DELIMITER = "/";
 
@@ -51,12 +52,13 @@ public class PodUpload {
   public static boolean upload(PodOperationsImpl operation, Path pathToUpload)
       throws IOException {
 
-    if (Utils.isNotNullOrEmpty(operation.getContext().getFile()) && pathToUpload.toFile().isFile()) {
-      return uploadTar(operation, getDirectoryFromFile(operation),
-          tar -> addFileToTar(new File(operation.getContext().getFile()).getName(), pathToUpload.toFile(), tar));
-    } else if (Utils.isNotNullOrEmpty(operation.getContext().getDir()) && pathToUpload.toFile().isDirectory()) {
-      return uploadTar(operation, operation.getContext().getDir(), tar -> {
-        for (File file : pathToUpload.toFile().listFiles()) {
+    final File toUpload = pathToUpload.toFile();
+    if (Utils.isNotNullOrEmpty(operation.getContext().getFile()) && toUpload.isFile()) {
+      return uploadTar(operation, getDirectoryFromFile(operation.getContext().getFile()),
+          tar -> addFileToTar(new File(operation.getContext().getFile()).getName(), toUpload, tar));
+    } else if (Utils.isNotNullOrEmpty(operation.getContext().getDir()) && toUpload.isDirectory()) {
+      return uploadTar(operation, ensureEndsWithSlash(operation.getContext().getDir()), tar -> {
+        for (File file : Objects.requireNonNull(toUpload.listFiles())) {
           addFileToTar(file.getName(), file, tar);
         }
       });
@@ -64,16 +66,9 @@ public class PodUpload {
     throw new IllegalArgumentException("Provided arguments are not valid (file, directory, path)");
   }
 
-  private static String getDirectoryFromFile(PodOperationsImpl operation) {
-    String file = operation.getContext().getFile();
+  private static String getDirectoryFromFile(String file) {
     String directoryTrimmedFromFilePath = file.substring(0, file.lastIndexOf('/'));
-    return directoryTrimmedFromFilePath.isEmpty() ? "/" : directoryTrimmedFromFilePath;
-  }
-
-  private interface UploadProcessor<T extends OutputStream> {
-
-    void process(T out) throws IOException;
-
+    return ensureEndsWithSlash(directoryTrimmedFromFilePath.isEmpty() ? "/" : directoryTrimmedFromFilePath);
   }
 
   private static boolean upload(PodOperationsImpl operation, String file, UploadProcessor<OutputStream> processor)
@@ -100,12 +95,12 @@ public class PodUpload {
     // we may have already exceeded the timeout because of how long it took to write
     if (!Utils.waitUntilReady(exitFuture, Math.max(0, uploadRequestTimeoutEnd - System.currentTimeMillis()),
         TimeUnit.MILLISECONDS)) {
-      LOG.debug("failed to complete upload before timeout expired");
+      logger.debug("failed to complete upload before timeout expired");
       return false;
     }
-    Integer exitCode = exitFuture.getNow(null);
-    if (exitCode != null && exitCode.intValue() != 0) {
-      LOG.debug("upload process failed with exit code {}", exitCode);
+    final Integer exitCode = exitFuture.getNow(null);
+    if (exitCode != null && exitCode != 0) {
+      logger.debug("upload process failed with exit code {}", exitCode);
       return false;
     }
 
@@ -115,12 +110,12 @@ public class PodUpload {
       CompletableFuture<Integer> countExitFuture = countWatch.exitCode();
       if (!Utils.waitUntilReady(countExitFuture, Math.max(0, uploadRequestTimeoutEnd - System.currentTimeMillis()),
           TimeUnit.MILLISECONDS) || !Integer.valueOf(0).equals(countExitFuture.getNow(null))) {
-        LOG.debug("failed to validate the upload size, exit code {}", countExitFuture.getNow(null));
+        logger.debug("failed to validate the upload size, exit code {}", countExitFuture.getNow(null));
         return false;
       }
       String remoteSize = new String(byteCount.toByteArray(), StandardCharsets.UTF_8);
       if (!String.valueOf(expected).equals(remoteSize.trim())) {
-        LOG.debug("upload file size validation failed, expected {}, but was {}", expected, remoteSize);
+        logger.debug("upload file size validation failed, expected {}, but was {}", expected, remoteSize);
         return false;
       }
     }
@@ -136,11 +131,12 @@ public class PodUpload {
       UploadProcessor<TarArchiveOutputStream> processor)
       throws IOException {
 
-    String fileName = String.format("/tmp/fabric8-%s.tar", UUID.randomUUID());
+    String fileName = String.format("%sfabric8-%s.tar", directory, generateId());
 
     boolean uploaded = upload(operation, fileName, os -> {
       try (final TarArchiveOutputStream tar = new TarArchiveOutputStream(os)) {
         tar.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX);
+        tar.setBigNumberMode(TarArchiveOutputStream.BIGNUMBER_POSIX);
         processor.process(tar);
       }
     });
@@ -151,7 +147,7 @@ public class PodUpload {
           String.format("rm %s", fileName))) {
         if (!Utils.waitUntilReady(rm.exitCode(), operation.getRequestConfig().getUploadRequestTimeout(), TimeUnit.MILLISECONDS)
             || !Integer.valueOf(0).equals(rm.exitCode().getNow(null))) {
-          LOG.warn("delete of temporary tar file {} may not have completed", fileName);
+          logger.warn("delete of temporary tar file {} may not have completed", fileName);
         }
       }
       return false;
@@ -180,17 +176,19 @@ public class PodUpload {
       tar.closeArchiveEntry();
     } else if (file.isDirectory()) {
       tar.closeArchiveEntry();
-      for (File fileInDirectory : file.listFiles()) {
+      for (File fileInDirectory : Objects.requireNonNull(file.listFiles())) {
         addFileToTar(fileName + TAR_PATH_DELIMITER + fileInDirectory.getName(), fileInDirectory, tar);
       }
     }
   }
 
   static String createExecCommandForUpload(String file) {
-    String directoryTrimmedFromFilePath = file.substring(0, file.lastIndexOf('/'));
-    final String directory = directoryTrimmedFromFilePath.isEmpty() ? "/" : directoryTrimmedFromFilePath;
     return String.format(
-        "mkdir -p %s && cat - > %s", shellQuote(directory), shellQuote(file));
+        "mkdir -p %s && cat - > %s && echo $?", shellQuote(getDirectoryFromFile(file)), shellQuote(file));
+  }
+
+  private static String ensureEndsWithSlash(String path) {
+    return path.endsWith("/") ? path : (path + "/");
   }
 
 }

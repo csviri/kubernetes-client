@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,23 +15,18 @@
  */
 package io.fabric8.kubernetes.client.dsl.internal;
 
-import io.fabric8.kubernetes.client.http.WebSocket;
+import io.fabric8.kubernetes.client.http.TestWebSocket;
 import io.fabric8.kubernetes.client.utils.CommonThreadPool;
 import org.assertj.core.api.InstanceOfAssertFactories;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.MockedStatic;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
@@ -41,18 +36,12 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.timeout;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class PortForwarderWebsocketListenerTest {
 
-  private WebSocket webSocket;
+  private TestWebSocket webSocket;
   private ReadableByteChannel in;
   private WritableByteChannel out;
   private ByteArrayOutputStream outputContent;
@@ -60,7 +49,7 @@ class PortForwarderWebsocketListenerTest {
 
   @BeforeEach
   void setUp() {
-    webSocket = mock(WebSocket.class);
+    webSocket = new TestWebSocket();
     in = Channels.newChannel(new ByteArrayInputStream("THIS IS A TEST".getBytes(StandardCharsets.UTF_8)));
     outputContent = new ByteArrayOutputStream();
     out = Channels.newChannel(outputContent);
@@ -80,13 +69,16 @@ class PortForwarderWebsocketListenerTest {
   void onOpen_shouldPipeInChannelToWebSocket() {
     listener = new PortForwarderWebsocketListener(in, out, CommonThreadPool.get());
     listener.onOpen(webSocket);
-    ArgumentCaptor<ByteBuffer> contentTypeCaptor = ArgumentCaptor.forClass(ByteBuffer.class);
     // Then
-    verify(webSocket, timeout(10_000).times(1)).send(contentTypeCaptor.capture());
-    assertThat(contentTypeCaptor.getValue())
-        .extracting(StandardCharsets.UTF_8::decode)
-        .extracting(CharBuffer::toString).asString()
-        .startsWith("THIS IS A TEST");
+    assertThat(webSocket.firstSent())
+        .succeedsWithin(10, TimeUnit.SECONDS, InstanceOfAssertFactories.type(ByteBuffer.class))
+        .satisfies(buf -> {
+          final byte[] copy = new byte[buf.remaining()];
+          buf.duplicate().get(copy);
+          assertThat(new String(copy, StandardCharsets.UTF_8)).startsWith("\u0000THIS IS A TEST");
+        });
+    // Single send for the 14-byte payload; pipe() exits on EOF before a second send.
+    assertThat(webSocket.getSent()).hasSize(1);
     assertThat(in.isOpen()).isTrue();
     assertThat(out.isOpen()).isTrue();
   }
@@ -98,7 +90,7 @@ class PortForwarderWebsocketListenerTest {
     listener = new PortForwarderWebsocketListener(inWithException, out, CommonThreadPool.get());
     listener.onOpen(webSocket);
     // Then
-    verify(webSocket, timeout(10_000).times(1)).sendClose(anyInt(), anyString());
+    assertThat(webSocket.firstClose()).succeedsWithin(10, TimeUnit.SECONDS);
     assertThat(listener.getClientThrowables())
         .singleElement()
         .asInstanceOf(InstanceOfAssertFactories.throwable(IOException.class))
@@ -114,7 +106,7 @@ class PortForwarderWebsocketListenerTest {
         .singleElement()
         .asInstanceOf(InstanceOfAssertFactories.throwable(RuntimeException.class))
         .hasMessage("Server error");
-    assertThat(in.isOpen()).isFalse();
+    Awaitility.await().atMost(1, TimeUnit.SECONDS).until(() -> !in.isOpen());
     assertThat(out.isOpen()).isFalse();
   }
 
@@ -131,57 +123,45 @@ class PortForwarderWebsocketListenerTest {
   @Test
   void onMessage_shouldSkipTwoMessagesAndPipeTheThird() {
     listener = new PortForwarderWebsocketListener(in, out, CommonThreadPool.get());
-    doAnswer(i -> {
-      listener.onMessage(webSocket, "SKIP 2");
-      return true;
-    }).doAnswer(i -> {
-      listener.onMessage(webSocket, ByteBuffer.wrap(
-          ByteBuffer.allocate(18).put((byte) 0).put("PROCESSED MESSAGE".getBytes(StandardCharsets.UTF_8)).array()));
-      return true;
-    })
-        .doNothing()
-        .when(webSocket).request();
+    webSocket
+        .onRequest(() -> listener.onMessage(webSocket, "SKIP 2"))
+        .onRequest(() -> listener.onMessage(webSocket, ByteBuffer.wrap(
+            ByteBuffer.allocate(18).put((byte) 0).put("PROCESSED MESSAGE".getBytes(StandardCharsets.UTF_8)).array())));
+    // third request is intentionally unscripted (no-op)
     listener.onMessage(webSocket, "SKIP 1");
     // Then
-    verify(webSocket, timeout(10_000).times(3)).request();
+    await().atMost(10, TimeUnit.SECONDS).until(() -> webSocket.requestCount() >= 3);
+    assertThat(webSocket.requestCount()).isEqualTo(3);
     assertThat(outputContent.toString()).contains("PROCESSED MESSAGE");
   }
 
   @Test
   void onMessage_withEmptyMessage_shouldEndWithError() {
     listener = new PortForwarderWebsocketListener(in, out, CommonThreadPool.get());
-    doAnswer(i -> {
-      listener.onMessage(webSocket, "SKIP 2");
-      return true;
-    }).doAnswer(i -> {
-      listener.onMessage(webSocket, ByteBuffer.wrap(new byte[0]));
-      return true;
-    }).when(webSocket).request();
+    webSocket
+        .onRequest(() -> listener.onMessage(webSocket, "SKIP 2"))
+        .onRequest(() -> listener.onMessage(webSocket, ByteBuffer.wrap(new byte[0])));
     listener.onMessage(webSocket, "SKIP 1");
     // Then
-    verify(webSocket, timeout(10_000)).sendClose(1002, "Protocol error");
+    assertThat(webSocket.firstClose())
+        .succeedsWithin(10, TimeUnit.SECONDS)
+        .isEqualTo(new TestWebSocket.CloseFrame(1002, "Protocol error"));
     await().atMost(10, TimeUnit.SECONDS).until(() -> !listener.isAlive());
     assertThat(outputContent.toString()).isEmpty();
     assertThat(listener.errorOccurred()).isTrue();
     assertThat(listener.getServerThrowables()).isNotEmpty();
-    assertThat(in.isOpen()).isFalse();
+    await().atMost(1, TimeUnit.SECONDS).until(() -> !in.isOpen());
     assertThat(out.isOpen()).isFalse();
   }
 
   @Test
   void onMessage_withServerClose_shouldSkipTwoMessagesAndPipeTheThird() {
     listener = new PortForwarderWebsocketListener(in, out, CommonThreadPool.get());
-    doAnswer(i -> {
-      listener.onMessage(webSocket, "SKIP 2");
-      return true;
-    }).doAnswer(i -> {
-      listener.onMessage(webSocket, ByteBuffer.wrap(
-          ByteBuffer.allocate(18).put((byte) 0).put("PROCESSED MESSAGE".getBytes(StandardCharsets.UTF_8)).array()));
-      return true;
-    }).doAnswer(i -> {
-      listener.onClose(webSocket, 31337, "Transmission complete");
-      return true;
-    }).when(webSocket).request();
+    webSocket
+        .onRequest(() -> listener.onMessage(webSocket, "SKIP 2"))
+        .onRequest(() -> listener.onMessage(webSocket, ByteBuffer.wrap(
+            ByteBuffer.allocate(18).put((byte) 0).put("PROCESSED MESSAGE".getBytes(StandardCharsets.UTF_8)).array())))
+        .onRequest(() -> listener.onClose(webSocket, 31337, "Transmission complete"));
     listener.onMessage(webSocket, "SKIP 1");
     // Then
     await().atMost(10, TimeUnit.SECONDS).until(() -> !listener.isAlive());
@@ -193,29 +173,21 @@ class PortForwarderWebsocketListenerTest {
 
   @Test
   void onMessage_withWrongChannel_shouldLogAndEndWithError() {
-    try (MockedStatic<LoggerFactory> loggerFactory = mockStatic(LoggerFactory.class)) {
-      final Logger logger = mock(Logger.class);
-      loggerFactory.when(() -> LoggerFactory.getLogger(PortForwarderWebsocketListener.class)).thenReturn(logger);
-      listener = new PortForwarderWebsocketListener(in, out, CommonThreadPool.get());
-      doAnswer(i -> {
-        listener.onMessage(webSocket, "SKIP 2");
-        return true;
-      }).doAnswer(i -> {
-        listener.onMessage(webSocket, ByteBuffer.wrap(
-            ByteBuffer.allocate(18).put((byte) 5).put("WRONG CHANNEL".getBytes(StandardCharsets.UTF_8)).array()));
-        return true;
-      })
-          .doNothing()
-          .when(webSocket).request();
-      listener.onMessage(webSocket, "SKIP 1");
-      // Then
-      verify(webSocket, timeout(10_000)).sendClose(1002, "Protocol error");
-      await().atMost(10, TimeUnit.SECONDS).until(() -> !listener.isAlive());
-      assertThat(outputContent.toString()).isEmpty();
-      assertThat(listener.errorOccurred()).isTrue();
-      assertThat(listener.getServerThrowables().iterator().next().getMessage())
-          .isEqualTo("Received a wrong channel from the remote socket: 5");
-    }
-
+    listener = new PortForwarderWebsocketListener(in, out, CommonThreadPool.get());
+    webSocket
+        .onRequest(() -> listener.onMessage(webSocket, "SKIP 2"))
+        .onRequest(() -> listener.onMessage(webSocket, ByteBuffer.wrap(
+            ByteBuffer.allocate(18).put((byte) 5).put("WRONG CHANNEL".getBytes(StandardCharsets.UTF_8)).array())));
+    // third request is intentionally unscripted (no-op)
+    listener.onMessage(webSocket, "SKIP 1");
+    // Then
+    assertThat(webSocket.firstClose())
+        .succeedsWithin(10, TimeUnit.SECONDS)
+        .isEqualTo(new TestWebSocket.CloseFrame(1002, "Protocol error"));
+    await().atMost(10, TimeUnit.SECONDS).until(() -> !listener.isAlive());
+    assertThat(outputContent.toString()).isEmpty();
+    assertThat(listener.errorOccurred()).isTrue();
+    assertThat(listener.getServerThrowables().iterator().next().getMessage())
+        .isEqualTo("Received a wrong channel from the remote socket: 5");
   }
 }

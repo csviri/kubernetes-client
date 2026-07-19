@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,28 +15,28 @@
  */
 package io.fabric8.openshift.client.server.mock.hive;
 
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.openshift.api.model.hive.v1.ClusterRelocate;
 import io.fabric8.openshift.api.model.hive.v1.ClusterRelocateBuilder;
 import io.fabric8.openshift.api.model.hive.v1.ClusterRelocateList;
 import io.fabric8.openshift.api.model.hive.v1.ClusterRelocateListBuilder;
 import io.fabric8.openshift.client.OpenShiftClient;
-import io.fabric8.openshift.client.server.mock.EnableOpenShiftMockClient;
-import io.fabric8.openshift.client.server.mock.OpenShiftMockServer;
 import org.junit.jupiter.api.Test;
 
 import java.net.HttpURLConnection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class ClusterRelocateTest {
   private OpenShiftClient client;
-  private OpenShiftMockServer server;
+  KubernetesMockServer server;
 
   @Test
   void get() {
     // Given
-    server.expect().get().withPath("/apis/hive.openshift.io/v1/namespaces/ns1/clusterrelocates/test-get")
+    server.expect().get().withPath("/apis/hive.openshift.io/v1/clusterrelocates/test-get")
         .andReturn(HttpURLConnection.HTTP_OK, createNewClusterRelocate("test-get"))
         .once();
 
@@ -52,7 +52,7 @@ class ClusterRelocateTest {
   @Test
   void list() {
     // Given
-    server.expect().get().withPath("/apis/hive.openshift.io/v1/namespaces/ns1/clusterrelocates")
+    server.expect().get().withPath("/apis/hive.openshift.io/v1/clusterrelocates")
         .andReturn(HttpURLConnection.HTTP_OK, new ClusterRelocateListBuilder()
             .addToItems(createNewClusterRelocate("test-list"))
             .build())
@@ -71,12 +71,13 @@ class ClusterRelocateTest {
   @Test
   void delete() {
     // Given
-    server.expect().delete().withPath("/apis/hive.openshift.io/v1/namespaces/ns1/clusterrelocates/clusterrelocate1")
+    server.expect().delete().withPath("/apis/hive.openshift.io/v1/clusterrelocates/clusterrelocate1")
         .andReturn(HttpURLConnection.HTTP_OK, createNewClusterRelocate("clusterrelocate1"))
         .once();
 
     // When
-    boolean isDeleted = client.hive().clusterRelocates().inNamespace("ns1").withName("clusterrelocate1").delete().size() == 1;
+    boolean isDeleted = client.hive().clusterRelocates().inNamespace("ns1").withName("clusterrelocate1").withGracePeriod(0)
+        .delete().size() == 1;
 
     // Then
     assertThat(isDeleted).isTrue();

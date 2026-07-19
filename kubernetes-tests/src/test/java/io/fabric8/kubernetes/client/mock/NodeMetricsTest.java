@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EnableKubernetesMockClient
+@EnableKubernetesMockClient(https = false)
 class NodeMetricsTest {
 
   KubernetesMockServer server;
@@ -57,7 +57,7 @@ class NodeMetricsTest {
     // Given
     server.expect().withPath("/apis/metrics.k8s.io/v1beta1/nodes?resourceVersion=0").andReturn(HTTP_OK,
         new NodeMetricsListBuilder().withMetadata(new ListMeta()).build()).once();
-    server.expect().withPath("/apis/metrics.k8s.io/v1beta1/nodes?timeoutSeconds=600&allowWatchBookmarks=true&watch=true")
+    server.expect().withPath("/apis/metrics.k8s.io/v1beta1/nodes?allowWatchBookmarks=true&timeoutSeconds=600&watch=true")
         .andUpgradeToWebSocket()
         .open()
         .done()

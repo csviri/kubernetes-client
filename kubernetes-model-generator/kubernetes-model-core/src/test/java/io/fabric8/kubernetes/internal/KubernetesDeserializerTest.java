@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,7 @@
  */
 package io.fabric8.kubernetes.internal;
 
+import io.fabric8.kubernetes.api.model.KubernetesList;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.Quantity;
@@ -54,11 +55,10 @@ class KubernetesDeserializerTest {
   @Test
   void shouldNotRegisterKindWithoutVersionIfNullVersion() {
     // given
-    String version = null;
     String kind = "kind1";
-    TypeKey key = mapping.createKey(version, kind);
+    TypeKey key = mapping.createKey(null, kind);
     // when
-    mapping.registerKind(version, kind, SmurfResource.class);
+    mapping.registerKind(null, kind, SmurfResource.class);
     // then
     Class<? extends KubernetesResource> clazz = mapping.getForKey(key);
     assertThat(clazz).isNull();
@@ -95,6 +95,16 @@ class KubernetesDeserializerTest {
     Class<? extends KubernetesResource> clazz = mapping.getForKey(key);
     // then
     assertThat(clazz).isEqualTo(Pod.class);
+  }
+
+  @Test
+  void shouldLoadHandWrittenKubernetesListFromServiceFile() {
+    // given KubernetesList is hand-written and registered via the plugin's additionalKubernetesResources
+    TypeKey key = mapping.getKeyFromClass(KubernetesList.class);
+    // when
+    Class<? extends KubernetesResource> clazz = mapping.getForKey(key);
+    // then
+    assertThat(clazz).isEqualTo(KubernetesList.class);
   }
 
   @Test

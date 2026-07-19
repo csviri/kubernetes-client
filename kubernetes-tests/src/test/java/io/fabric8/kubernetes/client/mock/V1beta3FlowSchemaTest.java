@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,9 +31,9 @@ import java.util.List;
 
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
-@EnableKubernetesMockClient
+@EnableKubernetesMockClient(https = false)
 class V1beta3FlowSchemaTest {
-  private KubernetesMockServer server;
+  KubernetesMockServer server;
   private KubernetesClient client;
 
   @Test
@@ -106,7 +106,8 @@ class V1beta3FlowSchemaTest {
         .once();
 
     // When
-    boolean isDeleted = client.flowControl().v1beta3().flowSchema().withName("flowschema1").delete().size() == 1;
+    boolean isDeleted = client.flowControl().v1beta3().flowSchema().withName("flowschema1").withGracePeriod(0).delete()
+        .size() == 1;
 
     // Then
     AssertionsForClassTypes.assertThat(isDeleted).isTrue();

@@ -22,12 +22,16 @@
   <parent>
     <artifactId>kubernetes-client-project</artifactId>
     <groupId>io.fabric8</groupId>
-    <version>6.8-SNAPSHOT</version>
+    <version>999-SNAPSHOT</version>
   </parent>
 
   <artifactId>kubernetes-itests</artifactId>
   <packaging>jar</packaging>
   <name>Fabric8 :: Kubernetes :: Regression :: Tests</name>
+
+  <properties>
+    <maven.deploy.skip>true</maven.deploy.skip>
+  </properties>
 
   <dependencies>
     <dependency>
@@ -42,7 +46,7 @@
     </dependency>
     <dependency>
       <groupId>io.fabric8</groupId>
-      <artifactId>kubernetes-junit-jupiter</artifactId>
+      <artifactId>kubernetes-junit-jupiter-autodetected</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -68,9 +72,30 @@
       <artifactId>slf4j-simple</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk18on</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk18on</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <profiles>
+    <profile>
+      <id>enable-snapshots</id>
+      <repositories>
+        <repository>
+          <id>central-portal-snapshots</id>
+          <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+          <releases><enabled>false</enabled></releases>
+          <snapshots><enabled>true</enabled></snapshots>
+        </repository>
+      </repositories>
+    </profile>
     <profile>
       <id>httpclient-jdk</id>
       <dependencies>
@@ -81,7 +106,7 @@
           <exclusions>
             <exclusion>
               <groupId>io.fabric8</groupId>
-              <artifactId>kubernetes-httpclient-okhttp</artifactId>
+              <artifactId>kubernetes-httpclient-vertx</artifactId>
             </exclusion>
           </exclusions>
         </dependency>
@@ -90,14 +115,6 @@
           <artifactId>kubernetes-httpclient-jdk</artifactId>
         </dependency>
       </dependencies>
-      <repositories>
-        <repository>
-          <id>sonatype-snapshots</id>
-          <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-          <releases><enabled>false</enabled></releases>
-          <snapshots><enabled>true</enabled></snapshots>
-        </repository>
-      </repositories>
     </profile>
     <profile>
       <id>httpclient-jetty</id>
@@ -109,7 +126,7 @@
           <exclusions>
             <exclusion>
               <groupId>io.fabric8</groupId>
-              <artifactId>kubernetes-httpclient-okhttp</artifactId>
+              <artifactId>kubernetes-httpclient-vertx</artifactId>
             </exclusion>
           </exclusions>
         </dependency>
@@ -118,17 +135,9 @@
           <artifactId>kubernetes-httpclient-jetty</artifactId>
         </dependency>
       </dependencies>
-      <repositories>
-        <repository>
-          <id>sonatype-snapshots</id>
-          <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-          <releases><enabled>false</enabled></releases>
-          <snapshots><enabled>true</enabled></snapshots>
-        </repository>
-      </repositories>
     </profile>
     <profile>
-      <id>httpclient-vertx</id>
+      <id>httpclient-okhttp</id>
       <dependencies>
         <dependency>
           <groupId>io.fabric8</groupId>
@@ -137,23 +146,90 @@
           <exclusions>
             <exclusion>
               <groupId>io.fabric8</groupId>
-              <artifactId>kubernetes-httpclient-okhttp</artifactId>
+              <artifactId>kubernetes-httpclient-vertx</artifactId>
             </exclusion>
           </exclusions>
         </dependency>
         <dependency>
           <groupId>io.fabric8</groupId>
-          <artifactId>kubernetes-httpclient-vertx</artifactId>
+          <artifactId>kubernetes-httpclient-okhttp</artifactId>
         </dependency>
       </dependencies>
-      <repositories>
-        <repository>
-          <id>sonatype-snapshots</id>
-          <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-          <releases><enabled>false</enabled></releases>
-          <snapshots><enabled>true</enabled></snapshots>
-        </repository>
-      </repositories>
+    </profile>
+    <profile>
+      <id>httpclient-vertx-5</id>
+      <!-- 
+        Profile for testing with Vert.x 5.x HTTP client implementation.
+        Usage: mvn -Phttpclient-vertx-5 test -Dtest.httpclient=vertx-5
+        This profile overrides parent POM's Vert.x version from 4.5.14 to 5.0.1
+        to ensure integration tests use the correct Vert.x 5 runtime classes.
+      -->
+      <properties>
+        <!-- Override parent vertx.version for this profile -->
+        <vertx.version>${vertx5.version}</vertx.version>
+      </properties>
+      <dependencyManagement>
+        <dependencies>
+          <!-- Force Vert.x 5.x versions when this profile is active -->
+          <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-core</artifactId>
+            <version>${vertx5.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-web-client</artifactId>
+            <version>${vertx5.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-web-common</artifactId>
+            <version>${vertx5.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-auth-common</artifactId>
+            <version>${vertx5.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-core-logging</artifactId>
+            <version>${vertx5.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-web</artifactId>
+            <version>${vertx5.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-bridge-common</artifactId>
+            <version>${vertx5.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-uri-template</artifactId>
+            <version>${vertx5.version}</version>
+          </dependency>
+        </dependencies>
+      </dependencyManagement>
+      <dependencies>
+        <dependency>
+          <groupId>io.fabric8</groupId>
+          <artifactId>openshift-client</artifactId>
+          <scope>test</scope>
+          <exclusions>
+            <exclusion>
+              <groupId>io.fabric8</groupId>
+              <artifactId>kubernetes-httpclient-vertx</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+        <dependency>
+          <groupId>io.fabric8</groupId>
+          <artifactId>kubernetes-httpclient-vertx-5</artifactId>
+        </dependency>
+      </dependencies>
     </profile>
   </profiles>
 </project>

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,11 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.openshift.client.server.mock;
 
 import io.fabric8.kubernetes.api.model.APIGroupListBuilder;
 import io.fabric8.kubernetes.client.KubernetesClientException;
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.openshift.api.model.Build;
 import io.fabric8.openshift.api.model.BuildBuilder;
 import io.fabric8.openshift.api.model.BuildConfig;
@@ -43,10 +44,10 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class BuildConfigTest {
 
-  OpenShiftMockServer server;
+  KubernetesMockServer server;
   OpenShiftClient client;
 
   @Test
@@ -195,12 +196,12 @@ class BuildConfigTest {
         .withPath("/apis/build.openshift.io/v1/namespaces/ns1/builds?labelSelector=openshift.io%2Fbuild-config.name%3Dbc2")
         .andReturn(200, new BuildListBuilder().build()).once();
 
-    boolean deleted = client.buildConfigs().withName("bc1").delete().size() == 1;
+    boolean deleted = client.buildConfigs().withName("bc1").withGracePeriod(0).delete().size() == 1;
 
-    deleted = client.buildConfigs().withName("bc2").delete().size() == 1;
+    deleted = client.buildConfigs().withName("bc2").withGracePeriod(0).delete().size() == 1;
     assertFalse(deleted);
 
-    deleted = client.buildConfigs().inNamespace("ns1").withName("bc2").delete().size() == 1;
+    deleted = client.buildConfigs().inNamespace("ns1").withName("bc2").withGracePeriod(0).delete().size() == 1;
     assertTrue(deleted);
   }
 

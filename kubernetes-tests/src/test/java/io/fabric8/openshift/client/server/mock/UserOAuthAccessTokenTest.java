@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,8 @@
  */
 package io.fabric8.openshift.client.server.mock;
 
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.openshift.api.model.UserOAuthAccessToken;
 import io.fabric8.openshift.api.model.UserOAuthAccessTokenBuilder;
 import io.fabric8.openshift.api.model.UserOAuthAccessTokenList;
@@ -26,10 +28,10 @@ import java.net.HttpURLConnection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class UserOAuthAccessTokenTest {
   private OpenShiftClient client;
-  private OpenShiftMockServer server;
+  KubernetesMockServer server;
 
   @Test
   void get() {
@@ -77,7 +79,7 @@ class UserOAuthAccessTokenTest {
         .once();
 
     // When
-    boolean isDeleted = client.userOAuthAccessTokens().withName("test-delete").delete().size() == 1;
+    boolean isDeleted = client.userOAuthAccessTokens().withName("test-delete").withGracePeriod(0).delete().size() == 1;
 
     // Then
     assertThat(isDeleted).isTrue();

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -96,7 +96,11 @@ public class KubernetesDeserializer extends JsonDeserializer<KubernetesResource>
 
   @Override
   public KubernetesResource deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException {
-    JsonNode node = jp.readValueAsTree();
+    final JsonNode node = jp.readValueAsTree();
+    return deserialize(jp, node);
+  }
+
+  final KubernetesResource deserialize(JsonParser jp, JsonNode node) throws IOException {
     if (node.isObject()) {
       return fromObjectNode(jp, node);
     } else if (node.isArray()) {

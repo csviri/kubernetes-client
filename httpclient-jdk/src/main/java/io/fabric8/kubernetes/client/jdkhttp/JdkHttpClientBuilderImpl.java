@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,18 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.jdkhttp;
 
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.http.HttpClient;
 import io.fabric8.kubernetes.client.http.StandardHttpClientBuilder;
 import io.fabric8.kubernetes.client.http.TlsVersion;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.ProxySelector;
 import java.net.http.HttpClient.Redirect;
 import java.net.http.HttpClient.Version;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.net.ssl.SSLParameters;
 
@@ -41,6 +43,8 @@ import javax.net.ssl.SSLParameters;
 class JdkHttpClientBuilderImpl
     extends StandardHttpClientBuilder<JdkHttpClientImpl, JdkHttpClientFactory, JdkHttpClientBuilderImpl> {
 
+  private static final Logger logger = LoggerFactory.getLogger(JdkHttpClientBuilderImpl.class);
+
   public JdkHttpClientBuilderImpl(JdkHttpClientFactory factory) {
     super(factory);
   }
@@ -48,8 +52,16 @@ class JdkHttpClientBuilderImpl
   @Override
   public HttpClient build() {
     if (client != null) {
-      return new JdkHttpClientImpl(this, client.getHttpClient());
+      return new JdkHttpClientImpl(this, client.getHttpClient(), client.getClosed());
     }
+
+    // Warn if tlsServerName is configured but not supported
+    if (tlsServerName != null && !tlsServerName.isEmpty()) {
+      logger.warn(
+          "tlsServerName '{}' is configured but not supported by JDK HTTP client. Consider using Jetty HTTP client for SNI support.",
+          tlsServerName);
+    }
+
     java.net.http.HttpClient.Builder builder = clientFactory.createNewHttpClientBuilder();
     if (connectTimeout != null && !java.time.Duration.ZERO.equals(connectTimeout)) {
       builder.connectTimeout(connectTimeout);
@@ -78,7 +90,7 @@ class JdkHttpClientBuilderImpl
           Arrays.asList(tlsVersions).stream().map(TlsVersion::javaName).toArray(String[]::new)));
     }
     clientFactory.additionalConfig(builder);
-    return new JdkHttpClientImpl(this, builder.build());
+    return new JdkHttpClientImpl(this, builder.build(), new AtomicBoolean());
   }
 
   @Override

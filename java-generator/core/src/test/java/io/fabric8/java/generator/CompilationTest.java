@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,9 @@ package io.fabric8.java.generator;
 import com.google.testing.compile.Compilation;
 import com.google.testing.compile.JavaFileObjects;
 import io.fabric8.java.generator.exceptions.JavaGeneratorException;
+import io.sundr.builder.internal.processor.BuildableProcessor;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -31,6 +33,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -69,7 +72,11 @@ class CompilationTest {
         Arguments.of("camel-integrationplatforms-crd.yaml", 192),
         Arguments.of("two-crds.yml", 6),
         Arguments.of("folder", 6),
-        Arguments.of("calico-ippool-crd.yml", 3));
+        Arguments.of("calico-ippool-crd.yml", 3),
+        Arguments.of("emissary-crds.yaml", 242),
+        Arguments.of("colliding-enums-crd.yml", 2),
+        Arguments.of("crossplane-resource-crd.yaml", 8),
+        Arguments.of("gateway.envoyproxy.io_backendtrafficpolicies.yaml", 76));
   }
 
   @ParameterizedTest(name = "{0} should generate {1} source files and compile OK")
@@ -88,6 +95,7 @@ class CompilationTest {
     assertEquals(Compilation.Status.SUCCESS, compilation.status());
   }
 
+  @Disabled("Requires support from sundrio to work with compile-testing, see sundrio PR #469")
   @Test
   void testCrontabCRDCompilesWithExtraAnnotations() throws Exception {
     // Arrange
@@ -98,10 +106,12 @@ class CompilationTest {
 
     // Act
     new FileJavaGenerator(config, crd).run(tempDir);
-    Compilation compilation = javac().compile(getSources(tempDir));
+    Compilation compilation = javac()
+        .withProcessors(new BuildableProcessor())
+        .compile(getSources(tempDir));
 
     // Assert
-    assertTrue(compilation.errors().isEmpty());
+    assertEquals(Collections.emptyList(), compilation.errors());
     assertEquals(3, compilation.sourceFiles().size());
     assertEquals(Compilation.Status.SUCCESS, compilation.status());
   }
@@ -121,6 +131,83 @@ class CompilationTest {
       javac().compile(getSources(tempDir));
     },
         "The current CRD should not compile since it contains duplicate fields which are not marked as deprecated");
+  }
+
+  @Test
+  void rejectsInjectedCodeInNumericEnumFromCrd() throws Exception {
+    // Arrange
+    File crd = getCRD("malicious-numeric-enum-crd.yml");
+
+    // Act & Assert
+    JavaGeneratorException exception = assertThrows(
+        JavaGeneratorException.class,
+        () -> new FileJavaGenerator(config, crd).run(tempDir));
+
+    assertTrue(exception.getMessage().contains("structural mismatch"));
+    assertTrue(getSources(tempDir).isEmpty(), "Rejected CRDs must not emit Java source files");
+  }
+
+  @Test
+  void rejectsExpressionInjectionInNumericEnumFromCrd() throws Exception {
+    // Arrange
+    File crd = getCRD("malicious-expression-enum-crd.yml");
+
+    // Act & Assert
+    JavaGeneratorException exception = assertThrows(
+        JavaGeneratorException.class,
+        () -> new FileJavaGenerator(config, crd).run(tempDir));
+
+    String msg = exception.getMessage();
+    assertTrue(msg.contains("structural mismatch") || msg.contains("code injection"),
+        "Expected injection detection message but got: " + msg);
+  }
+
+  @Test
+  void neutralizesUnicodeEscapeInjectionInSchemaValues() throws Exception {
+    // Arrange: a CRD whose `names.singular`, `names.plural` and a string enum value each smuggle a
+    // Java Unicode escape that, left unescaped, would break out of the generated string literal once
+    // javac decodes it (@Singular, @Plural, the enum constant value and its @JsonProperty).
+    File crd = getCRD("malicious-unicode-escape-crd.yml");
+
+    // Act: every value is now emitted as a fully escaped (inert) string literal, so generation
+    // succeeds and the result compiles. A real breakout would still trip the structural validation.
+    new FileJavaGenerator(config, crd).run(tempDir);
+    Compilation compilation = javac().compile(getSources(tempDir));
+
+    // Assert
+    assertTrue(compilation.errors().isEmpty());
+    assertEquals(Compilation.Status.SUCCESS, compilation.status());
+  }
+
+  @Test
+  void rejectsUnicodeEscapeInjectionInCrdVersion() throws Exception {
+    // Arrange: the version name feeds the generated package declaration, not only the @Version
+    // annotation, so a Unicode-escaped breakout there cannot be neutralized by literal escaping and
+    // must be rejected by the structural validation (same reasoning applies to the CRD group).
+    File crd = getCRD("malicious-version-crd.yml");
+
+    // Act & Assert
+    JavaGeneratorException exception = assertThrows(
+        JavaGeneratorException.class,
+        () -> new FileJavaGenerator(config, crd).run(tempDir));
+
+    assertTrue(exception.getMessage().contains("code injection"));
+    assertTrue(getSources(tempDir).isEmpty(), "Rejected CRDs must not emit Java source files");
+  }
+
+  @Test
+  void compilesStringEnumValueContainingBackslash() throws Exception {
+    // Arrange: a backslash in a schema value (here a Windows-style path) must be escaped, not
+    // mistaken for a broken Java escape sequence that aborts generation.
+    File crd = getCRD("backslash-enum-crd.yml");
+
+    // Act
+    new FileJavaGenerator(config, crd).run(tempDir);
+    Compilation compilation = javac().compile(getSources(tempDir));
+
+    // Assert
+    assertTrue(compilation.errors().isEmpty());
+    assertEquals(Compilation.Status.SUCCESS, compilation.status());
   }
 
   static List<JavaFileObject> getSources(File basePath) throws IOException {

@@ -1,8 +1,9 @@
 
 package io.fabric8.openshift.api.model.operatorhub.v1alpha1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,35 +11,39 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
 import io.fabric8.kubernetes.api.model.LocalObjectReference;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * SubscriptionCatalogHealth describes the health of a CatalogSource the Subscription knows about.
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "catalogSourceRef",
     "healthy",
     "lastUpdated"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -50,80 +55,111 @@ import lombok.experimental.Accessors;
     @BuildableReference(PodTemplateSpec.class),
     @BuildableReference(ResourceRequirements.class),
     @BuildableReference(IntOrString.class),
-    @BuildableReference(io.fabric8.kubernetes.api.model.ObjectReference.class),
+    @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class SubscriptionCatalogHealth implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class SubscriptionCatalogHealth implements Editable<SubscriptionCatalogHealthBuilder>, KubernetesResource
 {
 
     @JsonProperty("catalogSourceRef")
-    private io.fabric8.kubernetes.api.model.ObjectReference catalogSourceRef;
+    private ObjectReference catalogSourceRef;
     @JsonProperty("healthy")
     private Boolean healthy;
     @JsonProperty("lastUpdated")
     private String lastUpdated;
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public SubscriptionCatalogHealth() {
     }
 
-    /**
-     * 
-     * @param catalogSourceRef
-     * @param lastUpdated
-     * @param healthy
-     */
-    public SubscriptionCatalogHealth(io.fabric8.kubernetes.api.model.ObjectReference catalogSourceRef, Boolean healthy, String lastUpdated) {
+    public SubscriptionCatalogHealth(ObjectReference catalogSourceRef, Boolean healthy, String lastUpdated) {
         super();
         this.catalogSourceRef = catalogSourceRef;
         this.healthy = healthy;
         this.lastUpdated = lastUpdated;
     }
 
+    /**
+     * SubscriptionCatalogHealth describes the health of a CatalogSource the Subscription knows about.
+     */
     @JsonProperty("catalogSourceRef")
-    public io.fabric8.kubernetes.api.model.ObjectReference getCatalogSourceRef() {
+    public ObjectReference getCatalogSourceRef() {
         return catalogSourceRef;
     }
 
+    /**
+     * SubscriptionCatalogHealth describes the health of a CatalogSource the Subscription knows about.
+     */
     @JsonProperty("catalogSourceRef")
-    public void setCatalogSourceRef(io.fabric8.kubernetes.api.model.ObjectReference catalogSourceRef) {
+    public void setCatalogSourceRef(ObjectReference catalogSourceRef) {
         this.catalogSourceRef = catalogSourceRef;
     }
 
+    /**
+     * Healthy is true if the CatalogSource is healthy; false otherwise.
+     */
     @JsonProperty("healthy")
     public Boolean getHealthy() {
         return healthy;
     }
 
+    /**
+     * Healthy is true if the CatalogSource is healthy; false otherwise.
+     */
     @JsonProperty("healthy")
     public void setHealthy(Boolean healthy) {
         this.healthy = healthy;
     }
 
+    /**
+     * SubscriptionCatalogHealth describes the health of a CatalogSource the Subscription knows about.
+     */
     @JsonProperty("lastUpdated")
     public String getLastUpdated() {
         return lastUpdated;
     }
 
+    /**
+     * SubscriptionCatalogHealth describes the health of a CatalogSource the Subscription knows about.
+     */
     @JsonProperty("lastUpdated")
     public void setLastUpdated(String lastUpdated) {
         this.lastUpdated = lastUpdated;
     }
 
+    @JsonIgnore
+    public SubscriptionCatalogHealthBuilder edit() {
+        return new SubscriptionCatalogHealthBuilder(this);
+    }
+
+    @JsonIgnore
+    public SubscriptionCatalogHealthBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
-    public Map<java.lang.String, Object> getAdditionalProperties() {
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 
     @JsonAnySetter
-    public void setAdditionalProperty(java.lang.String name, Object value) {
+    public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

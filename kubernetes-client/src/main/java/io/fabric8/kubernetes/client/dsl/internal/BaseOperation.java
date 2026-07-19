@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,7 @@ import io.fabric8.kubernetes.api.builder.TypedVisitor;
 import io.fabric8.kubernetes.api.builder.Visitor;
 import io.fabric8.kubernetes.api.model.DefaultKubernetesResourceList;
 import io.fabric8.kubernetes.api.model.DeletionPropagation;
+import io.fabric8.kubernetes.api.model.GenericKubernetesResource;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.KubernetesResourceList;
@@ -28,9 +29,12 @@ import io.fabric8.kubernetes.api.model.ListOptions;
 import io.fabric8.kubernetes.api.model.ListOptionsBuilder;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.ObjectReference;
+import io.fabric8.kubernetes.api.model.PartialObjectMetadata;
+import io.fabric8.kubernetes.api.model.PartialObjectMetadataList;
 import io.fabric8.kubernetes.api.model.Status;
 import io.fabric8.kubernetes.api.model.StatusDetails;
 import io.fabric8.kubernetes.api.model.StatusDetailsBuilder;
+import io.fabric8.kubernetes.api.model.Table;
 import io.fabric8.kubernetes.api.model.autoscaling.v1.Scale;
 import io.fabric8.kubernetes.api.model.extensions.DeploymentRollback;
 import io.fabric8.kubernetes.client.Client;
@@ -44,12 +48,14 @@ import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.dsl.FilterNested;
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
 import io.fabric8.kubernetes.client.dsl.MixedOperation;
+import io.fabric8.kubernetes.client.dsl.NonDeletingOperation;
 import io.fabric8.kubernetes.client.dsl.Resource;
 import io.fabric8.kubernetes.client.dsl.Waitable;
 import io.fabric8.kubernetes.client.dsl.base.PatchContext;
 import io.fabric8.kubernetes.client.dsl.base.PatchType;
 import io.fabric8.kubernetes.client.extension.ExtensibleResource;
 import io.fabric8.kubernetes.client.http.HttpRequest;
+import io.fabric8.kubernetes.client.impl.BaseClient;
 import io.fabric8.kubernetes.client.informers.ResourceEventHandler;
 import io.fabric8.kubernetes.client.informers.SharedIndexInformer;
 import io.fabric8.kubernetes.client.informers.impl.DefaultSharedIndexInformer;
@@ -62,6 +68,8 @@ import io.fabric8.kubernetes.client.utils.URLUtils.URLBuilder;
 import io.fabric8.kubernetes.client.utils.Utils;
 import io.fabric8.kubernetes.client.utils.internal.CreateOrReplaceHelper;
 import io.fabric8.kubernetes.client.utils.internal.WatcherToggle;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -78,6 +86,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
@@ -97,9 +106,22 @@ public class BaseOperation<T extends HasMetadata, L extends KubernetesResourceLi
     ExtensibleResource<T>,
     ListerWatcher<T, L> {
 
+  static final Logger logger = LoggerFactory.getLogger(BaseOperation.class);
+
   private static final String WATCH = "watch";
   private static final String READ_ONLY_UPDATE_EXCEPTION_MESSAGE = "Cannot update read-only resources";
   private static final String READ_ONLY_EDIT_EXCEPTION_MESSAGE = "Cannot edit read-only resources";
+  private static final long CREATE_OR_REPLACE_DEFAULT_TIMEOUT = 1;
+  private static final TimeUnit CREATE_OR_REPLACE_DEFAULT_TIMEOUT_UNIT = TimeUnit.SECONDS;
+  private static final String ACCEPT_PARTIAL_METADATA_V1 = "application/json;as=PartialObjectMetadata;g=meta.k8s.io;v=v1,"
+      + "application/json;as=PartialObjectMetadata;g=meta.k8s.io;v=v1beta1,"
+      + "application/json";
+  private static final String ACCEPT_PARTIAL_METADATA_LIST_V1 = "application/json;as=PartialObjectMetadataList;g=meta.k8s.io;v=v1,"
+      + "application/json;as=PartialObjectMetadataList;g=meta.k8s.io;v=v1beta1,"
+      + "application/json";
+  private static final String ACCEPT_TABLE_V1 = "application/json;as=Table;v=v1;g=meta.k8s.io,"
+      + "application/json;as=Table;v=v1beta1;g=meta.k8s.io,"
+      + "application/json";
 
   private final T item;
 
@@ -297,13 +319,46 @@ public class BaseOperation<T extends HasMetadata, L extends KubernetesResourceLi
     }
     R resource = resource(item);
 
+    final long waitTimeout;
+    final TimeUnit waitTimeoutUnit;
+    if (context.getTimeout() > 0) {
+      waitTimeout = context.getTimeout();
+      waitTimeoutUnit = context.getTimeoutUnit();
+    } else {
+      waitTimeoutUnit = CREATE_OR_REPLACE_DEFAULT_TIMEOUT_UNIT;
+      waitTimeout = CREATE_OR_REPLACE_DEFAULT_TIMEOUT;
+    }
+
     CreateOrReplaceHelper<T> createOrReplaceHelper = new CreateOrReplaceHelper<>(
         resource::create,
         resource::replace,
-        m -> resource.waitUntilCondition(Objects::nonNull, 1, TimeUnit.SECONDS),
+        m -> resource.waitUntilCondition(Objects::nonNull, waitTimeout, waitTimeoutUnit),
         m -> resource.fromServer().get(), this.getKubernetesSerialization());
 
     return createOrReplaceHelper.createOrReplace(item);
+  }
+
+  @Override
+  public T createOr(Function<NonDeletingOperation<T>, T> conflictAction) {
+    try {
+      return create();
+    } catch (KubernetesClientException e) {
+      if (e.getCode() == HttpURLConnection.HTTP_CONFLICT) {
+        return conflictAction.apply(this);
+      }
+      throw e;
+    }
+  }
+
+  @Override
+  public ExtensibleResource<T> unlock() {
+    // this could be done lazily and tracked via the context,
+    // but it's easier to just modify the item
+    T current = getItemOrRequireFromServer();
+    if (current.getMetadata() != null) {
+      current.getMetadata().setResourceVersion(null);
+    }
+    return newInstance(context.withItem(current));
   }
 
   @Override
@@ -344,6 +399,11 @@ public class BaseOperation<T extends HasMetadata, L extends KubernetesResourceLi
   @Override
   public FilterWatchListDeletable<T, L, R> withLabelSelector(String selectorAsString) {
     return withNewFilter().withLabelSelector(selectorAsString).endFilter();
+  }
+
+  @Override
+  public FilterWatchListDeletable<T, L, R> withShardSelector(String shardSelector) {
+    return withNewFilter().withShardSelector(shardSelector).endFilter();
   }
 
   @Override
@@ -408,7 +468,7 @@ public class BaseOperation<T extends HasMetadata, L extends KubernetesResourceLi
         }
       };
       CompletableFuture<L> futureAnswer = handleResponse(httpClient, requestBuilder, listTypeReference);
-      return futureAnswer.thenApply(updateApiVersion());
+      return futureAnswer.thenApply(this::updateListItems);
     } catch (IOException e) {
       throw KubernetesClientException.launderThrowable(forOperationType("list"), e);
     }
@@ -418,6 +478,70 @@ public class BaseOperation<T extends HasMetadata, L extends KubernetesResourceLi
   public L list(ListOptions listOptions) {
     try {
       return waitForResult(submitList(listOptions));
+    } catch (IOException e) {
+      throw KubernetesClientException.launderThrowable(forOperationType("list"), e);
+    }
+  }
+
+  @Override
+  public PartialObjectMetadataList listAsPartialObjectMetadata() {
+    return listAsPartialObjectMetadata(new ListOptions());
+  }
+
+  @Override
+  public PartialObjectMetadataList listAsPartialObjectMetadata(ListOptions listOptions) {
+    return listAs(listOptions, ACCEPT_PARTIAL_METADATA_LIST_V1, new TypeReference<>() {
+    });
+  }
+
+  @Override
+  public PartialObjectMetadata getAsPartialObjectMetadata() {
+    return getAs(ACCEPT_PARTIAL_METADATA_V1, PartialObjectMetadata.class);
+  }
+
+  @Override
+  public Table listAsTable() {
+    return listAsTable(new ListOptions());
+  }
+
+  @Override
+  public Table listAsTable(ListOptions listOptions) {
+    return listAs(listOptions, ACCEPT_TABLE_V1, new TypeReference<>() {
+    });
+  }
+
+  @Override
+  public Table getAsTable() {
+    return getAs(ACCEPT_TABLE_V1, Table.class);
+  }
+
+  private <R> R getAs(String accept, Class<R> type) {
+    if (Utils.isNullOrEmpty(getName())) {
+      throw new KubernetesClientException("name not specified for an operation requiring one.");
+    }
+    try {
+      URL requestUrl = getCompleteResourceUrl();
+      HttpRequest.Builder requestBuilder = httpClient.newHttpRequestBuilder()
+          .url(requestUrl)
+          .setHeader("Accept", accept);
+      return handleResponse(requestBuilder, type);
+    } catch (KubernetesClientException e) {
+      if (e.getCode() != HttpURLConnection.HTTP_NOT_FOUND) {
+        throw e;
+      }
+      return null;
+    } catch (IOException e) {
+      throw KubernetesClientException.launderThrowable(forOperationType("get"), e);
+    }
+  }
+
+  private <R> R listAs(ListOptions listOptions, String accept, TypeReference<R> typeRef) {
+    try {
+      URL fetchListUrl = fetchListUrl(getNamespacedUrl(), defaultListOptions(listOptions, null));
+      HttpRequest.Builder requestBuilder = withRequestTimeout(httpClient.newHttpRequestBuilder()
+          .url(fetchListUrl)
+          .setHeader("Accept", accept));
+      return waitForResult(handleResponse(httpClient, requestBuilder, typeRef));
     } catch (IOException e) {
       throw KubernetesClientException.launderThrowable(forOperationType("list"), e);
     }
@@ -435,6 +559,10 @@ public class BaseOperation<T extends HasMetadata, L extends KubernetesResourceLi
     String labelQueryParam = context.getLabelQueryParam();
     if (labelQueryParam != null) {
       options.setLabelSelector(labelQueryParam);
+    }
+    String shardSelector = context.getShardSelector();
+    if (shardSelector != null) {
+      options.setShardSelector(shardSelector);
     }
     if (resourceVersion != null) {
       options.setResourceVersion(resourceVersion);
@@ -497,6 +625,11 @@ public class BaseOperation<T extends HasMetadata, L extends KubernetesResourceLi
             options.setLabelSelector(labelQueryParam);
             useOptions = true;
           }
+          String shardSelector = context.getShardSelector();
+          if (shardSelector != null) {
+            options.setShardSelector(shardSelector);
+            useOptions = true;
+          }
         }
         if (useOptions) {
           resourceURLForWriteOperation = appendListOptionParams(resourceURLForWriteOperation, options);
@@ -506,6 +639,9 @@ public class BaseOperation<T extends HasMetadata, L extends KubernetesResourceLi
         ArrayList<StatusDetails> details = new ArrayList<>();
         toStatusDetails(result, details);
         return details;
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw KubernetesClientException.launderThrowable(forOperationType("delete"), e);
       } catch (Exception e) {
         RuntimeException re = KubernetesClientException.launderThrowable(forOperationType("delete"), e);
         if (re instanceof KubernetesClientException) {
@@ -614,9 +750,12 @@ public class BaseOperation<T extends HasMetadata, L extends KubernetesResourceLi
 
   @Override
   public CompletableFuture<AbstractWatchManager<T>> submitWatch(ListOptions options, final Watcher<T> watcher) {
-    WatcherToggle<T> watcherToggle = new WatcherToggle<>(watcher, true);
     ListOptions optionsToUse = defaultListOptions(options, true);
     WatchConnectionManager<T, L> watch;
+    if (this.getConfig().isOnlyHttpWatches()) {
+      return CompletableFuture.completedFuture(httpWatch(watcher, optionsToUse));
+    }
+    WatcherToggle<T> watcherToggle = new WatcherToggle<>(watcher, true);
     try {
       watch = new WatchConnectionManager<>(
           httpClient,
@@ -635,29 +774,32 @@ public class BaseOperation<T extends HasMetadata, L extends KubernetesResourceLi
           if (t instanceof CompletionException) {
             t = t.getCause();
           }
+          boolean httpWatch = false;
           if (t instanceof KubernetesClientException) {
             KubernetesClientException ke = (KubernetesClientException) t;
+            // 503 will initially trigger re-tries, if it's "expected", we may need to short-circuit that
             List<Integer> furtherProcessedCodes = Arrays.asList(200, 503);
             if (furtherProcessedCodes.contains(ke.getCode())) {
-              //release the watch after disabling the watcher (to avoid premature call to onClose)
-              watcherToggle.disable();
-
               // If the HTTP return code is 200 or 503, we retry the watch again using a persistent hanging
               // HTTP GET. This is meant to handle cases like kubectl local proxy which does not support
               // websockets. Issue: https://github.com/kubernetes/kubernetes/issues/25126
-              try {
-                return new WatchHTTPManager<>(
-                    httpClient,
-                    this,
-                    optionsToUse,
-                    watcher,
-                    getRequestConfig().getWatchReconnectInterval(),
-                    getRequestConfig().getWatchReconnectLimit());
-              } catch (MalformedURLException e) {
-                throw KubernetesClientException.launderThrowable(forOperationType(WATCH), e);
-              }
+              logger.debug(
+                  "Websocket handshake failed with code {}, but an httpwatch may be possible.  Use Config.onlyHttpWatches to disable websocket watches.",
+                  ke.getCode());
+              httpWatch = true;
             }
+          } else {
+            logger.debug(
+                "Failed to establish a websocket watch, will try regular http instead.  Use Config.onlyHttpWatches to disable websocket watches.",
+                t);
+            httpWatch = true;
           }
+          if (httpWatch) {
+            //release the watch after disabling the watcher (to avoid premature call to onClose)
+            watcherToggle.disable();
+            return httpWatch(watcher, optionsToUse);
+          }
+
           throw KubernetesClientException.launderThrowable(t);
         } finally {
           watch.close();
@@ -666,6 +808,20 @@ public class BaseOperation<T extends HasMetadata, L extends KubernetesResourceLi
       return watch;
     });
 
+  }
+
+  private AbstractWatchManager<T> httpWatch(final Watcher<T> watcher, ListOptions optionsToUse) {
+    try {
+      return new WatchHTTPManager<>(
+          httpClient,
+          this,
+          optionsToUse,
+          watcher,
+          getRequestConfig().getWatchReconnectInterval(),
+          getRequestConfig().getWatchReconnectLimit());
+    } catch (MalformedURLException e) {
+      throw KubernetesClientException.launderThrowable(forOperationType(WATCH), e);
+    }
   }
 
   @Override
@@ -823,16 +979,22 @@ public class BaseOperation<T extends HasMetadata, L extends KubernetesResourceLi
 
   /**
    * Updates the list items if they have missing or default apiGroupVersion values and the resource is currently
-   * using API Groups with custom version strings
+   * using API Groups with custom version strings, or if they are generic and lack a kind
    */
-  protected UnaryOperator<L> updateApiVersion() {
-    return list -> {
-      String version = apiVersion;
-      if (list != null && version != null && version.length() > 0 && list.getItems() != null) {
-        list.getItems().forEach(this::updateApiVersion);
+  protected L updateListItems(L list) {
+    if (list != null && list.getItems() != null) {
+      boolean updateApiVersion = Utils.isNotNullOrEmpty(apiVersion);
+      boolean updateKind = GenericKubernetesResource.class.isAssignableFrom(getType());
+      if (updateApiVersion || updateKind) {
+        for (T item : list.getItems()) {
+          updateApiVersion(item);
+          if (updateKind && item != null && item.getKind() == null) {
+            ((GenericKubernetesResource) item).setKind(getKind());
+          }
+        }
       }
-      return list;
-    };
+    }
+    return list;
   }
 
   /**
@@ -843,11 +1005,11 @@ public class BaseOperation<T extends HasMetadata, L extends KubernetesResourceLi
    */
   protected void updateApiVersion(HasMetadata hasMetadata) {
     String version = apiVersion;
-    if (hasMetadata != null && version != null && version.length() > 0) {
+    if (hasMetadata != null && Utils.isNotNullOrEmpty(version)) {
       String current = hasMetadata.getApiVersion();
       // lets overwrite the api version if its currently missing, the resource uses an API Group with '/'
       // or we have the default of 'v1' when using an API group version like 'build.openshift.io/v1'
-      if (current == null || "v1".equals(current) || current.indexOf('/') < 0 && version.indexOf('/') > 0) {
+      if (current == null || "v1".equals(current) || (current.indexOf('/') < 0 && version.indexOf('/') > 0)) {
         hasMetadata.setApiVersion(version);
       }
     }
@@ -900,18 +1062,27 @@ public class BaseOperation<T extends HasMetadata, L extends KubernetesResourceLi
 
     informer.initialState(Stream.empty());
 
-    // prevent unnecessary watches and handle closure
+    // prevent unnecessary watches and handle closure - safety net for cancellation /
+    // exceptional completion paths that don't go through `test` below.
     future.whenComplete((r, t) -> informer.stop());
 
-    // use the cache to evaluate the list predicate, trapping any exceptions
+    // use the cache to evaluate the list predicate, trapping any exceptions.
+    // When `test` is the one completing the future, stop the informer inline on the same
+    // thread so any subsequent informer activity (e.g. the watch start that follows a list)
+    // observes the stop deterministically. Relying solely on `future.whenComplete` is racy:
+    // when a thread is blocked in `future.thenApply(...).get(...)`, the JDK lets the waiter
+    // help drain `postComplete`, and it can `claim()` the whenComplete dependent first — so
+    // `future.complete` can return on the completer thread before `informer.stop` has run.
     Consumer<List<T>> test = list -> {
       try {
         // could skip if lastResourceVersion has not changed
-        if (condition.test(list)) {
-          future.complete(list);
+        if (condition.test(list) && future.complete(list)) {
+          informer.stop();
         }
       } catch (Exception e) {
-        future.completeExceptionally(e);
+        if (future.completeExceptionally(e)) {
+          informer.stop();
+        }
       }
     };
 
@@ -932,12 +1103,21 @@ public class BaseOperation<T extends HasMetadata, L extends KubernetesResourceLi
       }
 
       @Override
-      public void onNothing() {
-        test.accept(informer.getStore().list());
+      public void onList(String resourceVersion, boolean remainedEmpty) {
+        if (remainedEmpty) {
+          test.accept(Collections.emptyList());
+        }
       }
     }).start().whenComplete((v, t) -> {
       if (t != null) {
         future.completeExceptionally(t);
+      }
+    });
+    informer.stopped().whenComplete((v, t) -> {
+      if (t != null) {
+        future.completeExceptionally(t);
+      } else {
+        future.completeExceptionally(new KubernetesClientException("Informer was stopped"));
       }
     });
     return future;
@@ -1012,44 +1192,27 @@ public class BaseOperation<T extends HasMetadata, L extends KubernetesResourceLi
     if (indexers != null) {
       informer.addIndexers(indexers);
     }
+    informer.started().whenComplete((ignored, throwable) -> {
+      if (throwable == null) {
+        BaseClient baseClient = this.context.getClient().adapt(BaseClient.class);
+        baseClient.addToCloseable(informer);
+        informer.stopped().whenComplete((x, y) -> baseClient.removeFromCloseable(informer));
+      }
+    });
     return informer;
   }
 
-  public static URL appendListOptionParams(URL base, ListOptions listOptions) {
+  public URL appendListOptionParams(URL base, ListOptions listOptions) {
     if (listOptions == null) {
       return base;
     }
     URLBuilder urlBuilder = new URLBuilder(base);
-    if (listOptions.getLimit() != null) {
-      urlBuilder.addQueryParameter("limit", listOptions.getLimit().toString());
-    }
-    if (listOptions.getContinue() != null) {
-      urlBuilder.addQueryParameter("continue", listOptions.getContinue());
-    }
 
-    if (listOptions.getFieldSelector() != null) {
-      urlBuilder.addQueryParameter("fieldSelector", listOptions.getFieldSelector());
-    }
+    Map<String, ?> values = getKubernetesSerialization().convertValue(listOptions, TreeMap.class);
+    values.remove("apiVersion");
+    values.remove("kind");
+    values.forEach((k, v) -> urlBuilder.addQueryParameter(k, v.toString()));
 
-    if (listOptions.getLabelSelector() != null) {
-      urlBuilder.addQueryParameter("labelSelector", listOptions.getLabelSelector());
-    }
-
-    if (listOptions.getResourceVersion() != null) {
-      urlBuilder.addQueryParameter("resourceVersion", listOptions.getResourceVersion());
-    }
-
-    if (listOptions.getTimeoutSeconds() != null) {
-      urlBuilder.addQueryParameter("timeoutSeconds", listOptions.getTimeoutSeconds().toString());
-    }
-
-    if (listOptions.getAllowWatchBookmarks() != null) {
-      urlBuilder.addQueryParameter("allowWatchBookmarks", listOptions.getAllowWatchBookmarks().toString());
-    }
-
-    if (listOptions.getWatch() != null) {
-      urlBuilder.addQueryParameter(WATCH, listOptions.getWatch().toString());
-    }
     return urlBuilder.build();
   }
 
@@ -1160,6 +1323,11 @@ public class BaseOperation<T extends HasMetadata, L extends KubernetesResourceLi
   @Override
   public Scale scale(Scale scale) {
     throw new KubernetesClientException(READ_ONLY_UPDATE_EXCEPTION_MESSAGE);
+  }
+
+  @Override
+  public ExtensibleResource<T> subresource(String subresource) {
+    return newInstance(context.withSubresource(subresource));
   }
 
 }

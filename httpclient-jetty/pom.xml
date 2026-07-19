@@ -21,7 +21,7 @@
   <parent>
     <artifactId>kubernetes-client-project</artifactId>
     <groupId>io.fabric8</groupId>
-    <version>6.8-SNAPSHOT</version>
+    <version>999-SNAPSHOT</version>
   </parent>
 
   <artifactId>kubernetes-httpclient-jetty</artifactId>
@@ -29,7 +29,7 @@
   <name>Fabric8 :: Kubernetes :: HttpClient :: Jetty</name>
 
   <properties>
-    <maven.compiler.release>11</maven.compiler.release>
+    <jpms.module.name>io.fabric8.kubernetes.client.jetty</jpms.module.name>
     <osgi.require-capability>
       osgi.extender;
       filter:="(osgi.extender=osgi.serviceloader.registrar)",
@@ -88,11 +88,16 @@
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
-      <artifactId>mockito-inline</artifactId>
+      <artifactId>mockito-core</artifactId>
     </dependency>
     <dependency>
       <groupId>org.assertj</groupId>
       <artifactId>assertj-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.awaitility</groupId>
+      <artifactId>awaitility</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 
@@ -101,37 +106,34 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <!-- We cleanup system properties an env vars, so that we can test in a predictable env -->
-          <environmentVariables>
-            <KUBERNETES_MASTER />
-            <KUBERNETES_API_VERSION />
-            <KUBERNETES_TRUST_CERTIFICATES />
-            <KUBERNETES_CERTS_CA_FILE />
-            <KUBERNETES_CERTS_CA_DATA />
-            <KUBERNETES_CERTS_CLIENT_FILE />
-            <KUBERNETES_CERTS_CLIENT_DATA />
-            <KUBERNETES_CERTS_CLIENT_KEY_FILE />
-            <KUBERNETES_CERTS_CLIENT_KEY_DATA />
-            <KUBERNETES_CERTS_CLIENT_KEY_ALGO />
-            <KUBERNETES_CERTS_CLIENT_KEY_PASSPHRASE />
-            <KUBERNETES_AUTH_BASIC_USERNAME />
-            <KUBERNETES_AUTH_BASIC_PASSWORD />
-            <KUBERNETES_AUTH_TRYKUBECONFIG />
-            <KUBERNETES_AUTH_TRYSERVICEACCOUNT />
-            <KUBERNETES_AUTH_TOKEN />
-            <KUBERNETES_WATCH_RECONNECTINTERVAL />
-            <KUBERNETES_WATCH_RECONNECTLIMIT />
-            <KUBERNETES_REQUEST_TIMEOUT />
-            <KUBERNETES_NAMESPACE />
-            <KUBERNETES_TLS_VERSIONS>TLSv1.2,TLSv1.1,TLSv1</KUBERNETES_TLS_VERSIONS>
-          </environmentVariables>
-        </configuration>
+        <executions>
+          <execution>
+            <id>default-test</id>
+            <goals>
+              <goal>test</goal>
+            </goals>
+            <configuration>
+              <excludedGroups>simultaneous-connections</excludedGroups>
+              <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
+            </configuration>
+          </execution>
+          <execution>
+            <id>simultaneous-connections-test</id>
+            <goals>
+              <goal>test</goal>
+            </goals>
+            <configuration>
+              <groups>simultaneous-connections</groups>
+              <forkCount>1</forkCount>
+              <reuseForks>false</reuseForks>
+              <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
-        <version>3.1.0</version>
         <executions>
           <execution>
             <goals>

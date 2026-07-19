@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,7 +27,7 @@ import io.fabric8.kubernetes.client.mock.crd.StarSpec;
 import io.fabric8.kubernetes.client.mock.crd.StarStatus;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
-import okhttp3.mockwebserver.RecordedRequest;
+import io.fabric8.mockwebserver.http.RecordedRequest;
 import org.junit.jupiter.api.Test;
 
 import java.net.HttpURLConnection;
@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnableKubernetesMockClient
+@EnableKubernetesMockClient(https = false)
 class TypedClusterScopeCustomResourceApiTest {
 
   KubernetesMockServer server;
@@ -91,7 +91,7 @@ class TypedClusterScopeCustomResourceApiTest {
 
     starClient = client.resources(Star.class);
 
-    boolean isDeleted = starClient.inNamespace("test").withName("sun").delete().size() == 1;
+    boolean isDeleted = starClient.inNamespace("test").withName("sun").withGracePeriod(0).delete().size() == 1;
     assertTrue(isDeleted);
   }
 

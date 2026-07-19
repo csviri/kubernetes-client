@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,7 +24,7 @@ import io.fabric8.kubernetes.client.utils.Utils;
 import io.fabric8.mockwebserver.crud.Attribute;
 import io.fabric8.mockwebserver.crud.AttributeExtractor;
 import io.fabric8.mockwebserver.crud.AttributeSet;
-import okhttp3.HttpUrl;
+import io.fabric8.mockwebserver.http.HttpUrl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,7 +44,7 @@ import static io.fabric8.mockwebserver.crud.AttributeType.WITHOUT;
 
 public class KubernetesAttributesExtractor implements AttributeExtractor {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(KubernetesAttributesExtractor.class);
+  private static final Logger logger = LoggerFactory.getLogger(KubernetesAttributesExtractor.class);
 
   public static final String KEY = "key";
   public static final String KIND = "kind";
@@ -136,7 +136,7 @@ public class KubernetesAttributesExtractor implements AttributeExtractor {
           .map(e -> new Attribute(e.getKey(), e.getValue()))
           .collect(Collectors.toList()));
       set = AttributeSet.merge(set, extractQueryParameters(url));
-      LOGGER.debug("fromPath {} : {}", s, set);
+      logger.debug("fromPath {} : {}", s, set);
       return set;
     }
     return new AttributeSet();
@@ -244,7 +244,7 @@ public class KubernetesAttributesExtractor implements AttributeExtractor {
         if (label != null) {
           attributes = attributes.add(label);
         } else {
-          LOGGER.warn("Ignoring unsupported label requirement: {}", requirement);
+          logger.warn("Ignoring unsupported label requirement: {}", requirement);
         }
       }
     }
@@ -260,7 +260,7 @@ public class KubernetesAttributesExtractor implements AttributeExtractor {
         if (field != null) {
           attributes = attributes.add(field);
         } else {
-          LOGGER.warn("Ignoring unsupported field requirement: {}", requirement);
+          logger.warn("Ignoring unsupported field requirement: {}", requirement);
         }
       }
     }
@@ -319,7 +319,7 @@ public class KubernetesAttributesExtractor implements AttributeExtractor {
     if (Utils.isNullOrEmpty(s)) {
       return null;
     }
-    HasMetadata result = Serialization.unmarshal(s);
+    HasMetadata result = Serialization.unmarshal(s, GenericKubernetesResource.class);
     if (result == null) {
       throw new IllegalArgumentException("Required value: kind is required");
     }

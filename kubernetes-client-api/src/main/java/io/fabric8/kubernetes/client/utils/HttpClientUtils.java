@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -69,12 +69,13 @@ public class HttpClientUtils {
     }
   }
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(HttpClientUtils.class);
+  private static final Logger logger = LoggerFactory.getLogger(HttpClientUtils.class);
   private static final String HEADER_INTERCEPTOR = "HEADER";
   private static final String KUBERNETES_BACKWARDS_COMPATIBILITY_INTERCEPTOR_DISABLE = "kubernetes.backwardsCompatibilityInterceptor.disable";
   private static final String BACKWARDS_COMPATIBILITY_DISABLE_DEFAULT = "true";
-  private static final Pattern IPV4_PATTERN = Pattern.compile(
-      "(http://|https://)?(?<ipAddressOrSubnet>(([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.){3}([01]?\\d\\d?|2[0-4]\\d|25[0-5])(\\/([1-2]\\d|3[0-2]|\\d))?)(\\D+|$)");
+  private static final Pattern IP_PATTERN = Pattern.compile(
+      "(http(s?)://)?(?<ipAddressOrSubnet>((\\d{1,3}(.\\d{1,3}){3})|([a-f\\d]{1,4}(\\:[a-f\\d]{0,4}){2,7}))(/\\d+)?)",
+      Pattern.CASE_INSENSITIVE);
   private static final Pattern INVALID_HOST_PATTERN = Pattern.compile("[^\\da-zA-Z.\\-/:]+");
 
   private HttpClientUtils() {
@@ -86,7 +87,14 @@ public class HttpClientUtils {
       proxy = config.getHttpProxy();
     }
     if (proxy != null) {
-      URI proxyUrl = new URI(proxy);
+      final String completedProxy;
+      if (proxy.contains("://")) {
+        completedProxy = proxy;
+      } else {
+        // No protocol specified, default to cluster requirements
+        completedProxy = master.getProtocol() + "://" + proxy;
+      }
+      final URI proxyUrl = new URI(completedProxy);
       if (proxyUrl.getPort() < 0) {
         throw new IllegalArgumentException("Failure in creating proxy URL. Proxy port is required!");
       }
@@ -116,10 +124,31 @@ public class HttpClientUtils {
     return interceptors;
   }
 
-  public static String basicCredentials(String username, String password) {
-    String usernameAndPassword = username + ":" + password;
-    String encoded = Base64.getEncoder().encodeToString(usernameAndPassword.getBytes(StandardCharsets.ISO_8859_1));
+  public static String basicCredentials(String usernameAndPassword) {
+    String encoded = Base64.getEncoder().encodeToString(usernameAndPassword.getBytes(StandardCharsets.UTF_8));
     return "Basic " + encoded;
+  }
+
+  public static String basicCredentials(String username, String password) {
+    return basicCredentials(username + ":" + password);
+  }
+
+  public static String[] decodeBasicCredentials(String basicCredentials) {
+    if (basicCredentials == null) {
+      return null;
+    }
+    try {
+      final String encodedCredentials = basicCredentials.replaceFirst("Basic ", "");
+      final String decodedProxyAuthorization = new String(Base64.getDecoder().decode(encodedCredentials),
+          StandardCharsets.UTF_8);
+      final String[] userPassword = decodedProxyAuthorization.split(":");
+      if (userPassword.length == 2) {
+        return userPassword;
+      }
+    } catch (Exception ignored) {
+      // Ignored
+    }
+    return null;
   }
 
   /**
@@ -142,7 +171,7 @@ public class HttpClientUtils {
             "No httpclient implementations found on the context classloader, please ensure your classpath includes an implementation jar");
       }
     }
-    LOGGER.debug("Using httpclient {} factory", factory.getClass().getName());
+    logger.debug("Using httpclient {} factory", factory.getClass().getName());
     return factory;
   }
 
@@ -156,12 +185,12 @@ public class HttpClientUtils {
     HttpClient.Factory factory = factories.get(0);
     if (factories.size() > 1) {
       if (factories.get(1).priority() == factory.priority()) {
-        LOGGER.warn("The following httpclient factories were detected on your classpath: {}, "
+        logger.warn("The following httpclient factories were detected on your classpath: {}, "
             + "multiple of which had the same priority ({}) so one was chosen randomly. "
             + "You should exclude dependencies that aren't needed or use an explicit association of the HttpClient.Factory.",
             factories.stream().map(f -> f.getClass().getName()).toArray(), factory.priority());
-      } else if (LOGGER.isDebugEnabled()) {
-        LOGGER.debug("The following httpclient factories were detected on your classpath: {}",
+      } else if (logger.isDebugEnabled()) {
+        logger.debug("The following httpclient factories were detected on your classpath: {}",
             factories.stream().map(f -> f.getClass().getName()).toArray());
       }
     }
@@ -195,6 +224,10 @@ public class HttpClientUtils {
       builder.tlsVersions(config.getTlsVersions());
     }
 
+    if (config.getTlsServerName() != null && !config.getTlsServerName().isEmpty()) {
+      builder.tlsServerName(config.getTlsServerName());
+    }
+
     HttpClientUtils.createApplicableInterceptors(config, factory).forEach(builder::addOrReplaceInterceptor);
   }
 
@@ -220,6 +253,11 @@ public class HttpClientUtils {
 
       if (config.getProxyUsername() != null) {
         builder.proxyAuthorization(basicCredentials(config.getProxyUsername(), config.getProxyPassword()));
+      }
+
+      String userInfo = proxyUri.getUserInfo();
+      if (userInfo != null) {
+        builder.proxyAuthorization(basicCredentials(userInfo));
       }
 
       builder.proxyType(toProxyType(proxyUri.getScheme()));
@@ -263,8 +301,8 @@ public class HttpClientUtils {
   }
 
   private static Optional<String> extractIpAddressOrSubnet(String ipAddressOrSubnet) {
-    final Matcher ipMatcher = IPV4_PATTERN.matcher(ipAddressOrSubnet);
-    if (ipMatcher.find()) {
+    final Matcher ipMatcher = IP_PATTERN.matcher(ipAddressOrSubnet);
+    if (ipMatcher.matches()) {
       return Optional.of(ipMatcher.group("ipAddressOrSubnet"));
     }
     return Optional.empty();

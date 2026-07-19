@@ -1,8 +1,9 @@
 
 package io.fabric8.volumesnapshot.api.model;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -27,22 +29,20 @@ import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * VolumeSnapshotSource specifies whether the underlying snapshot should be dynamically taken upon creation or if a pre-existing VolumeSnapshotContent object should be used. Exactly one of its members must be set. Members in VolumeSnapshotSource are immutable.
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "persistentVolumeClaimName",
     "volumeSnapshotContentName"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -62,7 +62,8 @@ import lombok.experimental.Accessors;
     @BuildableReference(Volume.class),
     @BuildableReference(VolumeMount.class)
 })
-public class VolumeSnapshotSource implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class VolumeSnapshotSource implements Editable<VolumeSnapshotSourceBuilder>, KubernetesResource
 {
 
     @JsonProperty("persistentVolumeClaimName")
@@ -70,54 +71,75 @@ public class VolumeSnapshotSource implements KubernetesResource
     @JsonProperty("volumeSnapshotContentName")
     private String volumeSnapshotContentName;
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public VolumeSnapshotSource() {
     }
 
-    /**
-     * 
-     * @param persistentVolumeClaimName
-     * @param volumeSnapshotContentName
-     */
     public VolumeSnapshotSource(String persistentVolumeClaimName, String volumeSnapshotContentName) {
         super();
         this.persistentVolumeClaimName = persistentVolumeClaimName;
         this.volumeSnapshotContentName = volumeSnapshotContentName;
     }
 
+    /**
+     * persistentVolumeClaimName specifies the name of the PersistentVolumeClaim object representing the volume from which a snapshot should be created. This PVC is assumed to be in the same namespace as the VolumeSnapshot object. This field should be set if the snapshot does not exists, and needs to be created. This field is immutable.
+     */
     @JsonProperty("persistentVolumeClaimName")
     public String getPersistentVolumeClaimName() {
         return persistentVolumeClaimName;
     }
 
+    /**
+     * persistentVolumeClaimName specifies the name of the PersistentVolumeClaim object representing the volume from which a snapshot should be created. This PVC is assumed to be in the same namespace as the VolumeSnapshot object. This field should be set if the snapshot does not exists, and needs to be created. This field is immutable.
+     */
     @JsonProperty("persistentVolumeClaimName")
     public void setPersistentVolumeClaimName(String persistentVolumeClaimName) {
         this.persistentVolumeClaimName = persistentVolumeClaimName;
     }
 
+    /**
+     * volumeSnapshotContentName specifies the name of a pre-existing VolumeSnapshotContent object representing an existing volume snapshot. This field should be set if the snapshot already exists and only needs a representation in Kubernetes. This field is immutable.
+     */
     @JsonProperty("volumeSnapshotContentName")
     public String getVolumeSnapshotContentName() {
         return volumeSnapshotContentName;
     }
 
+    /**
+     * volumeSnapshotContentName specifies the name of a pre-existing VolumeSnapshotContent object representing an existing volume snapshot. This field should be set if the snapshot already exists and only needs a representation in Kubernetes. This field is immutable.
+     */
     @JsonProperty("volumeSnapshotContentName")
     public void setVolumeSnapshotContentName(String volumeSnapshotContentName) {
         this.volumeSnapshotContentName = volumeSnapshotContentName;
     }
 
+    @JsonIgnore
+    public VolumeSnapshotSourceBuilder edit() {
+        return new VolumeSnapshotSourceBuilder(this);
+    }
+
+    @JsonIgnore
+    public VolumeSnapshotSourceBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
-    public Map<java.lang.String, Object> getAdditionalProperties() {
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 
     @JsonAnySetter
-    public void setAdditionalProperty(java.lang.String name, Object value) {
+    public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

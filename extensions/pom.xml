@@ -19,9 +19,10 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <artifactId>kubernetes-client-project</artifactId>
     <groupId>io.fabric8</groupId>
-    <version>6.8-SNAPSHOT</version>
+    <artifactId>kubernetes-model-generator</artifactId>
+    <version>999-SNAPSHOT</version>
+    <relativePath>../kubernetes-model-generator</relativePath>
   </parent>
 
   <artifactId>kubernetes-extensions</artifactId>
@@ -31,27 +32,19 @@
   <modules>
     <module>knative</module>
     <module>tekton</module>
-    <module>service-catalog</module>
     <module>volumesnapshot</module>
     <module>chaosmesh</module>
-    <module>camel-k</module>
     <module>certmanager</module>
     <module>verticalpodautoscaler</module>
     <module>volcano</module>
     <module>istio</module>
     <module>open-cluster-management</module>
+    <module>open-virtual-network</module>
   </modules>
-  
+
   <build>
     <pluginManagement>
       <plugins>
-        <plugin>
-          <groupId>org.jsonschema2pojo</groupId>
-          <artifactId>jsonschema2pojo-maven-plugin</artifactId>
-          <configuration>
-            <customAnnotator>io.fabric8.kubernetes.jsonschema2pojo.ExtensionTypeAnnotator</customAnnotator>
-          </configuration>
-        </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>build-helper-maven-plugin</artifactId>
@@ -72,5 +65,5 @@
       </plugins>
     </pluginManagement>
   </build>
-  
+
 </project>

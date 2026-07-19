@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,7 +32,7 @@ import java.util.Set;
 
 public class CustomResourceInfo {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(CustomResourceInfo.class);
+  private static final Logger logger = LoggerFactory.getLogger(CustomResourceInfo.class);
   public static final boolean DESCRIBE_TYPE_DEFS = false;
   private final String group;
   private final String version;
@@ -42,11 +42,13 @@ public class CustomResourceInfo {
   private final String[] shortNames;
   private final boolean storage;
   private final boolean served;
+  private final boolean deprecated;
+  private final String deprecationWarning;
   private final Scope scope;
   private final TypeDef definition;
   private final String crClassName;
-  private final Optional<String> specClassName;
-  private final Optional<String> statusClassName;
+  private final String specClassName;
+  private final String statusClassName;
   private final String id;
   private final int hash;
 
@@ -54,7 +56,7 @@ public class CustomResourceInfo {
   private final String[] labels;
 
   public CustomResourceInfo(String group, String version, String kind, String singular,
-      String plural, String[] shortNames, boolean storage, boolean served,
+      String plural, String[] shortNames, boolean storage, boolean served, boolean deprecated, String deprecationWarning,
       Scope scope, TypeDef definition, String crClassName,
       String specClassName, String statusClassName, String[] annotations, String[] labels) {
     this.group = group;
@@ -65,11 +67,13 @@ public class CustomResourceInfo {
     this.shortNames = shortNames;
     this.storage = storage;
     this.served = served;
+    this.deprecated = deprecated;
+    this.deprecationWarning = deprecationWarning;
     this.scope = scope;
     this.definition = definition;
     this.crClassName = crClassName;
-    this.specClassName = Optional.ofNullable(specClassName);
-    this.statusClassName = Optional.ofNullable(statusClassName);
+    this.specClassName = specClassName;
+    this.statusClassName = statusClassName;
     this.id = crdName() + "/" + version;
     this.hash = id.hashCode();
     this.annotations = annotations;
@@ -82,6 +86,14 @@ public class CustomResourceInfo {
 
   public boolean served() {
     return served;
+  }
+
+  public boolean deprecated() {
+    return deprecated;
+  }
+
+  public String deprecationWarning() {
+    return deprecationWarning;
   }
 
   public String key() {
@@ -125,11 +137,11 @@ public class CustomResourceInfo {
   }
 
   public Optional<String> specClassName() {
-    return specClassName;
+    return Optional.ofNullable(specClassName);
   }
 
   public Optional<String> statusClassName() {
-    return statusClassName;
+    return Optional.ofNullable(statusClassName);
   }
 
   public TypeDef definition() {
@@ -144,9 +156,9 @@ public class CustomResourceInfo {
     return labels;
   }
 
-  public static CustomResourceInfo fromClass(Class<? extends CustomResource> customResource) {
+  public static CustomResourceInfo fromClass(Class<? extends CustomResource<?, ?>> customResource) {
     try {
-      final CustomResource instance = customResource.getDeclaredConstructor().newInstance();
+      final CustomResource<?, ?> instance = customResource.getDeclaredConstructor().newInstance();
 
       final String[] shortNames = CustomResource.getShortNames(customResource);
 
@@ -159,14 +171,15 @@ public class CustomResourceInfo {
 
       SpecAndStatus specAndStatus = Types.resolveSpecAndStatusTypes(definition);
       if (specAndStatus.isUnreliable()) {
-        LOGGER.warn(
+        logger.warn(
             "Cannot reliably determine status types for {} because it isn't parameterized with only spec and status types. Status replicas detection will be deactivated.",
             customResource.getCanonicalName());
       }
 
       return new CustomResourceInfo(instance.getGroup(), instance.getVersion(), instance.getKind(),
-          instance.getSingular(), instance.getPlural(), shortNames, instance.isStorage(), instance.isServed(), scope,
-          definition,
+          instance.getSingular(), instance.getPlural(), shortNames, instance.isStorage(), instance.isServed(),
+          instance.isDeprecated(), instance.getDeprecationWarning(),
+          scope, definition,
           customResource.getCanonicalName(), specAndStatus.getSpecClassName(),
           specAndStatus.getStatusClassName(), toStringArray(instance.getMetadata().getAnnotations()),
           toStringArray(instance.getMetadata().getLabels()));

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,13 +44,15 @@ import static io.fabric8.java.generator.CRGeneratorRunner.groupToPackage;
  */
 public class FileJavaGenerator implements JavaGenerator {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(FileJavaGenerator.class);
+  private static final Logger logger = LoggerFactory.getLogger(FileJavaGenerator.class);
 
+  private final Config config;
   private final File source;
   private final CRGeneratorRunner crGeneratorRunner;
 
   public FileJavaGenerator(Config config, File source) {
     crGeneratorRunner = new CRGeneratorRunner(config);
+    this.config = config;
     this.source = source;
   }
 
@@ -64,6 +66,7 @@ public class FileJavaGenerator implements JavaGenerator {
         walk
             .map(Path::toFile)
             .filter(f -> !f.getAbsolutePath().equals(source.getAbsolutePath()) && f.isFile())
+            .filter(f -> config.getFilesSuffixes().stream().anyMatch(suffix -> f.getName().endsWith(suffix)))
             .forEach(f -> runOnSingleSource(f, outputDirectory));
       } catch (IOException e) {
         throw new JavaGeneratorException(
@@ -109,10 +112,10 @@ public class FileJavaGenerator implements JavaGenerator {
                   final String basePackage = groupToPackage(crd.getSpec().getGroup());
                   return crGeneratorRunner.generate(crd, basePackage).stream();
                 } else {
-                  LOGGER.warn("Not generating nothing for resource of kind: {}", resource.getKind());
+                  logger.warn("Not generating nothing for resource of kind: {}", resource.getKind());
                 }
               } else {
-                LOGGER.warn("Not generating nothing for unrecognized resource: {}", Serialization.asYaml(rawResource));
+                logger.warn("Not generating nothing for unrecognized resource: {}", Serialization.asYaml(rawResource));
               }
               return Stream.empty();
             })

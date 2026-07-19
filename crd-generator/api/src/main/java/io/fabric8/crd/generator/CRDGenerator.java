@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,11 +15,12 @@
  */
 package io.fabric8.crd.generator;
 
+import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
-import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator.Feature;
 import io.fabric8.crd.generator.utils.Types;
 import io.fabric8.crd.generator.v1.CustomResourceHandler;
 import io.fabric8.kubernetes.api.model.HasMetadata;
@@ -28,31 +29,49 @@ import io.fabric8.kubernetes.client.utils.ApiVersionUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.Closeable;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.net.URI;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 
+import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY;
+import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
+import static com.fasterxml.jackson.annotation.JsonInclude.Value.construct;
+
+/**
+ * @deprecated Use io.fabric8.crdv2.generator.CRDGenerator instead.
+ */
+@Deprecated(since = "7.0.0")
 public class CRDGenerator {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(CRDGenerator.class);
+  private static final Logger logger = LoggerFactory.getLogger(CRDGenerator.class);
   private final Resources resources;
   private final Map<String, AbstractCustomResourceHandler> handlers = new HashMap<>(2);
   private CRDOutput<? extends OutputStream> output;
   private boolean parallel;
   private Map<String, CustomResourceInfo> infos;
 
-  private static final ObjectMapper YAML_MAPPER = new ObjectMapper(
-      new YAMLFactory()
-          .enable(Feature.MINIMIZE_QUOTES)
-          .enable(Feature.ALWAYS_QUOTE_NUMBERS_AS_STRINGS)
-          .disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER));
-
-  static {
-    YAML_MAPPER.configure(SerializationFeature.INDENT_OUTPUT, true);
-    YAML_MAPPER.configure(SerializationFeature.WRITE_NULL_MAP_VALUES, false);
-    YAML_MAPPER.configure(SerializationFeature.WRITE_EMPTY_JSON_ARRAYS, false);
-  }
+  public static final ObjectMapper YAML_MAPPER = JsonMapper.builder(new YAMLFactory()
+      .enable(YAMLGenerator.Feature.MINIMIZE_QUOTES)
+      .enable(YAMLGenerator.Feature.ALWAYS_QUOTE_NUMBERS_AS_STRINGS)
+      .disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER))
+      .configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true)
+      .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true)
+      .configure(SerializationFeature.INDENT_OUTPUT, true)
+      .withConfigOverride(Map.class, configOverride -> configOverride.setInclude(construct(NON_NULL, NON_NULL)))
+      .serializationInclusion(NON_EMPTY)
+      .build();
 
   public CRDGenerator() {
     resources = new Resources();
@@ -89,11 +108,12 @@ public class CRDGenerator {
                   s -> new CustomResourceHandler(resources, parallel));
               break;
             case io.fabric8.crd.generator.v1beta1.CustomResourceHandler.VERSION:
+              logger.warn("CRD generator for v1beta1 is deprecated, consider using v1 instead.");
               handlers.computeIfAbsent(io.fabric8.crd.generator.v1beta1.CustomResourceHandler.VERSION,
                   s -> new io.fabric8.crd.generator.v1beta1.CustomResourceHandler(resources, parallel));
               break;
             default:
-              LOGGER.warn("Ignoring unsupported CRD version: {}", version);
+              logger.warn("Ignoring unsupported CRD version: {}", version);
           }
         }
       }
@@ -105,7 +125,10 @@ public class CRDGenerator {
     return handlers;
   }
 
-  public CRDGenerator customResourceClasses(Class<? extends CustomResource>... crClasses) {
+  // this is public API, so we cannot change the signature, so there is no way to prevent the possible heap pollution
+  // (we also cannot use @SafeVarargs, because that requires the method to be final, which is another signature change)
+  @SuppressWarnings("unchecked")
+  public final CRDGenerator customResourceClasses(Class<? extends CustomResource<?, ?>>... crClasses) {
     return customResources(Stream.of(crClasses).map(CustomResourceInfo::fromClass).toArray(CustomResourceInfo[]::new));
   }
 
@@ -132,12 +155,12 @@ public class CRDGenerator {
 
   public CRDGenerationInfo detailedGenerate() {
     if (getCustomResourceInfos().isEmpty()) {
-      LOGGER.warn("No resources were registered with the 'customResources' method to be generated");
+      logger.warn("No resources were registered with the 'customResources' method to be generated");
       return CRDGenerationInfo.EMPTY;
     }
 
     if (output == null) {
-      LOGGER.warn(
+      logger.warn(
           "No output option was selected either using 'inOutputDir' or 'withOutput' methods. Skipping generation.");
       return CRDGenerationInfo.EMPTY;
     }
@@ -150,8 +173,8 @@ public class CRDGenerator {
 
     for (CustomResourceInfo info : infos.values()) {
       if (info != null) {
-        if (LOGGER.isInfoEnabled()) {
-          LOGGER.info("Generating '{}' version '{}' with {} (spec: {} / status {})...",
+        if (logger.isInfoEnabled()) {
+          logger.info("Generating '{}' version '{}' with {} (spec: {} / status {})...",
               info.crdName(), info.version(), info.crClassName(),
               info.specClassName().orElse("undetermined"),
               info.statusClassName().orElse("undetermined"));

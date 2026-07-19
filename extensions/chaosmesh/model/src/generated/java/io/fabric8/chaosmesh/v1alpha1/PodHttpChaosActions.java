@@ -1,8 +1,9 @@
 
 package io.fabric8.chaosmesh.v1alpha1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -27,16 +29,15 @@ import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * PodHttpChaosActions defines possible actions of HttpChaos.
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "abort",
     "delay",
     "patch",
@@ -44,7 +45,6 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -64,7 +64,8 @@ import lombok.experimental.Accessors;
     @BuildableReference(Volume.class),
     @BuildableReference(VolumeMount.class)
 })
-public class PodHttpChaosActions implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class PodHttpChaosActions implements Editable<PodHttpChaosActionsBuilder>, KubernetesResource
 {
 
     @JsonProperty("abort")
@@ -76,22 +77,14 @@ public class PodHttpChaosActions implements KubernetesResource
     @JsonProperty("replace")
     private PodHttpChaosReplaceActions replace;
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public PodHttpChaosActions() {
     }
 
-    /**
-     * 
-     * @param patch
-     * @param delay
-     * @param abort
-     * @param replace
-     */
     public PodHttpChaosActions(Boolean abort, String delay, PodHttpChaosPatchActions patch, PodHttpChaosReplaceActions replace) {
         super();
         this.abort = abort;
@@ -100,54 +93,93 @@ public class PodHttpChaosActions implements KubernetesResource
         this.replace = replace;
     }
 
+    /**
+     * Abort is a rule to abort a http session.
+     */
     @JsonProperty("abort")
     public Boolean getAbort() {
         return abort;
     }
 
+    /**
+     * Abort is a rule to abort a http session.
+     */
     @JsonProperty("abort")
     public void setAbort(Boolean abort) {
         this.abort = abort;
     }
 
+    /**
+     * Delay represents the delay of the target request/response. A duration string is a possibly unsigned sequence of decimal numbers, each with optional fraction and a unit suffix, such as "300ms", "2h45m". Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+     */
     @JsonProperty("delay")
     public String getDelay() {
         return delay;
     }
 
+    /**
+     * Delay represents the delay of the target request/response. A duration string is a possibly unsigned sequence of decimal numbers, each with optional fraction and a unit suffix, such as "300ms", "2h45m". Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+     */
     @JsonProperty("delay")
     public void setDelay(String delay) {
         this.delay = delay;
     }
 
+    /**
+     * PodHttpChaosActions defines possible actions of HttpChaos.
+     */
     @JsonProperty("patch")
     public PodHttpChaosPatchActions getPatch() {
         return patch;
     }
 
+    /**
+     * PodHttpChaosActions defines possible actions of HttpChaos.
+     */
     @JsonProperty("patch")
     public void setPatch(PodHttpChaosPatchActions patch) {
         this.patch = patch;
     }
 
+    /**
+     * PodHttpChaosActions defines possible actions of HttpChaos.
+     */
     @JsonProperty("replace")
     public PodHttpChaosReplaceActions getReplace() {
         return replace;
     }
 
+    /**
+     * PodHttpChaosActions defines possible actions of HttpChaos.
+     */
     @JsonProperty("replace")
     public void setReplace(PodHttpChaosReplaceActions replace) {
         this.replace = replace;
     }
 
+    @JsonIgnore
+    public PodHttpChaosActionsBuilder edit() {
+        return new PodHttpChaosActionsBuilder(this);
+    }
+
+    @JsonIgnore
+    public PodHttpChaosActionsBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
-    public Map<java.lang.String, Object> getAdditionalProperties() {
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 
     @JsonAnySetter
-    public void setAdditionalProperty(java.lang.String name, Object value) {
+    public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

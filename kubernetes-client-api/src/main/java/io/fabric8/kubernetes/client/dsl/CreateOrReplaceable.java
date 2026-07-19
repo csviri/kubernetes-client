@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +15,7 @@
  */
 package io.fabric8.kubernetes.client.dsl;
 
-public interface CreateOrReplaceable<T> extends Replaceable<T> {
+public interface CreateOrReplaceable<T> extends Replaceable<T>, Timeoutable {
 
   /**
    * Creates a provided resource in a Kubernetes Cluster. If creation
@@ -23,9 +23,10 @@ public interface CreateOrReplaceable<T> extends Replaceable<T> {
    *
    * @return created item returned in kubernetes api response
    *
-   * @deprecated please use {@link ServerSideApplicable#serverSideApply()} or attempt a create then edit/patch operation.
+   * @deprecated please use {@link ServerSideApplicable#serverSideApply()}
+   *             or the {@link NonDeletingOperation#createOr(java.util.function.Function)}.
    * @see <a href=
-   *      "https://github.com/fabric8io/kubernetes-client/blob/master/doc/FAQ.md#alternatives-to-createOrReplace-and-replace"
+   *      "https://github.com/fabric8io/kubernetes-client/blob/main/doc/FAQ.md#alternatives-to-createOrReplace-and-replace"
    *      >Migration FAQ</a>
    */
   @Deprecated
@@ -37,4 +38,5 @@ public interface CreateOrReplaceable<T> extends Replaceable<T> {
    * @return the item from the api server
    */
   T create();
+
 }

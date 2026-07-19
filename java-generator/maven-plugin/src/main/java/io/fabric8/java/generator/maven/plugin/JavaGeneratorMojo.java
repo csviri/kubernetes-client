@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -74,14 +74,6 @@ public class JavaGeneratorMojo extends AbstractMojo {
   Boolean enumUppercase = null;
 
   /**
-   * *DEPRECATED* Always inject additional properties in the generated classes
-   *
-   */
-  @Deprecated
-  @Parameter(property = "fabric8.java-generator.always-preserve-unknown", required = false)
-  Boolean alwaysPreserveUnknown = null;
-
-  /**
    * Generate Extra annotation for lombok and sundrio integration
    *
    */
@@ -96,11 +88,46 @@ public class JavaGeneratorMojo extends AbstractMojo {
   Boolean generatedAnnotations = null;
 
   /**
+   * Always preserve unknown fields in the generated classes by emitting an additionalProperties field
+   *
+   */
+  @Parameter(property = "fabric8.java-generator.always-preserve-unknown", required = false)
+  Boolean alwaysPreserveUnknown = null;
+
+  /**
    * Package names to be substituted
    *
    */
   @Parameter(property = "fabric8.java-generator.package-overrides", required = false)
   Map<String, String> packageOverrides = null;
+
+  /**
+   * Files suffixes to be processed
+   *
+   */
+  @Parameter(property = "fabric8.java-generator.files-suffixes", required = false)
+  List<String> filesSuffixes = null;
+
+  /**
+   * DateTime format used for Serialization of fields of type `date-time`
+   *
+   */
+  @Parameter(property = "fabric8.java-generator.datetime-serialization-format", required = false)
+  String datetimeSerializationFormat = null;
+
+  /**
+   * DateTime format used for Deserialization of fields of type `date-time`
+   *
+   */
+  @Parameter(property = "fabric8.java-generator.datetime-deserialization-format", required = false)
+  String datetimeDeserializationFormat = null;
+
+  /**
+   * Mapping from fully qualified generated type to fully qualified existing Java type
+   *
+   */
+  @Parameter(property = "fabric8.java-generator.existing-java-types", required = false)
+  Map<String, String> existingJavaTypes = null;
 
   @Override
   public void execute() throws MojoExecutionException {
@@ -108,7 +135,12 @@ public class JavaGeneratorMojo extends AbstractMojo {
         .uppercaseEnums(enumUppercase)
         .objectExtraAnnotations(extraAnnotations)
         .generatedAnnotations(generatedAnnotations)
+        .alwaysPreserveUnknown(alwaysPreserveUnknown)
         .packageOverrides(packageOverrides)
+        .filesSuffixes(filesSuffixes)
+        .serDatetimeFormat(datetimeSerializationFormat)
+        .deserDatetimeFormat(datetimeDeserializationFormat)
+        .existingJavaTypes(existingJavaTypes)
         .build();
 
     List<JavaGenerator> runners = new ArrayList<>();

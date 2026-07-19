@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,18 +15,18 @@
  */
 package io.fabric8.istio.test.v1alpha3;
 
+import io.fabric8.istio.api.api.networking.v1alpha3.IsLoadBalancerSettingsConsistentHashLBHashKey;
+import io.fabric8.istio.api.api.networking.v1alpha3.IsLoadBalancerSettingsLbPolicy;
+import io.fabric8.istio.api.api.networking.v1alpha3.LoadBalancerSettingsConsistentHash;
+import io.fabric8.istio.api.api.networking.v1alpha3.LoadBalancerSettingsConsistentHashLBHttpCookie;
 import io.fabric8.istio.api.networking.v1alpha3.DestinationRule;
-import io.fabric8.istio.api.networking.v1alpha3.IsLoadBalancerSettingsConsistentHashLBHashKey;
-import io.fabric8.istio.api.networking.v1alpha3.IsLoadBalancerSettingsLbPolicy;
-import io.fabric8.istio.api.networking.v1alpha3.LoadBalancerSettingsConsistentHash;
-import io.fabric8.istio.api.networking.v1alpha3.LoadBalancerSettingsConsistentHashLBHttpCookie;
 import io.fabric8.kubernetes.client.utils.Serialization;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 /**
  * @author <a href="claprun@redhat.com">Christophe Laprun</a>
@@ -34,15 +34,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class DestinationRuleTest {
 
   @Test
-  void loadingFromYAMLIssue82ShouldWork() throws Exception {
+  void loadingFromYAMLIssue82ShouldWork() {
     final InputStream inputStream = DestinationRuleTest.class.getResourceAsStream("/v1alpha3/destination-rule-issue82.yaml");
-    final DestinationRule destinationRule = Serialization.yamlMapper().readValue(inputStream, DestinationRule.class);
+    final DestinationRule destinationRule = Serialization.unmarshal(inputStream, DestinationRule.class);
 
     final IsLoadBalancerSettingsLbPolicy policy = destinationRule.getSpec().getTrafficPolicy().getLoadBalancer().getLbPolicy();
-    assertTrue(policy instanceof LoadBalancerSettingsConsistentHash);
+    assertInstanceOf(LoadBalancerSettingsConsistentHash.class, policy);
     final LoadBalancerSettingsConsistentHash consistentHashLbPolicy = (LoadBalancerSettingsConsistentHash) policy;
     final IsLoadBalancerSettingsConsistentHashLBHashKey hashKey = consistentHashLbPolicy.getConsistentHash().getHashKey();
-    assertTrue(hashKey instanceof LoadBalancerSettingsConsistentHashLBHttpCookie);
+    assertInstanceOf(LoadBalancerSettingsConsistentHashLBHttpCookie.class, hashKey);
     final LoadBalancerSettingsConsistentHashLBHttpCookie httpCookieHashKey = (LoadBalancerSettingsConsistentHashLBHttpCookie) hashKey;
     assertEquals("user", httpCookieHashKey.getHttpCookie().getName());
   }

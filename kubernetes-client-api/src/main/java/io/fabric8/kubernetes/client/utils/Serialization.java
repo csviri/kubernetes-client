@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
+import io.fabric8.kubernetes.model.jackson.GoCompatibilityModule;
 import io.fabric8.kubernetes.model.jackson.UnmatchedFieldTypeModule;
 
 import java.io.InputStream;
@@ -44,6 +45,7 @@ public class Serialization {
   public static final UnmatchedFieldTypeModule UNMATCHED_FIELD_TYPE_MODULE = kubernetesSerialization
       .getUnmatchedFieldTypeModule();
 
+  @SuppressWarnings("java:S3077") // double-checked locking; volatile ensures safe publication
   private static volatile ObjectMapper YAML_MAPPER;
 
   /**
@@ -86,9 +88,10 @@ public class Serialization {
     if (YAML_MAPPER == null) {
       synchronized (Serialization.class) {
         if (YAML_MAPPER == null) {
-          YAML_MAPPER = new ObjectMapper(
+          ObjectMapper mapper = new ObjectMapper(
               new YAMLFactory().disable(YAMLGenerator.Feature.USE_NATIVE_TYPE_ID));
-          YAML_MAPPER.registerModules(UNMATCHED_FIELD_TYPE_MODULE);
+          mapper.registerModules(new GoCompatibilityModule(), UNMATCHED_FIELD_TYPE_MODULE);
+          YAML_MAPPER = mapper;
         }
       }
     }
@@ -182,6 +185,18 @@ public class Serialization {
    * @return returns de-serialized object
    */
   public static <T> T unmarshal(String str, final Class<T> type) {
+    return kubernetesSerialization.unmarshal(str, type);
+  }
+
+  /**
+   * Unmarshals a {@link String}
+   *
+   * @param str The {@link String}.
+   * @param type The target type reference, supporting generic types.
+   * @param <T> template argument denoting type
+   * @return returns de-serialized object
+   */
+  public static <T> T unmarshal(String str, TypeReference<T> type) {
     return kubernetesSerialization.unmarshal(str, type);
   }
 

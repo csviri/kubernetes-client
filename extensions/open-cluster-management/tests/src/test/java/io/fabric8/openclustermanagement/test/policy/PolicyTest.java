@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,10 +17,10 @@ package io.fabric8.openclustermanagement.test.policy;
 
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
-import io.fabric8.openclustermanagement.api.model.governancepolicypropagator.policy.v1.Policy;
-import io.fabric8.openclustermanagement.api.model.governancepolicypropagator.policy.v1.PolicyBuilder;
-import io.fabric8.openclustermanagement.api.model.governancepolicypropagator.policy.v1.PolicyList;
-import io.fabric8.openclustermanagement.api.model.governancepolicypropagator.policy.v1.PolicyListBuilder;
+import io.fabric8.openclustermanagement.api.model.policy.v1.Policy;
+import io.fabric8.openclustermanagement.api.model.policy.v1.PolicyBuilder;
+import io.fabric8.openclustermanagement.api.model.policy.v1.PolicyList;
+import io.fabric8.openclustermanagement.api.model.policy.v1.PolicyListBuilder;
 import io.fabric8.openclustermanagement.client.OpenClusterManagementClient;
 import org.junit.jupiter.api.Test;
 
@@ -31,8 +31,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @EnableKubernetesMockClient
 class PolicyTest {
-  private OpenClusterManagementClient client;
-  private KubernetesMockServer server;
+  OpenClusterManagementClient client;
+  KubernetesMockServer server;
 
   @Test
   void get() {

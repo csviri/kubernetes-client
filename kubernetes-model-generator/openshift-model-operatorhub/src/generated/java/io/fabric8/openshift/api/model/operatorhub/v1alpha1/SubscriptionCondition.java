@@ -1,17 +1,20 @@
 
 package io.fabric8.openshift.api.model.operatorhub.v1alpha1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
@@ -21,19 +24,20 @@ import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * SubscriptionCondition represents the latest available observations of a Subscription's state.
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "lastHeartbeatTime",
     "lastTransitionTime",
     "message",
@@ -43,7 +47,6 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -57,63 +60,38 @@ import lombok.experimental.Accessors;
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class SubscriptionCondition implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class SubscriptionCondition implements Editable<SubscriptionConditionBuilder>, KubernetesResource
 {
 
     @JsonProperty("lastHeartbeatTime")
     private String lastHeartbeatTime;
     @JsonProperty("lastTransitionTime")
     private String lastTransitionTime;
-    /**
-     * human-readable message indicating details about last transition
-     * 
-     */
     @JsonProperty("message")
-    @JsonPropertyDescription("human-readable message indicating details about last transition")
-    private java.lang.String message;
-    /**
-     * one-word CamelCase reason for the condition's last transition
-     * 
-     */
+    private String message;
     @JsonProperty("reason")
-    @JsonPropertyDescription("one-word CamelCase reason for the condition's last transition")
-    private java.lang.String reason;
-    /**
-     * status of the condition
-     * 
-     */
+    private String reason;
     @JsonProperty("status")
-    @JsonPropertyDescription("status of the condition")
-    private java.lang.String status;
-    /**
-     * type of Subscription condition
-     * 
-     */
+    private String status;
     @JsonProperty("type")
-    @JsonPropertyDescription("type of Subscription condition")
-    private java.lang.String type;
+    private String type;
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public SubscriptionCondition() {
     }
 
-    /**
-     * 
-     * @param reason
-     * @param lastHeartbeatTime
-     * @param lastTransitionTime
-     * @param message
-     * @param type
-     * @param status
-     */
-    public SubscriptionCondition(String lastHeartbeatTime, String lastTransitionTime, java.lang.String message, java.lang.String reason, java.lang.String status, java.lang.String type) {
+    public SubscriptionCondition(String lastHeartbeatTime, String lastTransitionTime, String message, String reason, String status, String type) {
         super();
         this.lastHeartbeatTime = lastHeartbeatTime;
         this.lastTransitionTime = lastTransitionTime;
@@ -123,106 +101,125 @@ public class SubscriptionCondition implements KubernetesResource
         this.type = type;
     }
 
+    /**
+     * SubscriptionCondition represents the latest available observations of a Subscription's state.
+     */
     @JsonProperty("lastHeartbeatTime")
     public String getLastHeartbeatTime() {
         return lastHeartbeatTime;
     }
 
+    /**
+     * SubscriptionCondition represents the latest available observations of a Subscription's state.
+     */
     @JsonProperty("lastHeartbeatTime")
     public void setLastHeartbeatTime(String lastHeartbeatTime) {
         this.lastHeartbeatTime = lastHeartbeatTime;
     }
 
+    /**
+     * SubscriptionCondition represents the latest available observations of a Subscription's state.
+     */
     @JsonProperty("lastTransitionTime")
     public String getLastTransitionTime() {
         return lastTransitionTime;
     }
 
+    /**
+     * SubscriptionCondition represents the latest available observations of a Subscription's state.
+     */
     @JsonProperty("lastTransitionTime")
     public void setLastTransitionTime(String lastTransitionTime) {
         this.lastTransitionTime = lastTransitionTime;
     }
 
     /**
-     * human-readable message indicating details about last transition
-     * 
+     * Message is a human-readable message indicating details about last transition.
      */
     @JsonProperty("message")
-    public java.lang.String getMessage() {
+    public String getMessage() {
         return message;
     }
 
     /**
-     * human-readable message indicating details about last transition
-     * 
+     * Message is a human-readable message indicating details about last transition.
      */
     @JsonProperty("message")
-    public void setMessage(java.lang.String message) {
+    public void setMessage(String message) {
         this.message = message;
     }
 
     /**
-     * one-word CamelCase reason for the condition's last transition
-     * 
+     * Reason is a one-word CamelCase reason for the condition's last transition.
      */
     @JsonProperty("reason")
-    public java.lang.String getReason() {
+    public String getReason() {
         return reason;
     }
 
     /**
-     * one-word CamelCase reason for the condition's last transition
-     * 
+     * Reason is a one-word CamelCase reason for the condition's last transition.
      */
     @JsonProperty("reason")
-    public void setReason(java.lang.String reason) {
+    public void setReason(String reason) {
         this.reason = reason;
     }
 
     /**
-     * status of the condition
-     * 
+     * Status is the status of the condition, one of True, False, Unknown.
      */
     @JsonProperty("status")
-    public java.lang.String getStatus() {
+    public String getStatus() {
         return status;
     }
 
     /**
-     * status of the condition
-     * 
+     * Status is the status of the condition, one of True, False, Unknown.
      */
     @JsonProperty("status")
-    public void setStatus(java.lang.String status) {
+    public void setStatus(String status) {
         this.status = status;
     }
 
     /**
-     * type of Subscription condition
-     * 
+     * Type is the type of Subscription condition.
      */
     @JsonProperty("type")
-    public java.lang.String getType() {
+    public String getType() {
         return type;
     }
 
     /**
-     * type of Subscription condition
-     * 
+     * Type is the type of Subscription condition.
      */
     @JsonProperty("type")
-    public void setType(java.lang.String type) {
+    public void setType(String type) {
         this.type = type;
     }
 
+    @JsonIgnore
+    public SubscriptionConditionBuilder edit() {
+        return new SubscriptionConditionBuilder(this);
+    }
+
+    @JsonIgnore
+    public SubscriptionConditionBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
-    public Map<java.lang.String, Object> getAdditionalProperties() {
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 
     @JsonAnySetter
-    public void setAdditionalProperty(java.lang.String name, Object value) {
+    public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

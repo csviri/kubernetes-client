@@ -1,8 +1,9 @@
 
 package io.fabric8.chaosmesh.v1alpha1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -27,16 +29,12 @@ import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "correlation",
     "device",
     "egress-port",
@@ -48,7 +46,6 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -68,7 +65,8 @@ import lombok.experimental.Accessors;
     @BuildableReference(Volume.class),
     @BuildableReference(VolumeMount.class)
 })
-public class NetworkDuplicateSpec implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class NetworkDuplicateSpec implements Editable<NetworkDuplicateSpecBuilder>, KubernetesResource
 {
 
     @JsonProperty("correlation")
@@ -88,26 +86,14 @@ public class NetworkDuplicateSpec implements KubernetesResource
     @JsonProperty("source-port")
     private String sourcePort;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public NetworkDuplicateSpec() {
     }
 
-    /**
-     * 
-     * @param hostname
-     * @param sourcePort
-     * @param egressPort
-     * @param correlation
-     * @param ipAddress
-     * @param ipProtocol
-     * @param device
-     * @param percent
-     */
     public NetworkDuplicateSpec(String correlation, String device, String egressPort, String hostname, String ipAddress, String ipProtocol, String percent, String sourcePort) {
         super();
         this.correlation = correlation;
@@ -120,87 +106,146 @@ public class NetworkDuplicateSpec implements KubernetesResource
         this.sourcePort = sourcePort;
     }
 
+    /**
+     * correlation is percentage (10 is 10%)
+     */
     @JsonProperty("correlation")
     public String getCorrelation() {
         return correlation;
     }
 
+    /**
+     * correlation is percentage (10 is 10%)
+     */
     @JsonProperty("correlation")
     public void setCorrelation(String correlation) {
         this.correlation = correlation;
     }
 
+    /**
+     * the network interface to impact
+     */
     @JsonProperty("device")
     public String getDevice() {
         return device;
     }
 
+    /**
+     * the network interface to impact
+     */
     @JsonProperty("device")
     public void setDevice(String device) {
         this.device = device;
     }
 
+    /**
+     * only impact egress traffic to these destination ports, use a ',' to separate or to indicate the range, such as 80, 8001:8010. it can only be used in conjunction with -p tcp or -p udp
+     */
     @JsonProperty("egress-port")
     public String getEgressPort() {
         return egressPort;
     }
 
+    /**
+     * only impact egress traffic to these destination ports, use a ',' to separate or to indicate the range, such as 80, 8001:8010. it can only be used in conjunction with -p tcp or -p udp
+     */
     @JsonProperty("egress-port")
     public void setEgressPort(String egressPort) {
         this.egressPort = egressPort;
     }
 
+    /**
+     * only impact traffic to these hostnames
+     */
     @JsonProperty("hostname")
     public String getHostname() {
         return hostname;
     }
 
+    /**
+     * only impact traffic to these hostnames
+     */
     @JsonProperty("hostname")
     public void setHostname(String hostname) {
         this.hostname = hostname;
     }
 
+    /**
+     * only impact egress traffic to these IP addresses
+     */
     @JsonProperty("ip-address")
     public String getIpAddress() {
         return ipAddress;
     }
 
+    /**
+     * only impact egress traffic to these IP addresses
+     */
     @JsonProperty("ip-address")
     public void setIpAddress(String ipAddress) {
         this.ipAddress = ipAddress;
     }
 
+    /**
+     * only impact traffic using this IP protocol, supported: tcp, udp, icmp, all
+     */
     @JsonProperty("ip-protocol")
     public String getIpProtocol() {
         return ipProtocol;
     }
 
+    /**
+     * only impact traffic using this IP protocol, supported: tcp, udp, icmp, all
+     */
     @JsonProperty("ip-protocol")
     public void setIpProtocol(String ipProtocol) {
         this.ipProtocol = ipProtocol;
     }
 
+    /**
+     * percentage of packets to duplicate (10 is 10%)
+     */
     @JsonProperty("percent")
     public String getPercent() {
         return percent;
     }
 
+    /**
+     * percentage of packets to duplicate (10 is 10%)
+     */
     @JsonProperty("percent")
     public void setPercent(String percent) {
         this.percent = percent;
     }
 
+    /**
+     * only impact egress traffic from these source ports, use a ',' to separate or to indicate the range, such as 80, 8001:8010. it can only be used in conjunction with -p tcp or -p udp
+     */
     @JsonProperty("source-port")
     public String getSourcePort() {
         return sourcePort;
     }
 
+    /**
+     * only impact egress traffic from these source ports, use a ',' to separate or to indicate the range, such as 80, 8001:8010. it can only be used in conjunction with -p tcp or -p udp
+     */
     @JsonProperty("source-port")
     public void setSourcePort(String sourcePort) {
         this.sourcePort = sourcePort;
     }
 
+    @JsonIgnore
+    public NetworkDuplicateSpecBuilder edit() {
+        return new NetworkDuplicateSpecBuilder(this);
+    }
+
+    @JsonIgnore
+    public NetworkDuplicateSpecBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -208,6 +253,10 @@ public class NetworkDuplicateSpec implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

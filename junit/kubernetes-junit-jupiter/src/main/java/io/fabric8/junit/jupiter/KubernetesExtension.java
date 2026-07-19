@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,7 +36,11 @@ public class KubernetesExtension implements HasKubernetesClient, BeforeAllCallba
   @Override
   public void beforeEach(ExtensionContext context) throws Exception {
     for (Field field : extractFields(context, KubernetesClient.class, f -> !Modifier.isStatic(f.getModifiers()))) {
-      setFieldValue(field, context.getRequiredTestInstance(), getClient(context).adapt((Class<Client>) field.getType()));
+      for (Object testInstance : context.getRequiredTestInstances().getAllInstances()) {
+        if (field.getDeclaringClass().isAssignableFrom(testInstance.getClass())) {
+          setFieldValue(field, testInstance, getClient(context).adapt((Class<Client>) field.getType()));
+        }
+      }
     }
   }
 }

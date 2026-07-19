@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,7 +49,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class PortForwarderWebsocket {
 
-  private static final Logger LOG = LoggerFactory.getLogger(PortForwarderWebsocket.class);
+  private static final Logger logger = LoggerFactory.getLogger(PortForwarderWebsocket.class);
 
   private final HttpClient client;
   private final Executor executor;
@@ -61,6 +61,7 @@ public class PortForwarderWebsocket {
     this.connectTimeoutMills = connectTimeoutMillis;
   }
 
+  @SuppressWarnings("java:S2095") // server is closed via the returned LocalPortForward.close()
   public LocalPortForward forward(final URL resourceBaseUrl, final int port, final InetAddress localHost, final int localPort) {
     try {
       InetSocketAddress inetSocketAddress = createNewInetSocketAddress(localHost, localPort);
@@ -146,7 +147,7 @@ public class PortForwarderWebsocket {
             handles.add(forward(resourceBaseUrl, port, socket, socket));
           } catch (IOException e) {
             if (alive.get()) {
-              LOG.error("Error while listening for connections", e);
+              logger.error("Error while listening for connections", e);
             }
             Utils.closeQuietly(localPortForwardHandle);
           }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,12 +17,41 @@ package io.fabric8.kubernetes.client.http;
 
 import lombok.Getter;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
+@Getter
 public class TestStandardHttpClientFactory implements HttpClient.Factory {
 
-  @Getter
-  private final ConcurrentLinkedQueue<TestStandardHttpClient> instances = new ConcurrentLinkedQueue<>();
+  public enum Mode {
+    /**
+     * A new instance of the HttpClient is created for each build.
+     */
+    MULTIPLE,
+    /**
+     * The factory and builder share a single instance of the HttpClient whenever it's built.
+     * Useful for mocking or setting expectations before a client is built using the factory's builder.
+     */
+    SINGLETON
+  }
+
+  private final Mode mode;
+  private final ConcurrentLinkedQueue<TestStandardHttpClient> instances;
+
+  public TestStandardHttpClientFactory() {
+    this(Mode.MULTIPLE);
+  }
+
+  public TestStandardHttpClientFactory(Mode mode) {
+    this.mode = mode == null ? Mode.MULTIPLE : mode;
+    instances = new ConcurrentLinkedQueue<>();
+    if (mode == Mode.SINGLETON) {
+      // Create the singleton instance (will be automatically added to the instances queue)
+      newBuilder().build();
+    }
+  }
 
   @Override
   public TestStandardHttpClientBuilder newBuilder() {
@@ -32,4 +61,25 @@ public class TestStandardHttpClientFactory implements HttpClient.Factory {
   public final TestStandardHttpClient getInstance(int index) {
     return instances.toArray(new TestStandardHttpClient[0])[index];
   }
+
+  public final Stream<TestStandardHttpClientFactory> times(int iterations) {
+    return IntStream.range(0, iterations).mapToObj(i -> this);
+  }
+
+  public final void expect(String pathRegex, int statusCode) {
+    instances.forEach(c -> c.expect(pathRegex, statusCode));
+  }
+
+  public final void expect(String pathRegex, int statusCode, String body) {
+    instances.forEach(c -> c.expect(pathRegex, statusCode, body));
+  }
+
+  public final void expect(String pathRegex, int statusCode, byte[] body) {
+    instances.forEach(c -> c.expect(pathRegex, statusCode, body));
+  }
+
+  public final void expect(String pathRegex, CompletableFuture<HttpResponse<AsyncBody>> future) {
+    instances.forEach(c -> c.expect(pathRegex, future));
+  }
+
 }

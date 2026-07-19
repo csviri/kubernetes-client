@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,9 +30,9 @@ public class ConfigViewEquivalent {
 
   public static void main(String[] args) throws IOException {
     // Gets KubeConfig via reading KUBECONFIG environment variable or ~/.kube/config
-    String kubeConfigFileName = io.fabric8.kubernetes.client.Config.getKubeconfigFilename();
-    if (kubeConfigFileName != null) {
-      File kubeConfigFile = new File(kubeConfigFileName);
+    final var kubeConfigFileNames = io.fabric8.kubernetes.client.Config.getKubeconfigFilenames();
+    if (!kubeConfigFileNames.isEmpty()) {
+      File kubeConfigFile = new File(kubeConfigFileNames.iterator().next());
       Files.readAllLines(kubeConfigFile.toPath())
           .forEach(logger::warn);
     }

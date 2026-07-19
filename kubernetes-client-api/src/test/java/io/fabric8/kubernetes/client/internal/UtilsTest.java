@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -64,6 +64,8 @@ import io.fabric8.kubernetes.api.model.storage.StorageClass;
 import io.fabric8.kubernetes.api.model.storage.VolumeAttachment;
 import io.fabric8.kubernetes.api.model.storage.v1beta1.CSIDriver;
 import io.fabric8.kubernetes.api.model.storage.v1beta1.CSINode;
+import io.fabric8.kubernetes.client.KubernetesClientException;
+import io.fabric8.kubernetes.client.RestoreSystemProperties;
 import io.fabric8.kubernetes.client.lib.FileSystem;
 import io.fabric8.kubernetes.client.utils.CommonThreadPool;
 import io.fabric8.kubernetes.client.utils.Utils;
@@ -76,26 +78,27 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@RestoreSystemProperties("something")
 class UtilsTest {
 
   @Test
   void existingSysPropShouldReturnValue() {
     System.setProperty("something", "value");
     assertEquals("value", Utils.getSystemPropertyOrEnvVar("something"));
-    System.getProperties().remove("something");
   }
 
   @Test
@@ -172,65 +175,6 @@ class UtilsTest {
     final String result = Utils.interpolateString(input, parameters);
     // Then
     assertEquals("This is a \"template string\" and the following is code ${NOT_REPLACED}: '1' === '1'; /* END */", result);
-  }
-
-  @Test
-  void testGetPluralFromKind() {
-    // Given
-    SortedMap<String, Class> pluralToKubernetesResourceMap = new TreeMap<>();
-    pluralToKubernetesResourceMap.put("bindings", Binding.class);
-    pluralToKubernetesResourceMap.put("componentstatuses", ComponentStatus.class);
-    pluralToKubernetesResourceMap.put("configmaps", ConfigMap.class);
-    pluralToKubernetesResourceMap.put("endpoints", Endpoints.class);
-    pluralToKubernetesResourceMap.put("events", Event.class);
-    pluralToKubernetesResourceMap.put("limitranges", LimitRange.class);
-    pluralToKubernetesResourceMap.put("namespaces", Namespace.class);
-    pluralToKubernetesResourceMap.put("nodes", Node.class);
-    pluralToKubernetesResourceMap.put("persistentvolumeclaims", PersistentVolumeClaim.class);
-    pluralToKubernetesResourceMap.put("persistentvolumes", PersistentVolume.class);
-    pluralToKubernetesResourceMap.put("pods", Pod.class);
-    pluralToKubernetesResourceMap.put("podtemplates", PodTemplate.class);
-    pluralToKubernetesResourceMap.put("replicationcontrollers", ReplicationController.class);
-    pluralToKubernetesResourceMap.put("resourcequotas", ResourceQuota.class);
-    pluralToKubernetesResourceMap.put("secrets", Secret.class);
-    pluralToKubernetesResourceMap.put("serviceaccounts", ServiceAccount.class);
-    pluralToKubernetesResourceMap.put("services", Service.class);
-    pluralToKubernetesResourceMap.put("mutatingwebhookconfigurations", MutatingWebhookConfiguration.class);
-    pluralToKubernetesResourceMap.put("validatingwebhookconfigurations", ValidatingWebhookConfiguration.class);
-    pluralToKubernetesResourceMap.put("customresourcedefinitions", CustomResourceDefinition.class);
-    pluralToKubernetesResourceMap.put("controllerrevisions", ControllerRevision.class);
-    pluralToKubernetesResourceMap.put("daemonsets", DaemonSet.class);
-    pluralToKubernetesResourceMap.put("deployments", Deployment.class);
-    pluralToKubernetesResourceMap.put("replicasets", ReplicaSet.class);
-    pluralToKubernetesResourceMap.put("statefulsets", StatefulSet.class);
-    pluralToKubernetesResourceMap.put("tokenreviews", TokenReview.class);
-    pluralToKubernetesResourceMap.put("localsubjectaccessreviews", LocalSubjectAccessReview.class);
-    pluralToKubernetesResourceMap.put("selfsubjectaccessreviews", SelfSubjectAccessReview.class);
-    pluralToKubernetesResourceMap.put("selfsubjectrulesreviews", SelfSubjectRulesReview.class);
-    pluralToKubernetesResourceMap.put("subjectaccessreviews", SubjectAccessReview.class);
-    pluralToKubernetesResourceMap.put("horizontalpodautoscalers", HorizontalPodAutoscaler.class);
-    pluralToKubernetesResourceMap.put("cronjobs", CronJob.class);
-    pluralToKubernetesResourceMap.put("jobs", Job.class);
-    pluralToKubernetesResourceMap.put("certificatesigningrequests", CertificateSigningRequest.class);
-    pluralToKubernetesResourceMap.put("leases", Lease.class);
-    pluralToKubernetesResourceMap.put("endpointslices", EndpointSlice.class);
-    pluralToKubernetesResourceMap.put("ingresses", Ingress.class);
-    pluralToKubernetesResourceMap.put("networkpolicies", NetworkPolicy.class);
-    pluralToKubernetesResourceMap.put("poddisruptionbudgets", PodDisruptionBudget.class);
-    pluralToKubernetesResourceMap.put("podsecuritypolicies", PodSecurityPolicy.class);
-    pluralToKubernetesResourceMap.put("clusterrolebindings", ClusterRoleBinding.class);
-    pluralToKubernetesResourceMap.put("clusterroles", ClusterRole.class);
-    pluralToKubernetesResourceMap.put("rolebindings", RoleBinding.class);
-    pluralToKubernetesResourceMap.put("roles", Role.class);
-    pluralToKubernetesResourceMap.put("priorityclasses", PriorityClass.class);
-    pluralToKubernetesResourceMap.put("csidrivers", CSIDriver.class);
-    pluralToKubernetesResourceMap.put("csinodes", CSINode.class);
-    pluralToKubernetesResourceMap.put("storageclasses", StorageClass.class);
-    pluralToKubernetesResourceMap.put("volumeattachments", VolumeAttachment.class);
-
-    // When & Then
-    pluralToKubernetesResourceMap.forEach(
-        (plural, kubernetesResource) -> assertEquals(plural, Utils.getPluralFromKind(kubernetesResource.getSimpleName())));
   }
 
   @Test
@@ -405,5 +349,52 @@ class UtilsTest {
       completableFuture.complete(null);
     }, 0, () -> 1L, TimeUnit.MILLISECONDS);
     completableFuture.get(1, TimeUnit.SECONDS);
+  }
+
+  @Test
+  void waitUntilReadyPreservesInterruptStatus() {
+    Future<?> interruptingFuture = new Future<Object>() {
+      @Override
+      public boolean cancel(boolean mayInterruptIfRunning) {
+        return false;
+      }
+
+      @Override
+      public boolean isCancelled() {
+        return false;
+      }
+
+      @Override
+      public boolean isDone() {
+        return false;
+      }
+
+      @Override
+      public Object get() throws InterruptedException {
+        throw new InterruptedException("simulated interrupt");
+      }
+
+      @Override
+      public Object get(long timeout, TimeUnit unit) throws InterruptedException {
+        throw new InterruptedException("simulated interrupt");
+      }
+    };
+
+    assertThat(Thread.currentThread().isInterrupted()).isFalse();
+    assertThatThrownBy(() -> Utils.waitUntilReady(interruptingFuture, 10, TimeUnit.SECONDS))
+        .isInstanceOf(KubernetesClientException.class)
+        .hasCauseInstanceOf(InterruptedException.class);
+    boolean wasInterrupted = Thread.interrupted();
+    assertThat(wasInterrupted)
+        .as("interrupt status should be preserved after InterruptedException is caught")
+        .isTrue();
+  }
+
+  @Test
+  void generateId() {
+    assertThat(Utils.generateId())
+        .isNotNull()
+        .satisfies(uuid -> assertThat(uuid.getLeastSignificantBits()).isPositive())
+        .satisfies(uuid -> assertThat(uuid.getMostSignificantBits()).isZero());
   }
 }

@@ -2,9 +2,10 @@
 package io.fabric8.kubernetes.api.model.apiextensions.v1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -12,7 +13,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
@@ -22,25 +26,25 @@ import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * WebhookConversion describes how to call a conversion webhook
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "clientConfig",
     "conversionReviewVersions"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -54,57 +58,81 @@ import lombok.experimental.Accessors;
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class WebhookConversion implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class WebhookConversion implements Editable<WebhookConversionBuilder>, KubernetesResource
 {
 
     @JsonProperty("clientConfig")
     private WebhookClientConfig clientConfig;
     @JsonProperty("conversionReviewVersions")
-    private List<String> conversionReviewVersions = new ArrayList<String>();
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<String> conversionReviewVersions = new ArrayList<>();
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public WebhookConversion() {
     }
 
-    /**
-     * 
-     * @param clientConfig
-     * @param conversionReviewVersions
-     */
     public WebhookConversion(WebhookClientConfig clientConfig, List<String> conversionReviewVersions) {
         super();
         this.clientConfig = clientConfig;
         this.conversionReviewVersions = conversionReviewVersions;
     }
 
+    /**
+     * WebhookConversion describes how to call a conversion webhook
+     */
     @JsonProperty("clientConfig")
     public WebhookClientConfig getClientConfig() {
         return clientConfig;
     }
 
+    /**
+     * WebhookConversion describes how to call a conversion webhook
+     */
     @JsonProperty("clientConfig")
     public void setClientConfig(WebhookClientConfig clientConfig) {
         this.clientConfig = clientConfig;
     }
 
+    /**
+     * conversionReviewVersions is an ordered list of preferred `ConversionReview` versions the Webhook expects. The API server will use the first version in the list which it supports. If none of the versions specified in this list are supported by API server, conversion will fail for the custom resource. If a persisted Webhook configuration specifies allowed versions and does not include any versions known to the API Server, calls to the webhook will fail.
+     */
     @JsonProperty("conversionReviewVersions")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<String> getConversionReviewVersions() {
         return conversionReviewVersions;
     }
 
+    /**
+     * conversionReviewVersions is an ordered list of preferred `ConversionReview` versions the Webhook expects. The API server will use the first version in the list which it supports. If none of the versions specified in this list are supported by API server, conversion will fail for the custom resource. If a persisted Webhook configuration specifies allowed versions and does not include any versions known to the API Server, calls to the webhook will fail.
+     */
     @JsonProperty("conversionReviewVersions")
     public void setConversionReviewVersions(List<String> conversionReviewVersions) {
         this.conversionReviewVersions = conversionReviewVersions;
     }
 
+    @JsonIgnore
+    public WebhookConversionBuilder edit() {
+        return new WebhookConversionBuilder(this);
+    }
+
+    @JsonIgnore
+    public WebhookConversionBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -112,6 +140,10 @@ public class WebhookConversion implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

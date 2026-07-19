@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -59,8 +59,14 @@ public class HasMetadataOperationsImpl<T extends HasMetadata, L extends Kubernet
     return rdc.isNamespaceScoped();
   }
 
+  @Override
   public OperationContext getOperationContext() {
     return this.context;
+  }
+
+  @Override
+  public String getKind() {
+    return rdc.getKind();
   }
 
 }

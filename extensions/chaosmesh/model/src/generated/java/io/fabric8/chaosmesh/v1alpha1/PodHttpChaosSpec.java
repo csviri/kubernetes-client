@@ -2,9 +2,10 @@
 package io.fabric8.chaosmesh.v1alpha1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -12,6 +13,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -29,21 +31,20 @@ import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * PodHttpChaosSpec defines the desired state of PodHttpChaos.
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
-    "rules"
+    "rules",
+    "tls"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -63,42 +64,75 @@ import lombok.experimental.Accessors;
     @BuildableReference(Volume.class),
     @BuildableReference(VolumeMount.class)
 })
-public class PodHttpChaosSpec implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class PodHttpChaosSpec implements Editable<PodHttpChaosSpecBuilder>, KubernetesResource
 {
 
     @JsonProperty("rules")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<PodHttpChaosRule> rules = new ArrayList<PodHttpChaosRule>();
+    private List<PodHttpChaosRule> rules = new ArrayList<>();
+    @JsonProperty("tls")
+    private PodHttpChaosTLS tls;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public PodHttpChaosSpec() {
     }
 
-    /**
-     * 
-     * @param rules
-     */
-    public PodHttpChaosSpec(List<PodHttpChaosRule> rules) {
+    public PodHttpChaosSpec(List<PodHttpChaosRule> rules, PodHttpChaosTLS tls) {
         super();
         this.rules = rules;
+        this.tls = tls;
     }
 
+    /**
+     * Rules are a list of injection rule for http request.
+     */
     @JsonProperty("rules")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<PodHttpChaosRule> getRules() {
         return rules;
     }
 
+    /**
+     * Rules are a list of injection rule for http request.
+     */
     @JsonProperty("rules")
     public void setRules(List<PodHttpChaosRule> rules) {
         this.rules = rules;
     }
 
+    /**
+     * PodHttpChaosSpec defines the desired state of PodHttpChaos.
+     */
+    @JsonProperty("tls")
+    public PodHttpChaosTLS getTls() {
+        return tls;
+    }
+
+    /**
+     * PodHttpChaosSpec defines the desired state of PodHttpChaos.
+     */
+    @JsonProperty("tls")
+    public void setTls(PodHttpChaosTLS tls) {
+        this.tls = tls;
+    }
+
+    @JsonIgnore
+    public PodHttpChaosSpecBuilder edit() {
+        return new PodHttpChaosSpecBuilder(this);
+    }
+
+    @JsonIgnore
+    public PodHttpChaosSpecBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -106,6 +140,10 @@ public class PodHttpChaosSpec implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

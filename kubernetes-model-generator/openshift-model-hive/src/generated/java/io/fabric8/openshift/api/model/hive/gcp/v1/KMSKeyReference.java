@@ -1,8 +1,9 @@
 
 package io.fabric8.openshift.api.model.hive.gcp.v1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,7 +11,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
@@ -20,19 +24,20 @@ import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * KMSKeyReference gathers required fields for looking up a GCP KMS Key
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "keyRing",
     "location",
     "name",
@@ -40,7 +45,6 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -54,9 +58,14 @@ import lombok.experimental.Accessors;
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class KMSKeyReference implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class KMSKeyReference implements Editable<KMSKeyReferenceBuilder>, KubernetesResource
 {
 
     @JsonProperty("keyRing")
@@ -68,22 +77,14 @@ public class KMSKeyReference implements KubernetesResource
     @JsonProperty("projectID")
     private String projectID;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public KMSKeyReference() {
     }
 
-    /**
-     * 
-     * @param name
-     * @param location
-     * @param keyRing
-     * @param projectID
-     */
     public KMSKeyReference(String keyRing, String location, String name, String projectID) {
         super();
         this.keyRing = keyRing;
@@ -92,47 +93,82 @@ public class KMSKeyReference implements KubernetesResource
         this.projectID = projectID;
     }
 
+    /**
+     * KeyRing is the name of the KMS Key Ring which the KMS Key belongs to.
+     */
     @JsonProperty("keyRing")
     public String getKeyRing() {
         return keyRing;
     }
 
+    /**
+     * KeyRing is the name of the KMS Key Ring which the KMS Key belongs to.
+     */
     @JsonProperty("keyRing")
     public void setKeyRing(String keyRing) {
         this.keyRing = keyRing;
     }
 
+    /**
+     * Location is the GCP location in which the Key Ring exists.
+     */
     @JsonProperty("location")
     public String getLocation() {
         return location;
     }
 
+    /**
+     * Location is the GCP location in which the Key Ring exists.
+     */
     @JsonProperty("location")
     public void setLocation(String location) {
         this.location = location;
     }
 
+    /**
+     * Name is the name of the customer managed encryption key to be used for the disk encryption.
+     */
     @JsonProperty("name")
     public String getName() {
         return name;
     }
 
+    /**
+     * Name is the name of the customer managed encryption key to be used for the disk encryption.
+     */
     @JsonProperty("name")
     public void setName(String name) {
         this.name = name;
     }
 
+    /**
+     * ProjectID is the ID of the Project in which the KMS Key Ring exists. Defaults to the VM ProjectID if not set.
+     */
     @JsonProperty("projectID")
     public String getProjectID() {
         return projectID;
     }
 
+    /**
+     * ProjectID is the ID of the Project in which the KMS Key Ring exists. Defaults to the VM ProjectID if not set.
+     */
     @JsonProperty("projectID")
     public void setProjectID(String projectID) {
         this.projectID = projectID;
     }
 
+    @JsonIgnore
+    public KMSKeyReferenceBuilder edit() {
+        return new KMSKeyReferenceBuilder(this);
+    }
+
+    @JsonIgnore
+    public KMSKeyReferenceBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -140,6 +176,10 @@ public class KMSKeyReference implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

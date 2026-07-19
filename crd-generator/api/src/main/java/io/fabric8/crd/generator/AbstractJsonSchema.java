@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,13 +15,21 @@
  */
 package io.fabric8.crd.generator;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.module.jsonSchema.JsonSchema;
+import com.fasterxml.jackson.module.jsonSchema.JsonSchemaGenerator;
+import com.fasterxml.jackson.module.jsonSchema.types.ArraySchema.Items;
+import io.fabric8.crd.generator.InternalSchemaSwaps.SwapResult;
 import io.fabric8.crd.generator.annotation.SchemaSwap;
 import io.fabric8.crd.generator.utils.Types;
+import io.fabric8.generator.annotation.ValidationRule;
 import io.fabric8.kubernetes.api.model.Duration;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.Quantity;
+import io.fabric8.kubernetes.client.utils.KubernetesSerialization;
 import io.sundr.builder.internal.functions.TypeAs;
 import io.sundr.model.AnnotationRef;
 import io.sundr.model.ClassRef;
@@ -30,6 +38,7 @@ import io.sundr.model.PrimitiveRefBuilder;
 import io.sundr.model.Property;
 import io.sundr.model.TypeDef;
 import io.sundr.model.TypeRef;
+import io.sundr.model.functions.GetDefinition;
 import io.sundr.utils.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,11 +50,16 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static io.sundr.model.utils.Types.BOOLEAN_REF;
 import static io.sundr.model.utils.Types.DOUBLE_REF;
@@ -63,7 +77,7 @@ import static io.sundr.model.utils.Types.VOID;
  */
 public abstract class AbstractJsonSchema<T, B> {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(AbstractJsonSchema.class);
+  private static final Logger logger = LoggerFactory.getLogger(AbstractJsonSchema.class);
 
   protected static final TypeDef OBJECT = TypeDef.forName(Object.class.getName());
   protected static final TypeDef QUANTITY = TypeDef.forName(Quantity.class.getName());
@@ -78,6 +92,8 @@ public abstract class AbstractJsonSchema<T, B> {
   protected static final TypeDef DATE = TypeDef.forName(Date.class.getName());
   protected static final TypeRef DATE_REF = DATE.toReference();
 
+  private static final String JSON_FORMAT_SHAPE = "shape";
+  private static final Map<JsonFormat.Shape, TypeRef> JSON_FORMAT_SHAPE_MAPPING = new HashMap<>();
   private static final String VALUE = "value";
 
   private static final String INT_OR_STRING_MARKER = "int_or_string";
@@ -94,11 +110,13 @@ public abstract class AbstractJsonSchema<T, B> {
       .build();
 
   private static final Map<TypeRef, String> COMMON_MAPPINGS = new HashMap<>();
+  public static final String ANNOTATION_JSON_FORMAT = "com.fasterxml.jackson.annotation.JsonFormat";
   public static final String ANNOTATION_JSON_PROPERTY = "com.fasterxml.jackson.annotation.JsonProperty";
   public static final String ANNOTATION_JSON_PROPERTY_DESCRIPTION = "com.fasterxml.jackson.annotation.JsonPropertyDescription";
   public static final String ANNOTATION_JSON_IGNORE = "com.fasterxml.jackson.annotation.JsonIgnore";
   public static final String ANNOTATION_JSON_ANY_GETTER = "com.fasterxml.jackson.annotation.JsonAnyGetter";
   public static final String ANNOTATION_JSON_ANY_SETTER = "com.fasterxml.jackson.annotation.JsonAnySetter";
+  public static final String ANNOTATION_DEFAULT = "io.fabric8.generator.annotation.Default";
   public static final String ANNOTATION_MIN = "io.fabric8.generator.annotation.Min";
   public static final String ANNOTATION_MAX = "io.fabric8.generator.annotation.Max";
   public static final String ANNOTATION_PATTERN = "io.fabric8.generator.annotation.Pattern";
@@ -108,9 +126,14 @@ public abstract class AbstractJsonSchema<T, B> {
   public static final String ANNOTATION_PERSERVE_UNKNOWN_FIELDS = "io.fabric8.crd.generator.annotation.PreserveUnknownFields";
   public static final String ANNOTATION_SCHEMA_SWAP = "io.fabric8.crd.generator.annotation.SchemaSwap";
   public static final String ANNOTATION_SCHEMA_SWAPS = "io.fabric8.crd.generator.annotation.SchemaSwaps";
+  public static final String ANNOTATION_VALIDATION_RULE = "io.fabric8.generator.annotation.ValidationRule";
+  public static final String ANNOTATION_VALIDATION_RULES = "io.fabric8.generator.annotation.ValidationRules";
 
   public static final String JSON_NODE_TYPE = "com.fasterxml.jackson.databind.JsonNode";
   public static final String ANY_TYPE = "io.fabric8.kubernetes.api.model.AnyType";
+
+  private static final JsonSchemaGenerator GENERATOR;
+  private static final Set<String> COMPLEX_JAVA_TYPES = new HashSet<>();
 
   static {
     COMMON_MAPPINGS.put(STRING_REF, STRING_MARKER);
@@ -128,6 +151,12 @@ public abstract class AbstractJsonSchema<T, B> {
     COMMON_MAPPINGS.put(QUANTITY_REF, INT_OR_STRING_MARKER);
     COMMON_MAPPINGS.put(INT_OR_STRING_REF, INT_OR_STRING_MARKER);
     COMMON_MAPPINGS.put(DURATION_REF, STRING_MARKER);
+    ObjectMapper mapper = new ObjectMapper();
+    // initialize with client defaults
+    new KubernetesSerialization(mapper, false);
+    GENERATOR = new JsonSchemaGenerator(mapper);
+
+    JSON_FORMAT_SHAPE_MAPPING.put(JsonFormat.Shape.STRING, Types.typeDefFrom(String.class).toReference());
   }
 
   public static String getSchemaTypeFor(TypeRef typeRef) {
@@ -141,31 +170,41 @@ public abstract class AbstractJsonSchema<T, B> {
   }
 
   protected static class SchemaPropsOptions {
+    final String defaultValue;
     final Double min;
     final Double max;
     final String pattern;
     final boolean nullable;
     final boolean required;
-
     final boolean preserveUnknownFields;
+    final List<KubernetesValidationRule> validationRules;
 
     SchemaPropsOptions() {
+      defaultValue = null;
       min = null;
       max = null;
       pattern = null;
       nullable = false;
       required = false;
       preserveUnknownFields = false;
+      validationRules = null;
     }
 
-    public SchemaPropsOptions(Double min, Double max, String pattern,
+    public SchemaPropsOptions(String defaultValue, Double min, Double max, String pattern,
+        List<KubernetesValidationRule> validationRules,
         boolean nullable, boolean required, boolean preserveUnknownFields) {
+      this.defaultValue = defaultValue;
       this.min = min;
       this.max = max;
       this.pattern = pattern;
       this.nullable = nullable;
       this.required = required;
       this.preserveUnknownFields = preserveUnknownFields;
+      this.validationRules = validationRules;
+    }
+
+    public Optional<String> getDefault() {
+      return Optional.ofNullable(defaultValue);
     }
 
     public Optional<Double> getMin() {
@@ -191,6 +230,11 @@ public abstract class AbstractJsonSchema<T, B> {
     public boolean isPreserveUnknownFields() {
       return preserveUnknownFields;
     }
+
+    public List<KubernetesValidationRule> getValidationRules() {
+      return Optional.ofNullable(validationRules)
+          .orElseGet(Collections::emptyList);
+    }
   }
 
   /**
@@ -203,9 +247,7 @@ public abstract class AbstractJsonSchema<T, B> {
    */
   protected T internalFrom(TypeDef definition, String... ignore) {
     InternalSchemaSwaps schemaSwaps = new InternalSchemaSwaps();
-    T ret = internalFromImpl(definition, new HashSet<>(), schemaSwaps, ignore);
-    schemaSwaps.throwIfUnmatchedSwaps();
-    return ret;
+    return internalFromImpl(definition, new LinkedHashMap<>(), schemaSwaps, ignore);
   }
 
   private static ClassRef extractClassRef(Object type) {
@@ -213,7 +255,7 @@ public abstract class AbstractJsonSchema<T, B> {
       if (type instanceof ClassRef) {
         return (ClassRef) type;
       } else if (type instanceof Class) {
-        return Types.typeDefFrom((Class) type).toReference();
+        return Types.typeDefFrom((Class<?>) type).toReference();
       } else {
         throw new IllegalArgumentException("Unmanaged type passed to the annotation " + type);
       }
@@ -244,7 +286,7 @@ public abstract class AbstractJsonSchema<T, B> {
       schemaSwaps.registerSwap(definitionType,
           extractClassRef(schemaSwap.originalType()),
           schemaSwap.fieldName(),
-          extractClassRef(schemaSwap.targetType()));
+          extractClassRef(schemaSwap.targetType()), schemaSwap.depth());
 
     } else if (annotation instanceof AnnotationRef
         && ((AnnotationRef) annotation).getClassRef().getFullyQualifiedName().equals(ANNOTATION_SCHEMA_SWAP)) {
@@ -252,14 +294,27 @@ public abstract class AbstractJsonSchema<T, B> {
       schemaSwaps.registerSwap(definitionType,
           extractClassRef(params.get("originalType")),
           (String) params.get("fieldName"),
-          extractClassRef(params.getOrDefault("targetType", void.class)));
+          extractClassRef(params.getOrDefault("targetType", void.class)), (Integer) params.getOrDefault("depth", 0));
 
     } else {
       throw new IllegalArgumentException("Unmanaged annotation type passed to the SchemaSwaps: " + annotation);
     }
   }
 
-  private T internalFromImpl(TypeDef definition, Set<String> visited, InternalSchemaSwaps schemaSwaps, String... ignore) {
+  private static Stream<KubernetesValidationRule> extractKubernetesValidationRules(AnnotationRef annotationRef) {
+    switch (annotationRef.getClassRef().getFullyQualifiedName()) {
+      case ANNOTATION_VALIDATION_RULE:
+        return Stream.of(KubernetesValidationRule.from(annotationRef));
+      case ANNOTATION_VALIDATION_RULES:
+        return Arrays.stream(((ValidationRule[]) annotationRef.getParameters().get(VALUE)))
+            .map(KubernetesValidationRule::from);
+      default:
+        return Stream.empty();
+    }
+  }
+
+  private T internalFromImpl(TypeDef definition, LinkedHashMap<String, String> visited, InternalSchemaSwaps schemaSwaps,
+      String... ignore) {
     Set<String> ignores = ignore.length > 0 ? new LinkedHashSet<>(Arrays.asList(ignore))
         : Collections
             .emptySet();
@@ -273,20 +328,30 @@ public abstract class AbstractJsonSchema<T, B> {
 
     boolean preserveUnknownFields = isJsonNode;
 
-    definition.getAnnotations().forEach(annotation -> extractSchemaSwaps(definition.toReference(), annotation, schemaSwaps));
+    schemaSwaps = schemaSwaps.branchAnnotations();
+    final InternalSchemaSwaps swaps = schemaSwaps;
+    definition.getAnnotations().forEach(annotation -> extractSchemaSwaps(definition.toReference(), annotation, swaps));
 
     // index potential accessors by name for faster lookup
     final Map<String, Method> accessors = indexPotentialAccessors(definition);
 
     for (Property property : definition.getProperties()) {
+      if (isJsonNode) {
+        break;
+      }
       String name = property.getName();
       if (property.isStatic() || ignores.contains(name)) {
-        LOGGER.debug("Ignoring property {}", name);
+        logger.debug("Ignoring property {}", name);
         continue;
       }
 
-      ClassRef potentialSchemaSwap = schemaSwaps.lookupAndMark(definition.toReference(), name).orElse(null);
-      final PropertyFacade facade = new PropertyFacade(property, accessors, potentialSchemaSwap);
+      schemaSwaps = schemaSwaps.branchDepths();
+      SwapResult swapResult = schemaSwaps.lookupAndMark(definition.toReference(), name);
+      LinkedHashMap<String, String> savedVisited = visited;
+      if (swapResult.onGoing) {
+        visited = new LinkedHashMap<>();
+      }
+      final PropertyFacade facade = new PropertyFacade(property, accessors, swapResult.classRef);
       final Property possiblyRenamedProperty = facade.process();
       name = possiblyRenamedProperty.getName();
 
@@ -296,6 +361,7 @@ public abstract class AbstractJsonSchema<T, B> {
         continue;
       }
       final T schema = internalFromImpl(name, possiblyRenamedProperty.getTypeRef(), visited, schemaSwaps);
+      visited = savedVisited;
       if (facade.preserveUnknownFields) {
         preserveUnknownFields = true;
       }
@@ -310,9 +376,11 @@ public abstract class AbstractJsonSchema<T, B> {
       }
 
       SchemaPropsOptions options = new SchemaPropsOptions(
+          facade.defaultValue,
           facade.min,
           facade.max,
           facade.pattern,
+          facade.validationRules,
           facade.nullable,
           facade.required,
           facade.preserveUnknownFields);
@@ -320,7 +388,19 @@ public abstract class AbstractJsonSchema<T, B> {
       addProperty(possiblyRenamedProperty, builder, possiblyUpdatedSchema, options);
     }
 
-    return build(builder, required, preserveUnknownFields);
+    List<KubernetesValidationRule> validationRules = Stream
+        .concat(definition.getAnnotations().stream(), definition.getExtendsList().stream()
+            .flatMap(classRef -> GetDefinition.of(classRef).getAnnotations().stream()))
+        .flatMap(AbstractJsonSchema::extractKubernetesValidationRules)
+        .filter(Objects::nonNull)
+        .collect(Collectors.toList());
+
+    swaps.throwIfUnmatchedSwaps();
+
+    List<String> sortedRequiredProperties = required.stream().sorted()
+        .collect(Collectors.toList());
+
+    return build(builder, sortedRequiredProperties, validationRules, preserveUnknownFields);
   }
 
   private Map<String, Method> indexPotentialAccessors(TypeDef definition) {
@@ -338,9 +418,11 @@ public abstract class AbstractJsonSchema<T, B> {
     private final String propertyName;
     private final String type;
     private String renamedTo;
+    private String defaultValue;
     private Double min;
     private Double max;
     private String pattern;
+    private List<KubernetesValidationRule> validationRules;
     private boolean nullable;
     private boolean required;
     private boolean ignored;
@@ -366,6 +448,9 @@ public abstract class AbstractJsonSchema<T, B> {
     public void process() {
       annotations.forEach(a -> {
         switch (a.getClassRef().getFullyQualifiedName()) {
+          case ANNOTATION_DEFAULT:
+            defaultValue = (String) a.getParameters().get(VALUE);
+            break;
           case ANNOTATION_NULLABLE:
             nullable = true;
             break;
@@ -380,6 +465,11 @@ public abstract class AbstractJsonSchema<T, B> {
             break;
           case ANNOTATION_REQUIRED:
             required = true;
+            break;
+          case ANNOTATION_JSON_FORMAT:
+            if (schemaFrom == null) {
+              schemaFrom = JSON_FORMAT_SHAPE_MAPPING.get((JsonFormat.Shape) a.getParameters().get(JSON_FORMAT_SHAPE));
+            }
             break;
           case ANNOTATION_JSON_PROPERTY:
             final String nameFromAnnotation = (String) a.getParameters().get(VALUE);
@@ -404,6 +494,10 @@ public abstract class AbstractJsonSchema<T, B> {
           case ANNOTATION_SCHEMA_FROM:
             schemaFrom = extractClassRef(a.getParameters().get("type"));
             break;
+          case ANNOTATION_VALIDATION_RULE:
+          case ANNOTATION_VALIDATION_RULES:
+            validationRules = extractKubernetesValidationRules(a).collect(Collectors.toList());
+            break;
         }
       });
     }
@@ -416,6 +510,10 @@ public abstract class AbstractJsonSchema<T, B> {
       return nullable;
     }
 
+    public Optional<String> getDefault() {
+      return Optional.ofNullable(defaultValue);
+    }
+
     public Optional<Double> getMax() {
       return Optional.ofNullable(max);
     }
@@ -426,6 +524,10 @@ public abstract class AbstractJsonSchema<T, B> {
 
     public Optional<String> getPattern() {
       return Optional.ofNullable(pattern);
+    }
+
+    public Optional<List<KubernetesValidationRule>> getValidationRules() {
+      return Optional.ofNullable(validationRules);
     }
 
     public boolean isRequired() {
@@ -470,6 +572,7 @@ public abstract class AbstractJsonSchema<T, B> {
     private final List<PropertyOrAccessor> propertyOrAccessors = new ArrayList<>(4);
     private String renamedTo;
     private String description;
+    private String defaultValue;
     private Double min;
     private Double max;
     private String pattern;
@@ -481,6 +584,7 @@ public abstract class AbstractJsonSchema<T, B> {
     private String nameContributedBy;
     private String descriptionContributedBy;
     private TypeRef schemaFrom;
+    private List<KubernetesValidationRule> validationRules;
 
     public PropertyFacade(Property property, Map<String, Method> potentialAccessors, ClassRef schemaSwap) {
       original = property;
@@ -500,9 +604,11 @@ public abstract class AbstractJsonSchema<T, B> {
         propertyOrAccessors.add(PropertyOrAccessor.fromMethod(method, name));
       }
       schemaFrom = schemaSwap;
+      defaultValue = null;
       min = null;
       max = null;
       pattern = null;
+      validationRules = new LinkedList<>();
     }
 
     public Property process() {
@@ -516,7 +622,7 @@ public abstract class AbstractJsonSchema<T, B> {
             renamedTo = p.getRenamedTo();
             this.nameContributedBy = contributorName;
           } else {
-            LOGGER.debug("Property {} has already been renamed to {} by {}", name, renamedTo, nameContributedBy);
+            logger.debug("Property {} has already been renamed to {} by {}", name, renamedTo, nameContributedBy);
           }
         }
 
@@ -525,12 +631,14 @@ public abstract class AbstractJsonSchema<T, B> {
             description = p.getDescription();
             descriptionContributedBy = contributorName;
           } else {
-            LOGGER.debug("Description for property {} has already been contributed by: {}", name, descriptionContributedBy);
+            logger.debug("Description for property {} has already been contributed by: {}", name, descriptionContributedBy);
           }
         }
+        defaultValue = p.getDefault().orElse(defaultValue);
         min = p.getMin().orElse(min);
         max = p.getMax().orElse(max);
         pattern = p.getPattern().orElse(pattern);
+        p.getValidationRules().ifPresent(rules -> validationRules.addAll(rules));
 
         if (p.isNullable()) {
           nullable = true;
@@ -553,7 +661,73 @@ public abstract class AbstractJsonSchema<T, B> {
       String finalName = renamedTo != null ? renamedTo : original.getName();
 
       return new Property(original.getAnnotations(), typeRef, finalName,
-          original.getComments(), original.getModifiers(), original.getAttributes());
+          original.getComments(), false, false, original.getModifiers(), original.getAttributes());
+    }
+  }
+
+  /**
+   * Version independent DTO for a ValidationRule
+   */
+  protected static class KubernetesValidationRule {
+    private String fieldPath;
+    private String message;
+    private String messageExpression;
+    private Boolean optionalOldSelf;
+    private String reason;
+    private String rule;
+
+    public String getFieldPath() {
+      return fieldPath;
+    }
+
+    public String getMessage() {
+      return message;
+    }
+
+    public String getMessageExpression() {
+      return messageExpression;
+    }
+
+    public Boolean getOptionalOldSelf() {
+      return optionalOldSelf;
+    }
+
+    public String getReason() {
+      return reason;
+    }
+
+    public String getRule() {
+      return rule;
+    }
+
+    static KubernetesValidationRule from(AnnotationRef annotationRef) {
+      KubernetesValidationRule result = new KubernetesValidationRule();
+      result.rule = (String) annotationRef.getParameters().get(VALUE);
+      result.reason = mapNotEmpty((String) annotationRef.getParameters().get("reason"));
+      result.message = mapNotEmpty((String) annotationRef.getParameters().get("message"));
+      result.messageExpression = mapNotEmpty((String) annotationRef.getParameters().get("messageExpression"));
+      result.fieldPath = mapNotEmpty((String) annotationRef.getParameters().get("fieldPath"));
+      result.optionalOldSelf = Boolean.TRUE.equals(annotationRef.getParameters().get("optionalOldSelf")) ? Boolean.TRUE : null;
+      return result;
+    }
+
+    static KubernetesValidationRule from(ValidationRule validationRule) {
+      KubernetesValidationRule result = new KubernetesValidationRule();
+      result.rule = validationRule.value();
+      result.reason = mapNotEmpty(validationRule.reason());
+      result.message = mapNotEmpty(validationRule.message());
+      result.messageExpression = mapNotEmpty(validationRule.messageExpression());
+      result.fieldPath = mapNotEmpty(validationRule.fieldPath());
+      result.optionalOldSelf = validationRule.optionalOldSelf() ? true : null;
+      return result;
+    }
+
+    private static String mapNotEmpty(String s) {
+      if (s == null)
+        return null;
+      if (s.isEmpty())
+        return null;
+      return s;
     }
   }
 
@@ -574,7 +748,7 @@ public abstract class AbstractJsonSchema<T, B> {
         .anyMatch(a -> a.getClassRef().getFullyQualifiedName().equals(ANNOTATION_JSON_IGNORE));
 
     if (ignored) {
-      return "$" + property.getName();
+      return null;
     } else {
       return property.getAnnotations().stream()
           // only consider JsonProperty annotation
@@ -623,9 +797,14 @@ public abstract class AbstractJsonSchema<T, B> {
    *
    * @param builder the builder used to build the final schema
    * @param required the list of names of required fields
+   * @param validationRules the list of validation rules
+   * @param preserveUnknownFields whether preserveUnknownFields is enabled
    * @return the built JSON schema
    */
-  public abstract T build(B builder, List<String> required, boolean preserveUnknownFields);
+  public abstract T build(B builder,
+      List<String> required,
+      List<KubernetesValidationRule> validationRules,
+      boolean preserveUnknownFields);
 
   /**
    * Builds the specific JSON schema representing the structural schema for the specified property
@@ -635,13 +814,15 @@ public abstract class AbstractJsonSchema<T, B> {
    * @return the structural schema associated with the specified property
    */
   public T internalFrom(String name, TypeRef typeRef) {
-    return internalFromImpl(name, typeRef, new HashSet<>(), new InternalSchemaSwaps());
+    return internalFromImpl(name, typeRef, new LinkedHashMap<>(), new InternalSchemaSwaps());
   }
 
-  private T internalFromImpl(String name, TypeRef typeRef, Set<String> visited, InternalSchemaSwaps schemaSwaps) {
+  private T internalFromImpl(String name, TypeRef typeRef, LinkedHashMap<String, String> visited,
+      InternalSchemaSwaps schemaSwaps) {
     // Note that ordering of the checks here is meaningful: we need to check for complex types last
     // in case some "complex" types are handled specifically
     if (typeRef.getDimensions() > 0 || io.sundr.model.utils.Collections.isCollection(typeRef)) { // Handle Collections & Arrays
+      //noinspection unchecked
       final TypeRef collectionType = TypeAs.combine(TypeAs.UNWRAP_ARRAY_OF, TypeAs.UNWRAP_COLLECTION_OF)
           .apply(typeRef);
       final T schema = internalFromImpl(name, collectionType, visited, schemaSwaps);
@@ -650,13 +831,13 @@ public abstract class AbstractJsonSchema<T, B> {
       final TypeRef keyType = TypeAs.UNWRAP_MAP_KEY_OF.apply(typeRef);
 
       if (!(keyType instanceof ClassRef && ((ClassRef) keyType).getFullyQualifiedName().equals("java.lang.String"))) {
-        LOGGER.warn("Property '{}' with '{}' key type is mapped to 'string' because of CRD schemas limitations", name, typeRef);
+        logger.warn("Property '{}' with '{}' key type is mapped to 'string' because of CRD schemas limitations", name, typeRef);
       }
 
       final TypeRef valueType = TypeAs.UNWRAP_MAP_VALUE_OF.apply(typeRef);
       T schema = internalFromImpl(name, valueType, visited, schemaSwaps);
       if (schema == null) {
-        LOGGER.warn(
+        logger.warn(
             "Property '{}' with '{}' value type is mapped to 'object' because its CRD representation cannot be extracted.",
             name, typeRef);
         schema = internalFromImpl(name, OBJECT_REF, visited, schemaSwaps);
@@ -681,10 +862,10 @@ public abstract class AbstractJsonSchema<T, B> {
           // check if we're dealing with an enum
           if (def.isEnum()) {
             final JsonNode[] enumValues = def.getProperties().stream()
-                .filter(property -> property.isStatic() && property.isPublic()
-                    && def.getFullyQualifiedName().equals(property.getTypeRef().toString()))
+                .filter(Property::isEnumConstant)
                 .map(this::extractUpdatedNameFromJacksonPropertyIfPresent)
-                .filter(n -> !n.startsWith("$"))
+                .filter(Objects::nonNull)
+                .sorted()
                 .map(JsonNodeFactory.instance::textNode)
                 .toArray(JsonNode[]::new);
             return enumProperty(enumValues);
@@ -698,25 +879,67 @@ public abstract class AbstractJsonSchema<T, B> {
     }
   }
 
-  // Flag to detect cycles
-  private boolean resolving = false;
-
-  private T resolveNestedClass(String name, TypeDef def, Set<String> visited, InternalSchemaSwaps schemaSwaps) {
-    if (!resolving) {
-      visited.clear();
-      resolving = true;
-    } else {
-      String visitedName = name + ":" + def.getFullyQualifiedName();
-      if (!def.getFullyQualifiedName().startsWith("java") && visited.contains(visitedName)) {
-        throw new IllegalArgumentException(
-            "Found a cyclic reference involving the field " + name + " of type " + def.getFullyQualifiedName());
-      }
-      visited.add(visitedName);
+  private T resolveNestedClass(String name, TypeDef def, LinkedHashMap<String, String> visited,
+      InternalSchemaSwaps schemaSwaps) {
+    String fullyQualifiedName = def.getFullyQualifiedName();
+    T res = resolveJavaClass(fullyQualifiedName);
+    if (res != null) {
+      return res;
+    }
+    if (visited.put(fullyQualifiedName, name) != null) {
+      throw new IllegalArgumentException(
+          "Found a cyclic reference involving the field of type " + fullyQualifiedName + " starting a field "
+              + visited.entrySet().stream().map(e -> e.getValue() + " >>\n" + e.getKey()).collect(Collectors.joining(".")) + "."
+              + name);
     }
 
-    T res = internalFromImpl(def, visited, schemaSwaps);
-    resolving = false;
+    res = internalFromImpl(def, visited, schemaSwaps);
+    visited.remove(fullyQualifiedName);
     return res;
+  }
+
+  private T resolveJavaClass(String fullyQualifiedName) {
+    if ((!fullyQualifiedName.startsWith("java.") && !fullyQualifiedName.startsWith("javax."))
+        || COMPLEX_JAVA_TYPES.contains(fullyQualifiedName)) {
+      return null;
+    }
+    String mapping = null;
+    boolean array = false;
+    try {
+      Class<?> clazz = Class.forName(fullyQualifiedName);
+      JsonSchema schema = GENERATOR.generateSchema(clazz);
+      if (schema.isArraySchema()) {
+        Items items = schema.asArraySchema().getItems();
+        if (items.isSingleItems()) {
+          array = true;
+          schema = items.asSingleItems().getSchema();
+        }
+      }
+      if (schema.isIntegerSchema()) {
+        mapping = INTEGER_MARKER;
+      } else if (schema.isNumberSchema()) {
+        mapping = NUMBER_MARKER;
+      } else if (schema.isBooleanSchema()) {
+        mapping = BOOLEAN_MARKER;
+      } else if (schema.isStringSchema()) {
+        mapping = STRING_MARKER;
+      }
+    } catch (Exception e) {
+      logger.debug(
+          "Something went wrong with detecting java type schema for {}, will use full introspection instead",
+          fullyQualifiedName, e);
+    }
+    // cache the result for subsequent calls
+    if (mapping != null) {
+      if (array) {
+        return arrayLikeProperty(singleProperty(mapping));
+      }
+      COMMON_MAPPINGS.put(TypeDef.forName(fullyQualifiedName).toReference(), mapping);
+      return singleProperty(mapping);
+    }
+
+    COMPLEX_JAVA_TYPES.add(fullyQualifiedName);
+    return null;
   }
 
   /**

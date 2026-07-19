@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,10 +15,12 @@
  */
 package io.fabric8.openshift.client.server.mock;
 
-import io.fabric8.openshift.api.model.miscellaneous.network.operator.v1.EgressRouter;
-import io.fabric8.openshift.api.model.miscellaneous.network.operator.v1.EgressRouterBuilder;
-import io.fabric8.openshift.api.model.miscellaneous.network.operator.v1.EgressRouterList;
-import io.fabric8.openshift.api.model.miscellaneous.network.operator.v1.EgressRouterListBuilder;
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
+import io.fabric8.openshift.api.model.operator.network.v1.EgressRouter;
+import io.fabric8.openshift.api.model.operator.network.v1.EgressRouterBuilder;
+import io.fabric8.openshift.api.model.operator.network.v1.EgressRouterList;
+import io.fabric8.openshift.api.model.operator.network.v1.EgressRouterListBuilder;
 import io.fabric8.openshift.client.OpenShiftClient;
 import org.junit.jupiter.api.Test;
 
@@ -26,10 +28,10 @@ import java.net.HttpURLConnection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class EgressRouterTest {
   private OpenShiftClient client;
-  private OpenShiftMockServer server;
+  KubernetesMockServer server;
 
   @Test
   void get() {
@@ -74,7 +76,8 @@ class EgressRouterTest {
         .once();
 
     // When
-    boolean isDeleted = client.egressRouters().inNamespace("ns1").withName("egressrouter1").delete().size() == 1;
+    boolean isDeleted = client.egressRouters().inNamespace("ns1").withName("egressrouter1").withGracePeriod(0).delete()
+        .size() == 1;
 
     // Then
     assertThat(isDeleted).isTrue();

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.vertx;
 
 import io.vertx.core.Future;
@@ -42,7 +41,7 @@ class InputStreamReadStream implements ReadStream<Buffer> {
   private Handler<Void> endHandler;
   private byte[] bytes;
 
-  public InputStreamReadStream(VertxHttpRequest vertxHttpRequest, InputStream is, HttpClientRequest request) {
+  InputStreamReadStream(VertxHttpRequest vertxHttpRequest, InputStream is, HttpClientRequest request) {
     this.vertxHttpRequest = vertxHttpRequest;
     this.is = is;
     this.request = request;

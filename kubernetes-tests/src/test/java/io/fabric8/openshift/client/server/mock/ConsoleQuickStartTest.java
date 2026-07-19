@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,8 @@
  */
 package io.fabric8.openshift.client.server.mock;
 
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.openshift.api.model.console.v1.ConsoleQuickStart;
 import io.fabric8.openshift.api.model.console.v1.ConsoleQuickStartBuilder;
 import io.fabric8.openshift.api.model.console.v1.ConsoleQuickStartList;
@@ -27,10 +29,10 @@ import java.net.HttpURLConnection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class ConsoleQuickStartTest {
   private OpenShiftClient client;
-  private OpenShiftMockServer server;
+  KubernetesMockServer server;
 
   @Test
   void get() {
@@ -75,7 +77,7 @@ class ConsoleQuickStartTest {
         .once();
 
     // When
-    boolean isDeleted = client.console().consoleQuickStarts().withName("cluster").delete().size() == 1;
+    boolean isDeleted = client.console().consoleQuickStarts().withName("cluster").withGracePeriod(0).delete().size() == 1;
 
     // Then
     assertThat(isDeleted).isTrue();

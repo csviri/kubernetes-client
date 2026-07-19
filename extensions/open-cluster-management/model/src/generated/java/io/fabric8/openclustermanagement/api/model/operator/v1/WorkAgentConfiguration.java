@@ -1,0 +1,235 @@
+
+package io.fabric8.openclustermanagement.api.model.operator.v1;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import javax.annotation.processing.Generated;
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.Duration;
+import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.IntOrString;
+import io.fabric8.kubernetes.api.model.KubernetesResource;
+import io.fabric8.kubernetes.api.model.LabelSelector;
+import io.fabric8.kubernetes.api.model.LocalObjectReference;
+import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.api.model.ObjectReference;
+import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
+import io.fabric8.kubernetes.api.model.PodTemplateSpec;
+import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
+import io.sundr.builder.annotations.Buildable;
+import io.sundr.builder.annotations.BuildableReference;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+import lombok.experimental.Accessors;
+
+@JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonPropertyOrder({
+    "appliedManifestWorkEvictionGracePeriod",
+    "featureGates",
+    "hubKubeAPIBurst",
+    "hubKubeAPIQPS",
+    "kubeAPIBurst",
+    "kubeAPIQPS",
+    "statusSyncInterval"
+})
+@ToString
+@EqualsAndHashCode
+@Accessors(prefix = {
+    "_",
+    ""
+})
+@Buildable(editableEnabled = false, validationEnabled = false, generateBuilderPackage = false, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder", refs = {
+    @BuildableReference(ObjectMeta.class),
+    @BuildableReference(LabelSelector.class),
+    @BuildableReference(Container.class),
+    @BuildableReference(PodTemplateSpec.class),
+    @BuildableReference(ResourceRequirements.class),
+    @BuildableReference(IntOrString.class),
+    @BuildableReference(ObjectReference.class),
+    @BuildableReference(LocalObjectReference.class),
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
+})
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class WorkAgentConfiguration implements Editable<WorkAgentConfigurationBuilder>, KubernetesResource
+{
+
+    @JsonProperty("appliedManifestWorkEvictionGracePeriod")
+    private Duration appliedManifestWorkEvictionGracePeriod;
+    @JsonProperty("featureGates")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<FeatureGate> featureGates = new ArrayList<>();
+    @JsonProperty("hubKubeAPIBurst")
+    private Integer hubKubeAPIBurst;
+    @JsonProperty("hubKubeAPIQPS")
+    private Integer hubKubeAPIQPS;
+    @JsonProperty("kubeAPIBurst")
+    private Integer kubeAPIBurst;
+    @JsonProperty("kubeAPIQPS")
+    private Integer kubeAPIQPS;
+    @JsonProperty("statusSyncInterval")
+    private Duration statusSyncInterval;
+    @JsonIgnore
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
+
+    /**
+     * No args constructor for use in serialization
+     */
+    public WorkAgentConfiguration() {
+    }
+
+    public WorkAgentConfiguration(Duration appliedManifestWorkEvictionGracePeriod, List<FeatureGate> featureGates, Integer hubKubeAPIBurst, Integer hubKubeAPIQPS, Integer kubeAPIBurst, Integer kubeAPIQPS, Duration statusSyncInterval) {
+        super();
+        this.appliedManifestWorkEvictionGracePeriod = appliedManifestWorkEvictionGracePeriod;
+        this.featureGates = featureGates;
+        this.hubKubeAPIBurst = hubKubeAPIBurst;
+        this.hubKubeAPIQPS = hubKubeAPIQPS;
+        this.kubeAPIBurst = kubeAPIBurst;
+        this.kubeAPIQPS = kubeAPIQPS;
+        this.statusSyncInterval = statusSyncInterval;
+    }
+
+    @JsonProperty("appliedManifestWorkEvictionGracePeriod")
+    public Duration getAppliedManifestWorkEvictionGracePeriod() {
+        return appliedManifestWorkEvictionGracePeriod;
+    }
+
+    @JsonProperty("appliedManifestWorkEvictionGracePeriod")
+    public void setAppliedManifestWorkEvictionGracePeriod(Duration appliedManifestWorkEvictionGracePeriod) {
+        this.appliedManifestWorkEvictionGracePeriod = appliedManifestWorkEvictionGracePeriod;
+    }
+
+    /**
+     * FeatureGates represents the list of feature gates for work If it is set empty, default feature gates will be used. If it is set, featuregate/Foo is an example of one item in FeatureGates:<br><p>   1. If featuregate/Foo does not exist, registration-operator will discard it<br><p>   2. If featuregate/Foo exists and is false by default. It is now possible to set featuregate/Foo=[false|true]<br><p>   3. If featuregate/Foo exists and is true by default. If a cluster-admin upgrading from 1 to 2 wants to continue having featuregate/Foo=false,<br><p>  	he can set featuregate/Foo=false before upgrading. Let's say the cluster-admin wants featuregate/Foo=false.
+     */
+    @JsonProperty("featureGates")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public List<FeatureGate> getFeatureGates() {
+        return featureGates;
+    }
+
+    /**
+     * FeatureGates represents the list of feature gates for work If it is set empty, default feature gates will be used. If it is set, featuregate/Foo is an example of one item in FeatureGates:<br><p>   1. If featuregate/Foo does not exist, registration-operator will discard it<br><p>   2. If featuregate/Foo exists and is false by default. It is now possible to set featuregate/Foo=[false|true]<br><p>   3. If featuregate/Foo exists and is true by default. If a cluster-admin upgrading from 1 to 2 wants to continue having featuregate/Foo=false,<br><p>  	he can set featuregate/Foo=false before upgrading. Let's say the cluster-admin wants featuregate/Foo=false.
+     */
+    @JsonProperty("featureGates")
+    public void setFeatureGates(List<FeatureGate> featureGates) {
+        this.featureGates = featureGates;
+    }
+
+    /**
+     * HubKubeAPIBurst indicates the maximum burst of the throttle while talking with apiserver on the hub cluster. If it is set empty, use the default value: 100
+     */
+    @JsonProperty("hubKubeAPIBurst")
+    public Integer getHubKubeAPIBurst() {
+        return hubKubeAPIBurst;
+    }
+
+    /**
+     * HubKubeAPIBurst indicates the maximum burst of the throttle while talking with apiserver on the hub cluster. If it is set empty, use the default value: 100
+     */
+    @JsonProperty("hubKubeAPIBurst")
+    public void setHubKubeAPIBurst(Integer hubKubeAPIBurst) {
+        this.hubKubeAPIBurst = hubKubeAPIBurst;
+    }
+
+    /**
+     * HubKubeAPIQPS indicates the maximum QPS while talking with apiserver on the hub cluster. If it is set empty, use the default value: 50
+     */
+    @JsonProperty("hubKubeAPIQPS")
+    public Integer getHubKubeAPIQPS() {
+        return hubKubeAPIQPS;
+    }
+
+    /**
+     * HubKubeAPIQPS indicates the maximum QPS while talking with apiserver on the hub cluster. If it is set empty, use the default value: 50
+     */
+    @JsonProperty("hubKubeAPIQPS")
+    public void setHubKubeAPIQPS(Integer hubKubeAPIQPS) {
+        this.hubKubeAPIQPS = hubKubeAPIQPS;
+    }
+
+    /**
+     * KubeAPIBurst indicates the maximum burst of the throttle while talking with apiserver on the spoke cluster. If it is set empty, use the default value: 100
+     */
+    @JsonProperty("kubeAPIBurst")
+    public Integer getKubeAPIBurst() {
+        return kubeAPIBurst;
+    }
+
+    /**
+     * KubeAPIBurst indicates the maximum burst of the throttle while talking with apiserver on the spoke cluster. If it is set empty, use the default value: 100
+     */
+    @JsonProperty("kubeAPIBurst")
+    public void setKubeAPIBurst(Integer kubeAPIBurst) {
+        this.kubeAPIBurst = kubeAPIBurst;
+    }
+
+    /**
+     * KubeAPIQPS indicates the maximum QPS while talking with apiserver on the spoke cluster. If it is set empty, use the default value: 50
+     */
+    @JsonProperty("kubeAPIQPS")
+    public Integer getKubeAPIQPS() {
+        return kubeAPIQPS;
+    }
+
+    /**
+     * KubeAPIQPS indicates the maximum QPS while talking with apiserver on the spoke cluster. If it is set empty, use the default value: 50
+     */
+    @JsonProperty("kubeAPIQPS")
+    public void setKubeAPIQPS(Integer kubeAPIQPS) {
+        this.kubeAPIQPS = kubeAPIQPS;
+    }
+
+    @JsonProperty("statusSyncInterval")
+    public Duration getStatusSyncInterval() {
+        return statusSyncInterval;
+    }
+
+    @JsonProperty("statusSyncInterval")
+    public void setStatusSyncInterval(Duration statusSyncInterval) {
+        this.statusSyncInterval = statusSyncInterval;
+    }
+
+    @JsonIgnore
+    public WorkAgentConfigurationBuilder edit() {
+        return new WorkAgentConfigurationBuilder(this);
+    }
+
+    @JsonIgnore
+    public WorkAgentConfigurationBuilder toBuilder() {
+        return edit();
+    }
+
+    @JsonAnyGetter
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
+        return this.additionalProperties;
+    }
+
+    @JsonAnySetter
+    public void setAdditionalProperty(String name, Object value) {
+        this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
+    }
+
+}

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes;
 
 import io.fabric8.junit.jupiter.api.LoadKubernetesManifests;
@@ -61,7 +60,10 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -135,6 +137,15 @@ class PodIT {
     Pod pod1 = client.pods().withName("pod-standard").edit(p -> new PodBuilder(p)
         .editMetadata().withResourceVersion(null).addToLabels("foo", "bar").endMetadata().build());
     assertEquals("bar", pod1.getMetadata().getLabels().get("foo"));
+  }
+
+  @Test
+  void readinessGate() {
+    Map<String, Boolean> readiness = new HashMap<>();
+    readiness.put("test", true);
+    Pod pod1 = client.pods().withName("pod-standard").patchReadinessGateStatus(readiness);
+    assertEquals("True", pod1.getStatus().getConditions().stream().filter(pc -> pc.getType().equals("test")).findFirst()
+        .orElseThrow(() -> new NoSuchElementException()).getStatus());
   }
 
   @Test

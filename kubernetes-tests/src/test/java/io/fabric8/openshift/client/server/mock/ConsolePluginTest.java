@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,10 +15,12 @@
  */
 package io.fabric8.openshift.client.server.mock;
 
-import io.fabric8.openshift.api.model.console.v1alpha1.ConsolePlugin;
-import io.fabric8.openshift.api.model.console.v1alpha1.ConsolePluginBuilder;
-import io.fabric8.openshift.api.model.console.v1alpha1.ConsolePluginList;
-import io.fabric8.openshift.api.model.console.v1alpha1.ConsolePluginListBuilder;
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
+import io.fabric8.openshift.api.model.console.v1.ConsolePlugin;
+import io.fabric8.openshift.api.model.console.v1.ConsolePluginBuilder;
+import io.fabric8.openshift.api.model.console.v1.ConsolePluginList;
+import io.fabric8.openshift.api.model.console.v1.ConsolePluginListBuilder;
 import io.fabric8.openshift.client.OpenShiftClient;
 import org.junit.jupiter.api.Test;
 
@@ -26,15 +28,15 @@ import java.net.HttpURLConnection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class ConsolePluginTest {
   private OpenShiftClient client;
-  private OpenShiftMockServer server;
+  KubernetesMockServer server;
 
   @Test
   void get() {
     // Given
-    server.expect().get().withPath("/apis/console.openshift.io/v1alpha1/consoleplugins/test-get")
+    server.expect().get().withPath("/apis/console.openshift.io/v1/consoleplugins/test-get")
         .andReturn(HttpURLConnection.HTTP_OK, createNewConsolePlugin("test-get"))
         .once();
 
@@ -50,7 +52,7 @@ class ConsolePluginTest {
   @Test
   void list() {
     // Given
-    server.expect().get().withPath("/apis/console.openshift.io/v1alpha1/consoleplugins")
+    server.expect().get().withPath("/apis/console.openshift.io/v1/consoleplugins")
         .andReturn(HttpURLConnection.HTTP_OK, new ConsolePluginListBuilder()
             .addToItems(createNewConsolePlugin("test-list"))
             .build())
@@ -69,12 +71,12 @@ class ConsolePluginTest {
   @Test
   void delete() {
     // Given
-    server.expect().delete().withPath("/apis/console.openshift.io/v1alpha1/consoleplugins/cluster")
+    server.expect().delete().withPath("/apis/console.openshift.io/v1/consoleplugins/cluster")
         .andReturn(HttpURLConnection.HTTP_OK, createNewConsolePlugin("cluster"))
         .once();
 
     // When
-    boolean isDeleted = client.console().consolePlugins().withName("cluster").delete().size() == 1;
+    boolean isDeleted = client.console().consolePlugins().withName("cluster").withGracePeriod(0).delete().size() == 1;
 
     // Then
     assertThat(isDeleted).isTrue();
@@ -85,12 +87,14 @@ class ConsolePluginTest {
         .withNewMetadata().withName(name).endMetadata()
         .withNewSpec()
         .withDisplayName("Dev Sandbox Console Plugin")
+        .withNewBackend()
         .withNewService()
         .withBasePath("/")
         .withName("dev-sandbox-console-plugin")
         .withNamespace("dev-sandbox-console-plugin")
         .withPort(9001)
         .endService()
+        .endBackend()
         .endSpec()
         .build();
   }

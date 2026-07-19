@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,16 +17,18 @@ package io.fabric8.kubernetes.client.http;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import org.opentest4j.AssertionFailedError;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class TestStandardHttpClient
     extends StandardHttpClient<TestStandardHttpClient, TestStandardHttpClientFactory, TestStandardHttpClientBuilder> {
@@ -37,17 +39,15 @@ public class TestStandardHttpClient
   @Getter
   private final List<RecordedConsumeBytesDirect> recordedConsumeBytesDirects;
 
-  protected TestStandardHttpClient(TestStandardHttpClientBuilder builder) {
-    super(builder);
+  protected TestStandardHttpClient(TestStandardHttpClientBuilder builder, AtomicBoolean closed) {
+    super(builder, closed);
     expectations = new HashMap<>();
     recordedBuildWebSocketDirects = new ArrayList<>();
     recordedConsumeBytesDirects = new ArrayList<>();
   }
 
   @Override
-  public void close() {
-    recordedConsumeBytesDirects.clear();
-    recordedBuildWebSocketDirects.clear();
+  public void doClose() {
     expectations.values().forEach(e -> {
       e.futures.clear();
       e.wsFutures.clear();
@@ -64,7 +64,7 @@ public class TestStandardHttpClient
       future = find(standardWebSocketBuilder.asHttpRequest().uri()).wsFutures.poll()
           .get(standardWebSocketBuilder, listener);
     } catch (Exception e) {
-      throw new AssertionFailedError("Unexpected exception", e);
+      throw new AssertionError("Unexpected exception", e);
     }
     recordedBuildWebSocketDirects.add(new RecordedBuildWebSocketDirect(standardWebSocketBuilder, listener, future));
     return future;
@@ -77,7 +77,7 @@ public class TestStandardHttpClient
     try {
       future = find(request.uri()).futures.poll().get(request, consumer);
     } catch (Exception e) {
-      throw new AssertionFailedError("Unexpected exception", e);
+      throw new AssertionError("Unexpected exception", e);
     }
     recordedConsumeBytesDirects.add(new RecordedConsumeBytesDirect(request, consumer, future));
     return future;
@@ -95,7 +95,7 @@ public class TestStandardHttpClient
         return e.getValue();
       }
     }
-    throw new AssertionFailedError("Missing expectation for path: " + path);
+    throw new AssertionError("Missing expectation for path: " + path);
   }
 
   public final TestStandardHttpClient expect(String pathRegex, Throwable exception) {
@@ -123,6 +123,26 @@ public class TestStandardHttpClient
   public final TestStandardHttpClient wsExpect(String pathRegex, WsFutureProvider wsFuture) {
     final Expectation expectation = expectations.compute(pathRegex, (k, v) -> v == null ? new Expectation() : v);
     expectation.wsFutures.add(wsFuture);
+    return this;
+  }
+
+  public final TestStandardHttpClient expect(String pathRegex, int statusCode) {
+    return expect(pathRegex, statusCode, (byte[]) null);
+  }
+
+  public final TestStandardHttpClient expect(String pathRegex, int statusCode, String body) {
+    return expect(pathRegex, statusCode, body.getBytes(StandardCharsets.UTF_8));
+  }
+
+  public final TestStandardHttpClient expect(String pathRegex, int statusCode, byte[] body) {
+    final Expectation expectation = expectations.compute(pathRegex, (k, v) -> v == null ? new Expectation() : v);
+    expectation.futures.add((r, c) -> {
+      final AsyncBody asyncBody = new TestAsyncBody();
+      if (body != null) {
+        c.consume(Collections.singletonList(ByteBuffer.wrap(body)), asyncBody);
+      }
+      return CompletableFuture.completedFuture(new TestHttpResponse<AsyncBody>().withCode(statusCode).withBody(asyncBody));
+    });
     return this;
   }
 

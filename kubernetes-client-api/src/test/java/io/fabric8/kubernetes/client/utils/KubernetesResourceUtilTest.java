@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.utils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -37,6 +36,8 @@ import org.assertj.core.data.MapEntry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -122,14 +123,32 @@ class KubernetesResourceUtilTest {
   void testNames() {
     assertTrue(KubernetesResourceUtil.isValidName(KubernetesResourceUtil.getName(configMap1)));
     assertFalse(KubernetesResourceUtil.isValidName("test.invalid.name"));
-    assertTrue(KubernetesResourceUtil.isValidLabelOrAnnotation(KubernetesResourceUtil.getOrCreateAnnotations(configMap1)));
+    assertTrue(KubernetesResourceUtil.areLabelsValid(KubernetesResourceUtil.getOrCreateAnnotations(configMap1)));
     assertFalse(KubernetesResourceUtil
-        .isValidLabelOrAnnotation(Collections.singletonMap("NoUppercaseOrSpecialCharsLike=Equals", "bar")));
+        .areLabelsValid(Collections.singletonMap("NoUppercaseOrSpecialCharsLike=Equals", "bar")));
 
     assertTrue(KubernetesResourceUtil.isValidName(KubernetesResourceUtil.sanitizeName("test.invalid.name")));
     assertTrue(KubernetesResourceUtil.isValidName(KubernetesResourceUtil.sanitizeName("90notcool-n@me")));
     assertTrue(KubernetesResourceUtil.isValidName(
         KubernetesResourceUtil.sanitizeName("90notcool-n@me_______waytoooooooooolooooooooongand should be shorten for sure")));
+  }
+
+  @Test
+  void testSubdomainValidation() {
+    assertTrue(KubernetesResourceUtil.isValidSubdomainName("a.b"));
+    assertFalse(KubernetesResourceUtil.isValidSubdomainName("a..b"));
+  }
+
+  @Test
+  void testKeyValidation() {
+    assertTrue(KubernetesResourceUtil.isValidKey("domain.prefix.io/label.key"));
+    assertFalse(KubernetesResourceUtil.isValidKey("domain.prefix.io?label.key"));
+  }
+
+  @Test
+  void testAnnotationValidation() {
+    assertTrue(
+        KubernetesResourceUtil.areAnnotationsValid(Collections.singletonMap("simple-key", "Something not valid for a label!")));
   }
 
   @Test
@@ -350,6 +369,36 @@ class KubernetesResourceUtilTest {
         .extracting(ConfigMap::getData)
         .asInstanceOf(InstanceOfAssertFactories.MAP)
         .contains(mapEntries);
+  }
+
+  @ParameterizedTest(name = "S5998: KUBERNETES_SUBDOMAIN_REGEX matches valid subdomain ''{0}''")
+  @ValueSource(strings = {
+      "a",
+      "abc",
+      "a-b",
+      "a--b",
+      "a.b.c",
+      "my-app.example.com",
+      "a1.b2.c3",
+      "0"
+  })
+  void subdomainRegex_shouldMatchValidSubdomains(String validSubdomain) {
+    assertThat(KubernetesResourceUtil.KUBERNETES_SUBDOMAIN_REGEX.matcher(validSubdomain).matches()).isTrue();
+  }
+
+  @ParameterizedTest(name = "S5998: KUBERNETES_SUBDOMAIN_REGEX rejects invalid subdomain ''{0}''")
+  @ValueSource(strings = {
+      "-a",
+      "a-",
+      ".a",
+      "a.",
+      "a..b",
+      "a.-b",
+      "A",
+      "a!b"
+  })
+  void subdomainRegex_shouldRejectInvalidSubdomains(String invalidSubdomain) {
+    assertThat(KubernetesResourceUtil.KUBERNETES_SUBDOMAIN_REGEX.matcher(invalidSubdomain).matches()).isFalse();
   }
 
   private MapEntry<String, String> createExpectedEntry(String key, Path filePath) throws IOException {

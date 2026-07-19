@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,6 +55,25 @@ class PodEphemeralContainersIT {
 
     List<EphemeralContainer> containers = pod.getSpec().getEphemeralContainers();
     assertTrue(containers.stream().anyMatch(c -> c.getName().equals("debugger-1")));
+  }
+
+  @Test
+  void editSubresource() {
+    Pod pod = client.pods().withName("pod-standard")
+        .subresource("ephemeralcontainers")
+        .edit(p -> new PodBuilder(p)
+            .editMetadata().withResourceVersion(null).endMetadata()
+            .editSpec()
+            .addNewEphemeralContainer()
+            .withName("debugger-sub")
+            .withImage("alpine")
+            .withCommand("sh")
+            .endEphemeralContainer()
+            .endSpec()
+            .build());
+
+    List<EphemeralContainer> containers = pod.getSpec().getEphemeralContainers();
+    assertTrue(containers.stream().anyMatch(c -> c.getName().equals("debugger-sub")));
   }
 
   @Test

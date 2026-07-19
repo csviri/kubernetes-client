@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,7 +31,7 @@ import io.fabric8.kubernetes.client.dsl.MixedOperation;
 import io.fabric8.kubernetes.client.dsl.Resource;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
-import okhttp3.mockwebserver.RecordedRequest;
+import io.fabric8.mockwebserver.http.RecordedRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -39,11 +39,11 @@ import java.net.HttpURLConnection;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
-import static junit.framework.TestCase.assertNotNull;
-import static junit.framework.TestCase.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnableKubernetesMockClient
+@EnableKubernetesMockClient(https = false)
 class ServiceTest {
 
   KubernetesMockServer server;
@@ -144,7 +144,7 @@ class ServiceTest {
         .andReturn(200, service)
         .once();
 
-    boolean isDeleted = client.services().inNamespace("test").withName("httpbin").delete().size() == 1;
+    boolean isDeleted = client.services().inNamespace("test").withName("httpbin").withGracePeriod(0).delete().size() == 1;
     assertTrue(isDeleted);
   }
 

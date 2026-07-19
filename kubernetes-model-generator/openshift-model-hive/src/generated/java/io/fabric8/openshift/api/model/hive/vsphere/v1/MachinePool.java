@@ -1,8 +1,9 @@
 
 package io.fabric8.openshift.api.model.hive.vsphere.v1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,7 +11,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
@@ -20,27 +24,28 @@ import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * MachinePool stores the configuration for a machine pool installed on vSphere.
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "coresPerSocket",
     "cpus",
     "memoryMB",
-    "osDisk"
+    "osDisk",
+    "resourcePool"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -54,9 +59,14 @@ import lombok.experimental.Accessors;
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class MachinePool implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class MachinePool implements Editable<MachinePoolBuilder>, KubernetesResource
 {
 
     @JsonProperty("coresPerSocket")
@@ -67,72 +77,118 @@ public class MachinePool implements KubernetesResource
     private Long memoryMB;
     @JsonProperty("osDisk")
     private OSDisk osDisk;
+    @JsonProperty("resourcePool")
+    private String resourcePool;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public MachinePool() {
     }
 
-    /**
-     * 
-     * @param memoryMB
-     * @param cpus
-     * @param coresPerSocket
-     * @param osDisk
-     */
-    public MachinePool(Integer coresPerSocket, Integer cpus, Long memoryMB, OSDisk osDisk) {
+    public MachinePool(Integer coresPerSocket, Integer cpus, Long memoryMB, OSDisk osDisk, String resourcePool) {
         super();
         this.coresPerSocket = coresPerSocket;
         this.cpus = cpus;
         this.memoryMB = memoryMB;
         this.osDisk = osDisk;
+        this.resourcePool = resourcePool;
     }
 
+    /**
+     * NumCoresPerSocket is the number of cores per socket in a vm. The number of vCPUs on the vm will be NumCPUs/NumCoresPerSocket.
+     */
     @JsonProperty("coresPerSocket")
     public Integer getCoresPerSocket() {
         return coresPerSocket;
     }
 
+    /**
+     * NumCoresPerSocket is the number of cores per socket in a vm. The number of vCPUs on the vm will be NumCPUs/NumCoresPerSocket.
+     */
     @JsonProperty("coresPerSocket")
     public void setCoresPerSocket(Integer coresPerSocket) {
         this.coresPerSocket = coresPerSocket;
     }
 
+    /**
+     * NumCPUs is the total number of virtual processor cores to assign a vm.
+     */
     @JsonProperty("cpus")
     public Integer getCpus() {
         return cpus;
     }
 
+    /**
+     * NumCPUs is the total number of virtual processor cores to assign a vm.
+     */
     @JsonProperty("cpus")
     public void setCpus(Integer cpus) {
         this.cpus = cpus;
     }
 
+    /**
+     * Memory is the size of a VM's memory in MB.
+     */
     @JsonProperty("memoryMB")
     public Long getMemoryMB() {
         return memoryMB;
     }
 
+    /**
+     * Memory is the size of a VM's memory in MB.
+     */
     @JsonProperty("memoryMB")
     public void setMemoryMB(Long memoryMB) {
         this.memoryMB = memoryMB;
     }
 
+    /**
+     * MachinePool stores the configuration for a machine pool installed on vSphere.
+     */
     @JsonProperty("osDisk")
     public OSDisk getOsDisk() {
         return osDisk;
     }
 
+    /**
+     * MachinePool stores the configuration for a machine pool installed on vSphere.
+     */
     @JsonProperty("osDisk")
     public void setOsDisk(OSDisk osDisk) {
         this.osDisk = osDisk;
     }
 
+    /**
+     * ResourcePool is the name of the resource pool that will be used for virtual machines. If it is not present, a default value will be used.
+     */
+    @JsonProperty("resourcePool")
+    public String getResourcePool() {
+        return resourcePool;
+    }
+
+    /**
+     * ResourcePool is the name of the resource pool that will be used for virtual machines. If it is not present, a default value will be used.
+     */
+    @JsonProperty("resourcePool")
+    public void setResourcePool(String resourcePool) {
+        this.resourcePool = resourcePool;
+    }
+
+    @JsonIgnore
+    public MachinePoolBuilder edit() {
+        return new MachinePoolBuilder(this);
+    }
+
+    @JsonIgnore
+    public MachinePoolBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -140,6 +196,10 @@ public class MachinePool implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

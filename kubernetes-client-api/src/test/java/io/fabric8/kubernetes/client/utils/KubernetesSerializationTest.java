@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.utils;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -23,6 +22,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import io.fabric8.kubernetes.api.model.GenericKubernetesResource;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.api.model.apiextensions.v1beta1.CustomResourceDefinition;
 import io.fabric8.kubernetes.model.annotation.Group;
 import io.fabric8.kubernetes.model.annotation.Version;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +34,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.io.IOException;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -86,6 +87,42 @@ class KubernetesSerializationTest {
           Arguments.of("customs.core.kubernetes.io/v1", "Pod", GenericKubernetesResource.class),
           Arguments.of("custom.core.kubernetes.io/v1", "Pods", GenericKubernetesResource.class));
     }
+  }
+
+  @Nested
+  class AsYaml {
+
+    private CustomResourceDefinition inputResource;
+
+    @BeforeEach
+    void loadYamlAsString() throws IOException {
+      try (var is = KubernetesSerializationTest.class.getResourceAsStream("/serialization/test-crd-schema.yml")) {
+        inputResource = Serialization.unmarshal(new String(is.readAllBytes()), CustomResourceDefinition.class);
+      }
+    }
+
+    @Test
+    void asYamlWithDefaults() {
+      assertThat(new KubernetesSerialization().asYaml(inputResource))
+          .contains("\"widgets.test.fabric8.io\"");
+    }
+
+    @Test
+    void asYamlWithDefaultYamlDumpSettings() {
+      kubernetesSerialization = new KubernetesSerialization(new ObjectMapper(), true,
+          new YamlDumpSettingsBuilder().build());
+      assertThat(kubernetesSerialization.asYaml(inputResource))
+          .contains("\"widgets.test.fabric8.io\"");
+    }
+
+    @Test
+    void asYamlWithDefaultYamlDumpSettingsMinimizeQuotes() {
+      kubernetesSerialization = new KubernetesSerialization(new ObjectMapper(), true,
+          new YamlDumpSettingsBuilder().setMinimizeQuotes(true).build());
+      assertThat(kubernetesSerialization.asYaml(inputResource))
+          .contains("widgets.test.fabric8.io");
+    }
+
   }
 
   @Version("v1")

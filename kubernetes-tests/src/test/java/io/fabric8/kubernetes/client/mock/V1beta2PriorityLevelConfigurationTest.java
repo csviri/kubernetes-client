@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,9 +31,9 @@ import java.util.List;
 
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
-@EnableKubernetesMockClient
+@EnableKubernetesMockClient(https = false)
 class V1beta2PriorityLevelConfigurationTest {
-  private KubernetesMockServer server;
+  KubernetesMockServer server;
   private KubernetesClient client;
 
   @Test
@@ -111,7 +111,7 @@ class V1beta2PriorityLevelConfigurationTest {
 
     // When
     boolean isDeleted = client.flowControl().v1beta2().priorityLevelConfigurations().withName("prioritylevelconfiguration1")
-        .delete().size() == 1;
+        .withGracePeriod(0).delete().size() == 1;
 
     // Then
     AssertionsForClassTypes.assertThat(isDeleted).isTrue();

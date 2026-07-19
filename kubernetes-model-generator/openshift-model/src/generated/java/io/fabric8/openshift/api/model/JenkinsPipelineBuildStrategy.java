@@ -2,9 +2,10 @@
 package io.fabric8.openshift.api.model;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -12,37 +13,38 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
-import io.fabric8.kubernetes.api.model.LocalObjectReference;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * JenkinsPipelineBuildStrategy holds parameters specific to a Jenkins Pipeline build. Deprecated: use OpenShift Pipelines
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "env",
     "jenkinsfile",
     "jenkinsfilePath"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -55,35 +57,33 @@ import lombok.experimental.Accessors;
     @BuildableReference(ResourceRequirements.class),
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
-    @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(io.fabric8.kubernetes.api.model.LocalObjectReference.class),
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class JenkinsPipelineBuildStrategy implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class JenkinsPipelineBuildStrategy implements Editable<JenkinsPipelineBuildStrategyBuilder>, KubernetesResource
 {
 
     @JsonProperty("env")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<EnvVar> env = new ArrayList<EnvVar>();
+    private List<EnvVar> env = new ArrayList<>();
     @JsonProperty("jenkinsfile")
     private String jenkinsfile;
     @JsonProperty("jenkinsfilePath")
     private String jenkinsfilePath;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public JenkinsPipelineBuildStrategy() {
     }
 
-    /**
-     * 
-     * @param jenkinsfilePath
-     * @param jenkinsfile
-     * @param env
-     */
     public JenkinsPipelineBuildStrategy(List<EnvVar> env, String jenkinsfile, String jenkinsfilePath) {
         super();
         this.env = env;
@@ -91,37 +91,67 @@ public class JenkinsPipelineBuildStrategy implements KubernetesResource
         this.jenkinsfilePath = jenkinsfilePath;
     }
 
+    /**
+     * env contains additional environment variables you want to pass into a build pipeline.
+     */
     @JsonProperty("env")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<EnvVar> getEnv() {
         return env;
     }
 
+    /**
+     * env contains additional environment variables you want to pass into a build pipeline.
+     */
     @JsonProperty("env")
     public void setEnv(List<EnvVar> env) {
         this.env = env;
     }
 
+    /**
+     * jenkinsfile defines the optional raw contents of a Jenkinsfile which defines a Jenkins pipeline build.
+     */
     @JsonProperty("jenkinsfile")
     public String getJenkinsfile() {
         return jenkinsfile;
     }
 
+    /**
+     * jenkinsfile defines the optional raw contents of a Jenkinsfile which defines a Jenkins pipeline build.
+     */
     @JsonProperty("jenkinsfile")
     public void setJenkinsfile(String jenkinsfile) {
         this.jenkinsfile = jenkinsfile;
     }
 
+    /**
+     * jenkinsfilePath is the optional path of the Jenkinsfile that will be used to configure the pipeline relative to the root of the context (contextDir). If both JenkinsfilePath &amp; Jenkinsfile are both not specified, this defaults to Jenkinsfile in the root of the specified contextDir.
+     */
     @JsonProperty("jenkinsfilePath")
     public String getJenkinsfilePath() {
         return jenkinsfilePath;
     }
 
+    /**
+     * jenkinsfilePath is the optional path of the Jenkinsfile that will be used to configure the pipeline relative to the root of the context (contextDir). If both JenkinsfilePath &amp; Jenkinsfile are both not specified, this defaults to Jenkinsfile in the root of the specified contextDir.
+     */
     @JsonProperty("jenkinsfilePath")
     public void setJenkinsfilePath(String jenkinsfilePath) {
         this.jenkinsfilePath = jenkinsfilePath;
     }
 
+    @JsonIgnore
+    public JenkinsPipelineBuildStrategyBuilder edit() {
+        return new JenkinsPipelineBuildStrategyBuilder(this);
+    }
+
+    @JsonIgnore
+    public JenkinsPipelineBuildStrategyBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -129,6 +159,10 @@ public class JenkinsPipelineBuildStrategy implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

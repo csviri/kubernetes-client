@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,8 +15,16 @@
  */
 package io.fabric8.kubernetes.client;
 
+import io.fabric8.kubernetes.api.model.admissionregistration.v1.MutatingAdmissionPolicy;
+import io.fabric8.kubernetes.api.model.admissionregistration.v1.MutatingAdmissionPolicyBinding;
+import io.fabric8.kubernetes.api.model.admissionregistration.v1.MutatingAdmissionPolicyBindingList;
+import io.fabric8.kubernetes.api.model.admissionregistration.v1.MutatingAdmissionPolicyList;
 import io.fabric8.kubernetes.api.model.admissionregistration.v1.MutatingWebhookConfiguration;
 import io.fabric8.kubernetes.api.model.admissionregistration.v1.MutatingWebhookConfigurationList;
+import io.fabric8.kubernetes.api.model.admissionregistration.v1.ValidatingAdmissionPolicy;
+import io.fabric8.kubernetes.api.model.admissionregistration.v1.ValidatingAdmissionPolicyBinding;
+import io.fabric8.kubernetes.api.model.admissionregistration.v1.ValidatingAdmissionPolicyBindingList;
+import io.fabric8.kubernetes.api.model.admissionregistration.v1.ValidatingAdmissionPolicyList;
 import io.fabric8.kubernetes.api.model.admissionregistration.v1.ValidatingWebhookConfiguration;
 import io.fabric8.kubernetes.api.model.admissionregistration.v1.ValidatingWebhookConfigurationList;
 import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation;
@@ -26,4 +34,40 @@ public interface V1AdmissionRegistrationAPIGroupDSL extends Client {
   NonNamespaceOperation<ValidatingWebhookConfiguration, ValidatingWebhookConfigurationList, Resource<ValidatingWebhookConfiguration>> validatingWebhookConfigurations();
 
   NonNamespaceOperation<MutatingWebhookConfiguration, MutatingWebhookConfigurationList, Resource<MutatingWebhookConfiguration>> mutatingWebhookConfigurations();
+
+  /**
+   * DSL entrypoint for admissionregistration.k8s.io/v1 ValidatingAdmissionPolicyBinding.
+   * ValidatingAdmissionPolicyBinding binds the ValidatingAdmissionPolicy with paramerized resources.
+   * ValidatingAdmissionPolicyBinding and parameter CRDs together define how cluster administrators configure policies for
+   * clusters.
+   *
+   * @return NonNamespaceOperation for ValidatingAdmissionPolicyBinding
+   */
+  NonNamespaceOperation<ValidatingAdmissionPolicyBinding, ValidatingAdmissionPolicyBindingList, Resource<ValidatingAdmissionPolicyBinding>> validatingAdmissionPolicyBindings();
+
+  /**
+   * DSL entrypoint for admissionregistration.k8s.io/v1 ValidatingAdmissionPolicy.
+   * ValidatingAdmissionPolicy describes the definition of an admission validation policy that accepts or rejects an object
+   * without changing it.
+   *
+   * @return NonNamespaceOperation for ValidatingAdmissionPolicy
+   */
+  NonNamespaceOperation<ValidatingAdmissionPolicy, ValidatingAdmissionPolicyList, Resource<ValidatingAdmissionPolicy>> validatingAdmissionPolicies();
+
+  /**
+   * DSL entrypoint for admissionregistration.k8s.io/v1 MutatingAdmissionPolicy.
+   * MutatingAdmissionPolicy describes the definition of an admission mutation policy that mutates an object
+   * coming into the admission chain.
+   *
+   * @return NonNamespaceOperation for MutatingAdmissionPolicy
+   */
+  NonNamespaceOperation<MutatingAdmissionPolicy, MutatingAdmissionPolicyList, Resource<MutatingAdmissionPolicy>> mutatingAdmissionPolicies();
+
+  /**
+   * DSL entrypoint for admissionregistration.k8s.io/v1 MutatingAdmissionPolicyBinding.
+   * MutatingAdmissionPolicyBinding binds the MutatingAdmissionPolicy with parameterized resources.
+   *
+   * @return NonNamespaceOperation for MutatingAdmissionPolicyBinding
+   */
+  NonNamespaceOperation<MutatingAdmissionPolicyBinding, MutatingAdmissionPolicyBindingList, Resource<MutatingAdmissionPolicyBinding>> mutatingAdmissionPolicyBindings();
 }

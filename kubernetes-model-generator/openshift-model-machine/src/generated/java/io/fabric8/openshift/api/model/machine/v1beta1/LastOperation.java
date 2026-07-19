@@ -1,8 +1,9 @@
 
 package io.fabric8.openshift.api.model.machine.v1beta1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,29 +11,32 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
 import io.fabric8.kubernetes.api.model.LocalObjectReference;
-import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * LastOperation represents the detail of the last performed operation on the MachineObject.
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "description",
     "lastUpdated",
     "state",
@@ -40,13 +44,12 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
 })
 @Buildable(editableEnabled = false, validationEnabled = false, generateBuilderPackage = false, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder", refs = {
-    @BuildableReference(ObjectMeta.class),
+    @BuildableReference(io.fabric8.kubernetes.api.model.ObjectMeta.class),
     @BuildableReference(LabelSelector.class),
     @BuildableReference(Container.class),
     @BuildableReference(PodTemplateSpec.class),
@@ -54,37 +57,34 @@ import lombok.experimental.Accessors;
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class LastOperation implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class LastOperation implements Editable<LastOperationBuilder>, KubernetesResource
 {
 
     @JsonProperty("description")
-    private java.lang.String description;
+    private String description;
     @JsonProperty("lastUpdated")
     private String lastUpdated;
     @JsonProperty("state")
-    private java.lang.String state;
+    private String state;
     @JsonProperty("type")
-    private java.lang.String type;
+    private String type;
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public LastOperation() {
     }
 
-    /**
-     * 
-     * @param lastUpdated
-     * @param description
-     * @param state
-     * @param type
-     */
-    public LastOperation(java.lang.String description, String lastUpdated, java.lang.String state, java.lang.String type) {
+    public LastOperation(String description, String lastUpdated, String state, String type) {
         super();
         this.description = description;
         this.lastUpdated = lastUpdated;
@@ -92,54 +92,93 @@ public class LastOperation implements KubernetesResource
         this.type = type;
     }
 
+    /**
+     * description is the human-readable description of the last operation.
+     */
     @JsonProperty("description")
-    public java.lang.String getDescription() {
+    public String getDescription() {
         return description;
     }
 
+    /**
+     * description is the human-readable description of the last operation.
+     */
     @JsonProperty("description")
-    public void setDescription(java.lang.String description) {
+    public void setDescription(String description) {
         this.description = description;
     }
 
+    /**
+     * LastOperation represents the detail of the last performed operation on the MachineObject.
+     */
     @JsonProperty("lastUpdated")
     public String getLastUpdated() {
         return lastUpdated;
     }
 
+    /**
+     * LastOperation represents the detail of the last performed operation on the MachineObject.
+     */
     @JsonProperty("lastUpdated")
     public void setLastUpdated(String lastUpdated) {
         this.lastUpdated = lastUpdated;
     }
 
+    /**
+     * state is the current status of the last performed operation. E.g. Processing, Failed, Successful etc
+     */
     @JsonProperty("state")
-    public java.lang.String getState() {
+    public String getState() {
         return state;
     }
 
+    /**
+     * state is the current status of the last performed operation. E.g. Processing, Failed, Successful etc
+     */
     @JsonProperty("state")
-    public void setState(java.lang.String state) {
+    public void setState(String state) {
         this.state = state;
     }
 
+    /**
+     * type is the type of operation which was last performed. E.g. Create, Delete, Update etc
+     */
     @JsonProperty("type")
-    public java.lang.String getType() {
+    public String getType() {
         return type;
     }
 
+    /**
+     * type is the type of operation which was last performed. E.g. Create, Delete, Update etc
+     */
     @JsonProperty("type")
-    public void setType(java.lang.String type) {
+    public void setType(String type) {
         this.type = type;
     }
 
+    @JsonIgnore
+    public LastOperationBuilder edit() {
+        return new LastOperationBuilder(this);
+    }
+
+    @JsonIgnore
+    public LastOperationBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
-    public Map<java.lang.String, Object> getAdditionalProperties() {
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 
     @JsonAnySetter
-    public void setAdditionalProperty(java.lang.String name, Object value) {
+    public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

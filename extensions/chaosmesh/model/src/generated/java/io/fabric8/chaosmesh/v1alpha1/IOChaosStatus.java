@@ -2,10 +2,10 @@
 package io.fabric8.chaosmesh.v1alpha1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -13,6 +13,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -30,23 +31,21 @@ import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * IOChaosStatus defines the observed state of IOChaos
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "conditions",
     "experiment",
     "instances"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -66,33 +65,27 @@ import lombok.experimental.Accessors;
     @BuildableReference(Volume.class),
     @BuildableReference(VolumeMount.class)
 })
-public class IOChaosStatus implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class IOChaosStatus implements Editable<IOChaosStatusBuilder>, KubernetesResource
 {
 
     @JsonProperty("conditions")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<ChaosCondition> conditions = new ArrayList<ChaosCondition>();
+    private List<ChaosCondition> conditions = new ArrayList<>();
     @JsonProperty("experiment")
     private ExperimentStatus experiment;
     @JsonProperty("instances")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private Map<String, Long> instances = new LinkedHashMap<String, Long>();
+    private Map<String, Long> instances = new LinkedHashMap<>();
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public IOChaosStatus() {
     }
 
-    /**
-     * 
-     * @param experiment
-     * @param instances
-     * @param conditions
-     */
     public IOChaosStatus(List<ChaosCondition> conditions, ExperimentStatus experiment, Map<String, Long> instances) {
         super();
         this.conditions = conditions;
@@ -100,44 +93,79 @@ public class IOChaosStatus implements KubernetesResource
         this.instances = instances;
     }
 
+    /**
+     * Conditions represents the current global condition of the chaos
+     */
     @JsonProperty("conditions")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<ChaosCondition> getConditions() {
         return conditions;
     }
 
+    /**
+     * Conditions represents the current global condition of the chaos
+     */
     @JsonProperty("conditions")
     public void setConditions(List<ChaosCondition> conditions) {
         this.conditions = conditions;
     }
 
+    /**
+     * IOChaosStatus defines the observed state of IOChaos
+     */
     @JsonProperty("experiment")
     public ExperimentStatus getExperiment() {
         return experiment;
     }
 
+    /**
+     * IOChaosStatus defines the observed state of IOChaos
+     */
     @JsonProperty("experiment")
     public void setExperiment(ExperimentStatus experiment) {
         this.experiment = experiment;
     }
 
+    /**
+     * Instances always specifies podiochaos generation or empty
+     */
     @JsonProperty("instances")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public Map<String, Long> getInstances() {
         return instances;
     }
 
+    /**
+     * Instances always specifies podiochaos generation or empty
+     */
     @JsonProperty("instances")
     public void setInstances(Map<String, Long> instances) {
         this.instances = instances;
     }
 
+    @JsonIgnore
+    public IOChaosStatusBuilder edit() {
+        return new IOChaosStatusBuilder(this);
+    }
+
+    @JsonIgnore
+    public IOChaosStatusBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
-    public Map<java.lang.String, Object> getAdditionalProperties() {
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 
     @JsonAnySetter
-    public void setAdditionalProperty(java.lang.String name, Object value) {
+    public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

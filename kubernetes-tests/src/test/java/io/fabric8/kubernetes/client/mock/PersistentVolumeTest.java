@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.mock;
 
 import io.fabric8.kubernetes.api.model.NodeSelectorRequirementBuilder;
@@ -37,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnableKubernetesMockClient
+@EnableKubernetesMockClient(https = false)
 public class PersistentVolumeTest {
 
   KubernetesMockServer server;
@@ -97,7 +96,7 @@ public class PersistentVolumeTest {
   public void testDelete() {
     server.expect().withPath("/api/v1/persistentvolumes/persistentvolume1")
         .andReturn(200, new PersistentVolumeBuilder().build()).once();
-    boolean deleted = client.persistentVolumes().withName("persistentvolume1").delete().size() == 1;
+    boolean deleted = client.persistentVolumes().withName("persistentvolume1").withGracePeriod(0).delete().size() == 1;
     assertTrue(deleted);
   }
 

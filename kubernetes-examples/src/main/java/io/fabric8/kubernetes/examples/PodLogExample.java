@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -46,6 +46,9 @@ public class PodLogExample {
         KubernetesClient client = new KubernetesClientBuilder().build();
         LogWatch ignore = client.pods().inNamespace(namespace).withName(podName).tailingLines(10).watchLog(System.out)) {
       Thread.sleep(5 * 1000L);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      logger.error(e.getMessage(), e);
     } catch (Exception e) {
       logger.error(e.getMessage(), e);
     }

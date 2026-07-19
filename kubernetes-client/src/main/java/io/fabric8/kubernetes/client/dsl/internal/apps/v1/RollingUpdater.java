@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,8 +45,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.AbstractMap;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -60,7 +60,7 @@ public abstract class RollingUpdater<T extends HasMetadata, L> {
 
   private static final Long DEFAULT_SERVER_GC_WAIT_TIMEOUT = 60 * 1000L; // 60 seconds
 
-  private static final transient Logger LOG = LoggerFactory.getLogger(RollingUpdater.class);
+  private static final Logger logger = LoggerFactory.getLogger(RollingUpdater.class);
 
   protected final Client client;
   protected final String namespace;
@@ -107,7 +107,7 @@ public abstract class RollingUpdater<T extends HasMetadata, L> {
               .build();
           pods().inNamespace(namespace).withName(pod.getMetadata().getName()).replace(updated);
         } catch (KubernetesClientException e) {
-          LOG.warn("Unable to add deployment key to pod: {}", e.getMessage());
+          logger.warn("Unable to add deployment key to pod: {}", e.getMessage());
         }
       }
 
@@ -170,54 +170,33 @@ public abstract class RollingUpdater<T extends HasMetadata, L> {
   }
 
   private static <T> T applyPatch(Resource<T> resource, Map<String, Object> map, KubernetesSerialization serialization) {
-    return resource.patch(PatchContext.of(PatchType.STRATEGIC_MERGE), serialization.asJson(map));
+    return resource.patch(PatchContext.of(PatchType.JSON_MERGE), serialization.asJson(map));
   }
 
   public static <T extends HasMetadata> T resume(RollableScalableResourceOperation<T, ?, ?> resource) {
-    return applyPatch(resource, RollingUpdater.requestPayLoadForRolloutResume(), resource.getKubernetesSerialization());
+    return applyPatch(resource, RollingUpdater.requestPayLoadForRollout(null), resource.getKubernetesSerialization());
   }
 
   public static <T extends HasMetadata> T pause(RollableScalableResourceOperation<T, ?, ?> resource) {
-    return applyPatch(resource, RollingUpdater.requestPayLoadForRolloutPause(), resource.getKubernetesSerialization());
+    return applyPatch(resource, RollingUpdater.requestPayLoadForRollout(Boolean.TRUE), resource.getKubernetesSerialization());
   }
 
   public static <T extends HasMetadata> T restart(RollableScalableResourceOperation<T, ?, ?> resource) {
     return applyPatch(resource, RollingUpdater.requestPayLoadForRolloutRestart(), resource.getKubernetesSerialization());
   }
 
-  public static Map<String, Object> requestPayLoadForRolloutPause() {
-    Map<String, Object> jsonPatchPayload = new HashMap<>();
-    Map<String, Object> spec = new HashMap<>();
-    spec.put("paused", true);
-    jsonPatchPayload.put("spec", spec);
-    return jsonPatchPayload;
-  }
-
-  public static Map<String, Object> requestPayLoadForRolloutResume() {
-    Map<String, Object> jsonPatchPayload = new HashMap<>();
-    Map<String, Object> spec = new HashMap<>();
-    spec.put("paused", null);
-    jsonPatchPayload.put("spec", spec);
-    return jsonPatchPayload;
+  public static Map<String, Object> requestPayLoadForRollout(Boolean paused) {
+    return Map.of("spec", new AbstractMap.SimpleEntry<>("paused", paused));
   }
 
   public static Map<String, Object> requestPayLoadForRolloutRestart() {
-    Map<String, Object> jsonPatchPayload = new HashMap<>();
-    Map<String, String> annotations = new HashMap<>();
-    annotations.put("kubectl.kubernetes.io/restartedAt",
-        new Date().toInstant().atOffset(ZoneOffset.UTC).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-    Map<String, Object> templateMetadata = new HashMap<>();
-    templateMetadata.put("annotations", annotations);
-    Map<String, Object> template = new HashMap<>();
-    template.put("metadata", templateMetadata);
-    Map<String, Object> deploymentSpec = new HashMap<>();
-    deploymentSpec.put("template", template);
-    jsonPatchPayload.put("spec", deploymentSpec);
-    return jsonPatchPayload;
+    String now = new Date().toInstant().atOffset(ZoneOffset.UTC).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+    return Map.of("spec",
+        Map.of("template", Map.of("metadata", Map.of("annotations", Map.of("kubectl.kubernetes.io/restartedAt", now)))));
   }
 
   /**
-   * Lets wait until there are enough Ready pods of the given RC
+   * Let's wait until there are enough Ready pods of the given RC
    */
   private void waitUntilPodsAreReady(final T obj, final String namespace, final int requiredPodCount) {
     final AtomicInteger podCount = new AtomicInteger(0);
@@ -235,20 +214,20 @@ public abstract class RollingUpdater<T extends HasMetadata, L> {
       return count == requiredPodCount;
     });
 
-    Future<?> logger = Utils.scheduleAtFixedRate(Runnable::run,
-        () -> LOG.debug("Only {}/{} pod(s) ready for {}: {} in namespace: {} seconds so waiting...",
+    Future<?> logFuture = Utils.scheduleAtFixedRate(Runnable::run,
+        () -> logger.debug("Only {}/{} pod(s) ready for {}: {} in namespace: {} seconds so waiting...",
             podCount.get(), requiredPodCount, obj.getKind(), obj.getMetadata().getName(), namespace),
         0, loggingIntervalMillis, TimeUnit.MILLISECONDS);
 
     try {
       if (!Utils.waitUntilReady(future, rollingTimeoutMillis, TimeUnit.MILLISECONDS)) {
-        LOG.warn("Only {}/{} pod(s) ready for {}: {} in namespace: {}  after waiting for {} seconds so giving up",
+        logger.warn("Only {}/{} pod(s) ready for {}: {} in namespace: {}  after waiting for {} seconds so giving up",
             podCount.get(), requiredPodCount, obj.getKind(), obj.getMetadata().getName(), namespace,
             TimeUnit.MILLISECONDS.toSeconds(rollingTimeoutMillis));
       }
     } finally {
       future.cancel(true);
-      logger.cancel(true);
+      logFuture.cancel(true);
     }
   }
 
@@ -257,15 +236,15 @@ public abstract class RollingUpdater<T extends HasMetadata, L> {
    * Lets wait until the resource is actually deleted in the server
    */
   private void waitUntilDeleted(final String namespace, final String name) {
-    Future<?> logger = Utils.scheduleAtFixedRate(Runnable::run,
-        () -> LOG.debug("Found resource {}/{} not yet deleted on server, so waiting...", namespace, name),
+    Future<?> logFuture = Utils.scheduleAtFixedRate(Runnable::run,
+        () -> logger.debug("Found resource {}/{} not yet deleted on server, so waiting...", namespace, name),
         0, loggingIntervalMillis, TimeUnit.MILLISECONDS);
     try {
       resources().inNamespace(namespace)
           .withName(name)
           .waitUntilCondition(Objects::isNull, DEFAULT_SERVER_GC_WAIT_TIMEOUT, TimeUnit.MILLISECONDS);
     } finally {
-      logger.cancel(true); // since we're using the common pool, we must shutdown manually
+      logFuture.cancel(true); // since we're using the common pool, we must shutdown manually
     }
   }
 

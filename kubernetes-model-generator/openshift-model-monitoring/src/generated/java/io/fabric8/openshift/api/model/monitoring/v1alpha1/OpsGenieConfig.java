@@ -2,9 +2,10 @@
 package io.fabric8.openshift.api.model.monitoring.v1alpha1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -12,7 +13,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
@@ -23,23 +27,26 @@ import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.SecretKeySelector;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * OpsGenieConfig configures notifications via OpsGenie. See https://prometheus.io/docs/alerting/latest/configuration/#opsgenie_config
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
+    "actions",
     "apiKey",
     "apiURL",
     "description",
     "details",
+    "entity",
     "httpConfig",
     "message",
     "note",
@@ -47,11 +54,11 @@ import lombok.experimental.Accessors;
     "responders",
     "sendResolved",
     "source",
-    "tags"
+    "tags",
+    "updateAlerts"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -65,11 +72,18 @@ import lombok.experimental.Accessors;
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class OpsGenieConfig implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class OpsGenieConfig implements Editable<OpsGenieConfigBuilder>, KubernetesResource
 {
 
+    @JsonProperty("actions")
+    private String actions;
     @JsonProperty("apiKey")
     private SecretKeySelector apiKey;
     @JsonProperty("apiURL")
@@ -78,7 +92,9 @@ public class OpsGenieConfig implements KubernetesResource
     private String description;
     @JsonProperty("details")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<KeyValue> details = new ArrayList<KeyValue>();
+    private List<KeyValue> details = new ArrayList<>();
+    @JsonProperty("entity")
+    private String entity;
     @JsonProperty("httpConfig")
     private HTTPConfig httpConfig;
     @JsonProperty("message")
@@ -89,44 +105,32 @@ public class OpsGenieConfig implements KubernetesResource
     private String priority;
     @JsonProperty("responders")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<OpsGenieConfigResponder> responders = new ArrayList<OpsGenieConfigResponder>();
+    private List<OpsGenieConfigResponder> responders = new ArrayList<>();
     @JsonProperty("sendResolved")
     private Boolean sendResolved;
     @JsonProperty("source")
     private String source;
     @JsonProperty("tags")
     private String tags;
+    @JsonProperty("updateAlerts")
+    private Boolean updateAlerts;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public OpsGenieConfig() {
     }
 
-    /**
-     * 
-     * @param note
-     * @param sendResolved
-     * @param apiKey
-     * @param apiURL
-     * @param httpConfig
-     * @param description
-     * @param details
-     * @param source
-     * @param message
-     * @param priority
-     * @param responders
-     * @param tags
-     */
-    public OpsGenieConfig(SecretKeySelector apiKey, String apiURL, String description, List<KeyValue> details, HTTPConfig httpConfig, String message, String note, String priority, List<OpsGenieConfigResponder> responders, Boolean sendResolved, String source, String tags) {
+    public OpsGenieConfig(String actions, SecretKeySelector apiKey, String apiURL, String description, List<KeyValue> details, String entity, HTTPConfig httpConfig, String message, String note, String priority, List<OpsGenieConfigResponder> responders, Boolean sendResolved, String source, String tags, Boolean updateAlerts) {
         super();
+        this.actions = actions;
         this.apiKey = apiKey;
         this.apiURL = apiURL;
         this.description = description;
         this.details = details;
+        this.entity = entity;
         this.httpConfig = httpConfig;
         this.message = message;
         this.note = note;
@@ -135,129 +139,263 @@ public class OpsGenieConfig implements KubernetesResource
         this.sendResolved = sendResolved;
         this.source = source;
         this.tags = tags;
+        this.updateAlerts = updateAlerts;
     }
 
+    /**
+     * actions defines a comma separated list of actions that will be available for the alert. These appear as action buttons in the OpsGenie interface.
+     */
+    @JsonProperty("actions")
+    public String getActions() {
+        return actions;
+    }
+
+    /**
+     * actions defines a comma separated list of actions that will be available for the alert. These appear as action buttons in the OpsGenie interface.
+     */
+    @JsonProperty("actions")
+    public void setActions(String actions) {
+        this.actions = actions;
+    }
+
+    /**
+     * OpsGenieConfig configures notifications via OpsGenie. See https://prometheus.io/docs/alerting/latest/configuration/#opsgenie_config
+     */
     @JsonProperty("apiKey")
     public SecretKeySelector getApiKey() {
         return apiKey;
     }
 
+    /**
+     * OpsGenieConfig configures notifications via OpsGenie. See https://prometheus.io/docs/alerting/latest/configuration/#opsgenie_config
+     */
     @JsonProperty("apiKey")
     public void setApiKey(SecretKeySelector apiKey) {
         this.apiKey = apiKey;
     }
 
+    /**
+     * apiURL defines the URL to send OpsGenie API requests to. When not specified, defaults to the standard OpsGenie API endpoint.
+     */
     @JsonProperty("apiURL")
     public String getApiURL() {
         return apiURL;
     }
 
+    /**
+     * apiURL defines the URL to send OpsGenie API requests to. When not specified, defaults to the standard OpsGenie API endpoint.
+     */
     @JsonProperty("apiURL")
     public void setApiURL(String apiURL) {
         this.apiURL = apiURL;
     }
 
+    /**
+     * description defines the detailed description of the incident. This provides additional context beyond the message field.
+     */
     @JsonProperty("description")
     public String getDescription() {
         return description;
     }
 
+    /**
+     * description defines the detailed description of the incident. This provides additional context beyond the message field.
+     */
     @JsonProperty("description")
     public void setDescription(String description) {
         this.description = description;
     }
 
+    /**
+     * details defines a set of arbitrary key/value pairs that provide further detail about the incident. These appear as additional fields in the OpsGenie alert.
+     */
     @JsonProperty("details")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<KeyValue> getDetails() {
         return details;
     }
 
+    /**
+     * details defines a set of arbitrary key/value pairs that provide further detail about the incident. These appear as additional fields in the OpsGenie alert.
+     */
     @JsonProperty("details")
     public void setDetails(List<KeyValue> details) {
         this.details = details;
     }
 
+    /**
+     * entity defines an optional field that can be used to specify which domain alert is related to. This helps group related alerts together in OpsGenie.
+     */
+    @JsonProperty("entity")
+    public String getEntity() {
+        return entity;
+    }
+
+    /**
+     * entity defines an optional field that can be used to specify which domain alert is related to. This helps group related alerts together in OpsGenie.
+     */
+    @JsonProperty("entity")
+    public void setEntity(String entity) {
+        this.entity = entity;
+    }
+
+    /**
+     * OpsGenieConfig configures notifications via OpsGenie. See https://prometheus.io/docs/alerting/latest/configuration/#opsgenie_config
+     */
     @JsonProperty("httpConfig")
     public HTTPConfig getHttpConfig() {
         return httpConfig;
     }
 
+    /**
+     * OpsGenieConfig configures notifications via OpsGenie. See https://prometheus.io/docs/alerting/latest/configuration/#opsgenie_config
+     */
     @JsonProperty("httpConfig")
     public void setHttpConfig(HTTPConfig httpConfig) {
         this.httpConfig = httpConfig;
     }
 
+    /**
+     * message defines the alert text limited to 130 characters. This appears as the main alert title in OpsGenie.
+     */
     @JsonProperty("message")
     public String getMessage() {
         return message;
     }
 
+    /**
+     * message defines the alert text limited to 130 characters. This appears as the main alert title in OpsGenie.
+     */
     @JsonProperty("message")
     public void setMessage(String message) {
         this.message = message;
     }
 
+    /**
+     * note defines an additional alert note. This provides supplementary information about the alert.
+     */
     @JsonProperty("note")
     public String getNote() {
         return note;
     }
 
+    /**
+     * note defines an additional alert note. This provides supplementary information about the alert.
+     */
     @JsonProperty("note")
     public void setNote(String note) {
         this.note = note;
     }
 
+    /**
+     * priority defines the priority level of alert. Possible values are P1, P2, P3, P4, and P5, where P1 is highest priority.
+     */
     @JsonProperty("priority")
     public String getPriority() {
         return priority;
     }
 
+    /**
+     * priority defines the priority level of alert. Possible values are P1, P2, P3, P4, and P5, where P1 is highest priority.
+     */
     @JsonProperty("priority")
     public void setPriority(String priority) {
         this.priority = priority;
     }
 
+    /**
+     * responders defines the list of responders responsible for notifications. These determine who gets notified when the alert is created.
+     */
     @JsonProperty("responders")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<OpsGenieConfigResponder> getResponders() {
         return responders;
     }
 
+    /**
+     * responders defines the list of responders responsible for notifications. These determine who gets notified when the alert is created.
+     */
     @JsonProperty("responders")
     public void setResponders(List<OpsGenieConfigResponder> responders) {
         this.responders = responders;
     }
 
+    /**
+     * sendResolved defines whether or not to notify about resolved alerts.
+     */
     @JsonProperty("sendResolved")
     public Boolean getSendResolved() {
         return sendResolved;
     }
 
+    /**
+     * sendResolved defines whether or not to notify about resolved alerts.
+     */
     @JsonProperty("sendResolved")
     public void setSendResolved(Boolean sendResolved) {
         this.sendResolved = sendResolved;
     }
 
+    /**
+     * source defines the backlink to the sender of the notification. This helps identify where the alert originated from.
+     */
     @JsonProperty("source")
     public String getSource() {
         return source;
     }
 
+    /**
+     * source defines the backlink to the sender of the notification. This helps identify where the alert originated from.
+     */
     @JsonProperty("source")
     public void setSource(String source) {
         this.source = source;
     }
 
+    /**
+     * tags defines a comma separated list of tags attached to the notifications. These help categorize and filter alerts within OpsGenie.
+     */
     @JsonProperty("tags")
     public String getTags() {
         return tags;
     }
 
+    /**
+     * tags defines a comma separated list of tags attached to the notifications. These help categorize and filter alerts within OpsGenie.
+     */
     @JsonProperty("tags")
     public void setTags(String tags) {
         this.tags = tags;
     }
 
+    /**
+     * updateAlerts defines Whether to update message and description of the alert in OpsGenie if it already exists By default, the alert is never updated in OpsGenie, the new message only appears in activity log.
+     */
+    @JsonProperty("updateAlerts")
+    public Boolean getUpdateAlerts() {
+        return updateAlerts;
+    }
+
+    /**
+     * updateAlerts defines Whether to update message and description of the alert in OpsGenie if it already exists By default, the alert is never updated in OpsGenie, the new message only appears in activity log.
+     */
+    @JsonProperty("updateAlerts")
+    public void setUpdateAlerts(Boolean updateAlerts) {
+        this.updateAlerts = updateAlerts;
+    }
+
+    @JsonIgnore
+    public OpsGenieConfigBuilder edit() {
+        return new OpsGenieConfigBuilder(this);
+    }
+
+    @JsonIgnore
+    public OpsGenieConfigBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -265,6 +403,10 @@ public class OpsGenieConfig implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

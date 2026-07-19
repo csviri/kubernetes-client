@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,6 +21,7 @@ import io.fabric8.kubernetes.model.annotation.Version;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -171,15 +172,18 @@ class HasMetadataTest {
     assertEquals(0, hasMetadata.getMetadata().getOwnerReferences().size());
     assertFalse(hasMetadata.hasOwnerReferenceFor(owner));
 
-    OwnerReference ownerReference = hasMetadata.addOwnerReference(owner);
+    OwnerReference ownerReference = hasMetadata.addOwnerReference(owner, true, true);
     assertEquals(1, hasMetadata.getMetadata().getOwnerReferences().size());
     assertTrue(hasMetadata.hasOwnerReferenceFor(owner));
     assertTrue(hasMetadata.hasOwnerReferenceFor(Owner.uid));
 
-    final Optional<OwnerReference> retrieved = hasMetadata.getOwnerReferenceFor(owner);
-    assertTrue(retrieved.isPresent());
-    assertEquals(ownerReference, retrieved.get());
-    assertEquals(retrieved, hasMetadata.getOwnerReferenceFor(Owner.uid));
+    final Optional<OwnerReference> maybeOwnerRef = hasMetadata.getOwnerReferenceFor(owner);
+    assertTrue(maybeOwnerRef.isPresent());
+    final var actualOwnerRef = maybeOwnerRef.get();
+    assertEquals(ownerReference, actualOwnerRef);
+    assertEquals(maybeOwnerRef, hasMetadata.getOwnerReferenceFor(Owner.uid));
+    assertTrue(actualOwnerRef.getBlockOwnerDeletion());
+    assertTrue(actualOwnerRef.getController());
 
     assertEquals(Owner.uid, ownerReference.getUid());
     assertEquals(Owner.apiVersion, ownerReference.getApiVersion());
@@ -207,6 +211,11 @@ class HasMetadataTest {
   }
 
   @Test
+  void apiVersionOfConfigMapShouldBeCorrect() {
+    assertEquals("v1", HasMetadata.getApiVersion(ConfigMap.class));
+  }
+
+  @Test
   void addingSameOwnerReferenceMultipleTimesShouldAddItOnlyOnce() {
     HasMetadata hasMetadata = new Default();
     HasMetadata owner = new Owner();
@@ -215,6 +224,248 @@ class HasMetadataTest {
     hasMetadata.addOwnerReference(owner);
     hasMetadata.addOwnerReference(owner);
     assertEquals(1, hasMetadata.getMetadata().getOwnerReferences().size());
+  }
+
+  @Test
+  void addingOwnerReferenceToNamespacedResourceFromClusterScopedResourceShouldFail() {
+    HasMetadata clusterScoped = new Owner();
+    HasMetadata namespaced = new OwnerNamespaced();
+
+    assertThrows(IllegalArgumentException.class, () -> clusterScoped.addOwnerReference(namespaced));
+  }
+
+  @Test
+  void addingOwnerReferenceToResourceInDifferentNamespaceShouldFail() {
+    HasMetadata namespaced1 = new OwnerNamespaced();
+    namespaced1.getMetadata().setNamespace("namespace1");
+    HasMetadata namespaced2 = new OwnerNamespaced();
+    namespaced2.getMetadata().setNamespace("namespace2");
+
+    assertThrows(IllegalArgumentException.class, () -> namespaced1.addOwnerReference(namespaced2));
+  }
+
+  @Test
+  void testInitNameAndNamespaceFromNamespacedResource() {
+    TestNamespacedHasMetadata original = new TestNamespacedHasMetadata();
+    ObjectMeta originalMetadata = new ObjectMetaBuilder()
+        .withName("testName")
+        .withNamespace("testNamespace")
+        .withGeneration(100000L)
+        .build();
+    original.setMetadata(originalMetadata);
+
+    TestNamespacedHasMetadata copy = new TestNamespacedHasMetadata();
+    copy.initNameAndNamespaceFrom(original);
+
+    final ObjectMeta metadata = copy.getMetadata();
+    assertEquals(originalMetadata.getName(), metadata.getName());
+    assertEquals(originalMetadata.getNamespace(), metadata.getNamespace());
+    assertNull(metadata.getGeneration());
+  }
+
+  @Test
+  void testInitNameAndNamespaceFromClusteredResource() {
+    TestHasMetadata original = new TestHasMetadata();
+    ObjectMeta originalMetadata = new ObjectMetaBuilder()
+        .withName("testName")
+        .withGeneration(100000L)
+        .build();
+    original.setMetadata(originalMetadata);
+
+    TestHasMetadata copy = new TestHasMetadata();
+    copy.initNameAndNamespaceFrom(original);
+
+    final ObjectMeta metadata = copy.getMetadata();
+    assertEquals(originalMetadata.getName(), metadata.getName());
+    assertNull(metadata.getNamespace());
+    assertNull(metadata.getGeneration());
+  }
+
+  @Test
+  void initNameAndNamespaceFromWithNullMetadataShouldFail() {
+    TestHasMetadata original = new TestHasMetadata();
+    original.setMetadata(null);
+
+    final TestHasMetadata test = new TestHasMetadata();
+    Exception exception = assertThrows(NullPointerException.class,
+        () -> test.initNameAndNamespaceFrom(original));
+    assertEquals(HasMetadata.REQUIRES_NON_NULL_METADATA, exception.getMessage());
+  }
+
+  @Test
+  void initNameAndNamespaceFromWithMissingNameShouldFail() {
+    TestNamespacedHasMetadata original = new TestNamespacedHasMetadata();
+    ObjectMeta originalMetadata = new ObjectMetaBuilder()
+        .withNamespace("testNamespace")
+        .build();
+    original.setMetadata(originalMetadata);
+
+    final TestNamespacedHasMetadata test = new TestNamespacedHasMetadata();
+    Exception exception = assertThrows(NullPointerException.class,
+        () -> test.initNameAndNamespaceFrom(original));
+    assertEquals(HasMetadata.REQUIRES_NON_NULL_NAME, exception.getMessage());
+  }
+
+  @Test
+  void initNameAndNamespaceFromWithMissingNamespaceShouldFail() {
+    TestNamespacedHasMetadata original = new TestNamespacedHasMetadata();
+    ObjectMeta originalMetadata = new ObjectMetaBuilder()
+        .withName("testName")
+        .build();
+    original.setMetadata(originalMetadata);
+
+    final TestNamespacedHasMetadata test = new TestNamespacedHasMetadata();
+    Exception exception = assertThrows(NullPointerException.class,
+        () -> test.initNameAndNamespaceFrom(original));
+    assertEquals(HasMetadata.REQUIRES_NON_NULL_NAMESPACE, exception.getMessage());
+  }
+
+  @Test
+  void isSameResourceWithNullReturnsFalse() {
+    assertFalse(new TestHasMetadata().isSameResource(null));
+  }
+
+  @Test
+  void isSameResourceWithSelfReturnsTrueEvenInStrictMode() {
+    HasMetadata one = new TestHasMetadata();
+    assertTrue(one.isSameResource(one));
+    // should normally be false (no metadata set) but identity wins regardless of strict mode
+    assertTrue(one.isSameResource(one, true));
+  }
+
+  @Test
+  void isSameResourceWithNullMetadataOnEitherSideReturnsFalse() {
+    HasMetadata one = new TestHasMetadata();
+    HasMetadata two = new TestHasMetadata();
+    assertFalse(one.isSameResource(two));
+    assertFalse(one.isSameResource(two, true));
+  }
+
+  @Test
+  void isSameResourceWithDifferentNameAndNamespaceReturnsFalse() {
+    TestHM t1 = new TestHM();
+    TestHM t2 = new TestHM();
+    assertFalse(t1.isSameResource(t2));
+    assertFalse(t2.isSameResource(t1));
+    assertFalse(t1.isSameResource(t2, true));
+    assertFalse(t2.isSameResource(t1, true));
+  }
+
+  @Test
+  void isSameResourceWithDifferentNameReturnsFalse() {
+    TestHM t1 = new TestHM();
+    TestHM t2 = new TestHM(t1);
+    t2.getMetadata().setName("otherName");
+    assertFalse(t1.isSameResource(t2));
+    assertFalse(t2.isSameResource(t1));
+    assertFalse(t1.isSameResource(t2, true));
+    assertFalse(t2.isSameResource(t1, true));
+  }
+
+  @Test
+  void isSameResourceWithDifferentNamespaceReturnsFalse() {
+    TestHM t1 = new TestHM();
+    TestHM t2 = new TestHM(t1);
+    t2.getMetadata().setNamespace("otherNamespace");
+    assertFalse(t1.isSameResource(t2));
+    assertFalse(t2.isSameResource(t1));
+    assertFalse(t1.isSameResource(t2, true));
+    assertFalse(t2.isSameResource(t1, true));
+  }
+
+  @Test
+  void isSameResourceWithDifferentKindReturnsFalse() {
+    TestHM t1 = new TestHM();
+    TestHM t2 = new TestHM(t1) {
+      @Override
+      public String getKind() {
+        return "OtherKind";
+      }
+    };
+    assertFalse(t1.isSameResource(t2));
+    assertFalse(t2.isSameResource(t1));
+    assertFalse(t1.isSameResource(t2, true));
+    assertFalse(t2.isSameResource(t1, true));
+  }
+
+  @Test
+  void isSameResourceWithUidSetOnOneSideOnlyReturnsFalse() {
+    TestHM t1 = new TestHM();
+    TestHM t2 = new TestHM(t1);
+    t1.getMetadata().setUid(UUID.randomUUID().toString());
+    assertFalse(t1.isSameResource(t2));
+    assertFalse(t2.isSameResource(t1));
+    assertFalse(t1.isSameResource(t2, true));
+    assertFalse(t2.isSameResource(t1, true));
+  }
+
+  @Test
+  void isSameResourceWithSameUidReturnsTrueRegardlessOfStrictMode() {
+    TestHM t1 = new TestHM();
+    TestHM t2 = new TestHM(t1);
+    final String uid = UUID.randomUUID().toString();
+    t1.getMetadata().setUid(uid);
+    t2.getMetadata().setUid(uid);
+    assertTrue(t1.isSameResource(t2));
+    assertTrue(t2.isSameResource(t1));
+    assertTrue(t1.isSameResource(t2, true));
+    assertTrue(t2.isSameResource(t1, true));
+  }
+
+  @Test
+  void isSameResourceWithSameNameAndNamespaceReturnsTrueInBothModes() {
+    TestHM t1 = new TestHM();
+    TestHM t2 = new TestHM(t1);
+    assertTrue(t1.isSameResource(t2));
+    assertTrue(t2.isSameResource(t1));
+    assertTrue(t1.isSameResource(t2, true));
+    assertTrue(t2.isSameResource(t1, true));
+  }
+
+  @Test
+  void isSameResourceWithSameResourceVersionReturnsTrueInStrictMode() {
+    TestHM t1 = new TestHM();
+    TestHM t2 = new TestHM(t1);
+    t1.getMetadata().setResourceVersion("rv1");
+    t2.getMetadata().setResourceVersion("rv1");
+    assertTrue(t1.isSameResource(t2));
+    assertTrue(t2.isSameResource(t1));
+    assertTrue(t1.isSameResource(t2, true));
+    assertTrue(t2.isSameResource(t1, true));
+  }
+
+  @Test
+  void isSameResourceWithDifferentResourceVersionReturnsTrueInNonStrictModeAndFalseInStrictMode() {
+    TestHM t1 = new TestHM();
+    TestHM t2 = new TestHM(t1);
+    t1.getMetadata().setResourceVersion("rv1");
+    t2.getMetadata().setResourceVersion("rv2");
+    assertTrue(t1.isSameResource(t2));
+    assertTrue(t2.isSameResource(t1));
+    assertFalse(t1.isSameResource(t2, true));
+    assertFalse(t2.isSameResource(t1, true));
+  }
+
+  static class TestHasMetadata implements HasMetadata {
+    private ObjectMeta metadata;
+
+    @Override
+    public ObjectMeta getMetadata() {
+      return metadata;
+    }
+
+    @Override
+    public void setMetadata(ObjectMeta metadata) {
+      this.metadata = metadata;
+    }
+
+    @Override
+    public void setApiVersion(String version) {
+    }
+  }
+
+  static class TestNamespacedHasMetadata extends TestHasMetadata implements Namespaced {
+    // No additional fields or methods needed for this simple test implementation
   }
 
   @Group("fabric8.io")
@@ -321,6 +572,11 @@ class HasMetadataTest {
       meta.setName(name);
     }
 
+    Default(String name, String namespace) {
+      this(name);
+      meta.setNamespace(namespace);
+    }
+
     @Override
     public ObjectMeta getMetadata() {
       return meta;
@@ -346,4 +602,25 @@ class HasMetadataTest {
       throw new RuntimeException("setApiVersion shouldn't be called");
     }
   }
+
+  @Group("fabric8.io")
+  @Version("v1")
+  private static class TestHM extends Default {
+    public TestHM(TestHM other) {
+      super(other.getMetadata().getName(), other.getMetadata().getNamespace());
+    }
+
+    public TestHM() {
+      super(UUID.randomUUID().toString(), UUID.randomUUID().toString());
+    }
+
+    @Override
+    public String getKind() {
+      return "TestHM";
+    }
+  }
+
+  private static class OwnerNamespaced extends Owner implements Namespaced {
+  }
+
 }

@@ -2,9 +2,10 @@
 package io.fabric8.openshift.api.model.monitoring.v1alpha1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -12,7 +13,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
@@ -23,19 +27,20 @@ import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.SecretKeySelector;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * PagerDutyConfig configures notifications via PagerDuty. See https://prometheus.io/docs/alerting/latest/configuration/#pagerduty_config
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "class",
     "client",
     "clientURL",
@@ -44,15 +49,18 @@ import lombok.experimental.Accessors;
     "details",
     "group",
     "httpConfig",
+    "pagerDutyImageConfigs",
+    "pagerDutyLinkConfigs",
     "routingKey",
     "sendResolved",
     "serviceKey",
     "severity",
+    "source",
+    "timeout",
     "url"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -66,9 +74,14 @@ import lombok.experimental.Accessors;
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class PagerDutyConfig implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class PagerDutyConfig implements Editable<PagerDutyConfigBuilder>, KubernetesResource
 {
 
     @JsonProperty("class")
@@ -83,11 +96,17 @@ public class PagerDutyConfig implements KubernetesResource
     private String description;
     @JsonProperty("details")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<KeyValue> details = new ArrayList<KeyValue>();
+    private List<KeyValue> details = new ArrayList<>();
     @JsonProperty("group")
     private String group;
     @JsonProperty("httpConfig")
     private HTTPConfig httpConfig;
+    @JsonProperty("pagerDutyImageConfigs")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<PagerDutyImageConfig> pagerDutyImageConfigs = new ArrayList<>();
+    @JsonProperty("pagerDutyLinkConfigs")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<PagerDutyLinkConfig> pagerDutyLinkConfigs = new ArrayList<>();
     @JsonProperty("routingKey")
     private SecretKeySelector routingKey;
     @JsonProperty("sendResolved")
@@ -96,35 +115,22 @@ public class PagerDutyConfig implements KubernetesResource
     private SecretKeySelector serviceKey;
     @JsonProperty("severity")
     private String severity;
+    @JsonProperty("source")
+    private String source;
+    @JsonProperty("timeout")
+    private String timeout;
     @JsonProperty("url")
     private String url;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public PagerDutyConfig() {
     }
 
-    /**
-     * 
-     * @param severity
-     * @param clientURL
-     * @param description
-     * @param className
-     * @param url
-     * @param component
-     * @param sendResolved
-     * @param httpConfig
-     * @param client
-     * @param details
-     * @param serviceKey
-     * @param routingKey
-     * @param group
-     */
-    public PagerDutyConfig(String className, String client, String clientURL, String component, String description, List<KeyValue> details, String group, HTTPConfig httpConfig, SecretKeySelector routingKey, Boolean sendResolved, SecretKeySelector serviceKey, String severity, String url) {
+    public PagerDutyConfig(String className, String client, String clientURL, String component, String description, List<KeyValue> details, String group, HTTPConfig httpConfig, List<PagerDutyImageConfig> pagerDutyImageConfigs, List<PagerDutyLinkConfig> pagerDutyLinkConfigs, SecretKeySelector routingKey, Boolean sendResolved, SecretKeySelector serviceKey, String severity, String source, String timeout, String url) {
         super();
         this.className = className;
         this.client = client;
@@ -134,144 +140,304 @@ public class PagerDutyConfig implements KubernetesResource
         this.details = details;
         this.group = group;
         this.httpConfig = httpConfig;
+        this.pagerDutyImageConfigs = pagerDutyImageConfigs;
+        this.pagerDutyLinkConfigs = pagerDutyLinkConfigs;
         this.routingKey = routingKey;
         this.sendResolved = sendResolved;
         this.serviceKey = serviceKey;
         this.severity = severity;
+        this.source = source;
+        this.timeout = timeout;
         this.url = url;
     }
 
+    /**
+     * class defines the class/type of the event.
+     */
     @JsonProperty("class")
     public String getClassName() {
         return className;
     }
 
+    /**
+     * class defines the class/type of the event.
+     */
     @JsonProperty("class")
     public void setClassName(String className) {
         this.className = className;
     }
 
+    /**
+     * client defines the client identification.
+     */
     @JsonProperty("client")
     public String getClient() {
         return client;
     }
 
+    /**
+     * client defines the client identification.
+     */
     @JsonProperty("client")
     public void setClient(String client) {
         this.client = client;
     }
 
+    /**
+     * clientURL defines the backlink to the sender of notification.
+     */
     @JsonProperty("clientURL")
     public String getClientURL() {
         return clientURL;
     }
 
+    /**
+     * clientURL defines the backlink to the sender of notification.
+     */
     @JsonProperty("clientURL")
     public void setClientURL(String clientURL) {
         this.clientURL = clientURL;
     }
 
+    /**
+     * component defines the part or component of the affected system that is broken.
+     */
     @JsonProperty("component")
     public String getComponent() {
         return component;
     }
 
+    /**
+     * component defines the part or component of the affected system that is broken.
+     */
     @JsonProperty("component")
     public void setComponent(String component) {
         this.component = component;
     }
 
+    /**
+     * description of the incident.
+     */
     @JsonProperty("description")
     public String getDescription() {
         return description;
     }
 
+    /**
+     * description of the incident.
+     */
     @JsonProperty("description")
     public void setDescription(String description) {
         this.description = description;
     }
 
+    /**
+     * details defines the arbitrary key/value pairs that provide further detail about the incident.
+     */
     @JsonProperty("details")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<KeyValue> getDetails() {
         return details;
     }
 
+    /**
+     * details defines the arbitrary key/value pairs that provide further detail about the incident.
+     */
     @JsonProperty("details")
     public void setDetails(List<KeyValue> details) {
         this.details = details;
     }
 
+    /**
+     * group defines a cluster or grouping of sources.
+     */
     @JsonProperty("group")
     public String getGroup() {
         return group;
     }
 
+    /**
+     * group defines a cluster or grouping of sources.
+     */
     @JsonProperty("group")
     public void setGroup(String group) {
         this.group = group;
     }
 
+    /**
+     * PagerDutyConfig configures notifications via PagerDuty. See https://prometheus.io/docs/alerting/latest/configuration/#pagerduty_config
+     */
     @JsonProperty("httpConfig")
     public HTTPConfig getHttpConfig() {
         return httpConfig;
     }
 
+    /**
+     * PagerDutyConfig configures notifications via PagerDuty. See https://prometheus.io/docs/alerting/latest/configuration/#pagerduty_config
+     */
     @JsonProperty("httpConfig")
     public void setHttpConfig(HTTPConfig httpConfig) {
         this.httpConfig = httpConfig;
     }
 
+    /**
+     * pagerDutyImageConfigs defines a list of image details to attach that provide further detail about an incident.
+     */
+    @JsonProperty("pagerDutyImageConfigs")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public List<PagerDutyImageConfig> getPagerDutyImageConfigs() {
+        return pagerDutyImageConfigs;
+    }
+
+    /**
+     * pagerDutyImageConfigs defines a list of image details to attach that provide further detail about an incident.
+     */
+    @JsonProperty("pagerDutyImageConfigs")
+    public void setPagerDutyImageConfigs(List<PagerDutyImageConfig> pagerDutyImageConfigs) {
+        this.pagerDutyImageConfigs = pagerDutyImageConfigs;
+    }
+
+    /**
+     * pagerDutyLinkConfigs defines a list of link details to attach that provide further detail about an incident.
+     */
+    @JsonProperty("pagerDutyLinkConfigs")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public List<PagerDutyLinkConfig> getPagerDutyLinkConfigs() {
+        return pagerDutyLinkConfigs;
+    }
+
+    /**
+     * pagerDutyLinkConfigs defines a list of link details to attach that provide further detail about an incident.
+     */
+    @JsonProperty("pagerDutyLinkConfigs")
+    public void setPagerDutyLinkConfigs(List<PagerDutyLinkConfig> pagerDutyLinkConfigs) {
+        this.pagerDutyLinkConfigs = pagerDutyLinkConfigs;
+    }
+
+    /**
+     * PagerDutyConfig configures notifications via PagerDuty. See https://prometheus.io/docs/alerting/latest/configuration/#pagerduty_config
+     */
     @JsonProperty("routingKey")
     public SecretKeySelector getRoutingKey() {
         return routingKey;
     }
 
+    /**
+     * PagerDutyConfig configures notifications via PagerDuty. See https://prometheus.io/docs/alerting/latest/configuration/#pagerduty_config
+     */
     @JsonProperty("routingKey")
     public void setRoutingKey(SecretKeySelector routingKey) {
         this.routingKey = routingKey;
     }
 
+    /**
+     * sendResolved defines whether or not to notify about resolved alerts.
+     */
     @JsonProperty("sendResolved")
     public Boolean getSendResolved() {
         return sendResolved;
     }
 
+    /**
+     * sendResolved defines whether or not to notify about resolved alerts.
+     */
     @JsonProperty("sendResolved")
     public void setSendResolved(Boolean sendResolved) {
         this.sendResolved = sendResolved;
     }
 
+    /**
+     * PagerDutyConfig configures notifications via PagerDuty. See https://prometheus.io/docs/alerting/latest/configuration/#pagerduty_config
+     */
     @JsonProperty("serviceKey")
     public SecretKeySelector getServiceKey() {
         return serviceKey;
     }
 
+    /**
+     * PagerDutyConfig configures notifications via PagerDuty. See https://prometheus.io/docs/alerting/latest/configuration/#pagerduty_config
+     */
     @JsonProperty("serviceKey")
     public void setServiceKey(SecretKeySelector serviceKey) {
         this.serviceKey = serviceKey;
     }
 
+    /**
+     * severity of the incident.
+     */
     @JsonProperty("severity")
     public String getSeverity() {
         return severity;
     }
 
+    /**
+     * severity of the incident.
+     */
     @JsonProperty("severity")
     public void setSeverity(String severity) {
         this.severity = severity;
     }
 
+    /**
+     * source defines the unique location of the affected system.
+     */
+    @JsonProperty("source")
+    public String getSource() {
+        return source;
+    }
+
+    /**
+     * source defines the unique location of the affected system.
+     */
+    @JsonProperty("source")
+    public void setSource(String source) {
+        this.source = source;
+    }
+
+    /**
+     * timeout is the maximum time allowed to invoke the pagerduty It requires Alertmanager &gt;= v0.30.0.
+     */
+    @JsonProperty("timeout")
+    public String getTimeout() {
+        return timeout;
+    }
+
+    /**
+     * timeout is the maximum time allowed to invoke the pagerduty It requires Alertmanager &gt;= v0.30.0.
+     */
+    @JsonProperty("timeout")
+    public void setTimeout(String timeout) {
+        this.timeout = timeout;
+    }
+
+    /**
+     * url defines the URL to send requests to.
+     */
     @JsonProperty("url")
     public String getUrl() {
         return url;
     }
 
+    /**
+     * url defines the URL to send requests to.
+     */
     @JsonProperty("url")
     public void setUrl(String url) {
         this.url = url;
     }
 
+    @JsonIgnore
+    public PagerDutyConfigBuilder edit() {
+        return new PagerDutyConfigBuilder(this);
+    }
+
+    @JsonIgnore
+    public PagerDutyConfigBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -279,6 +445,10 @@ public class PagerDutyConfig implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

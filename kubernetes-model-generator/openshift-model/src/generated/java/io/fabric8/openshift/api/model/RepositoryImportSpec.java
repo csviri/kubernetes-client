@@ -1,8 +1,9 @@
 
 package io.fabric8.openshift.api.model;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,28 +11,32 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
-import io.fabric8.kubernetes.api.model.LocalObjectReference;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * RepositoryImportSpec describes a request to import images from a container image repository.
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "from",
     "importPolicy",
     "includeManifest",
@@ -39,7 +44,6 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -51,15 +55,20 @@ import lombok.experimental.Accessors;
     @BuildableReference(PodTemplateSpec.class),
     @BuildableReference(ResourceRequirements.class),
     @BuildableReference(IntOrString.class),
-    @BuildableReference(io.fabric8.kubernetes.api.model.ObjectReference.class),
-    @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(ObjectReference.class),
+    @BuildableReference(io.fabric8.kubernetes.api.model.LocalObjectReference.class),
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class RepositoryImportSpec implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class RepositoryImportSpec implements Editable<RepositoryImportSpecBuilder>, KubernetesResource
 {
 
     @JsonProperty("from")
-    private io.fabric8.kubernetes.api.model.ObjectReference from;
+    private ObjectReference from;
     @JsonProperty("importPolicy")
     private TagImportPolicy importPolicy;
     @JsonProperty("includeManifest")
@@ -67,23 +76,15 @@ public class RepositoryImportSpec implements KubernetesResource
     @JsonProperty("referencePolicy")
     private TagReferencePolicy referencePolicy;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public RepositoryImportSpec() {
     }
 
-    /**
-     * 
-     * @param importPolicy
-     * @param includeManifest
-     * @param referencePolicy
-     * @param from
-     */
-    public RepositoryImportSpec(io.fabric8.kubernetes.api.model.ObjectReference from, TagImportPolicy importPolicy, Boolean includeManifest, TagReferencePolicy referencePolicy) {
+    public RepositoryImportSpec(ObjectReference from, TagImportPolicy importPolicy, Boolean includeManifest, TagReferencePolicy referencePolicy) {
         super();
         this.from = from;
         this.importPolicy = importPolicy;
@@ -91,47 +92,82 @@ public class RepositoryImportSpec implements KubernetesResource
         this.referencePolicy = referencePolicy;
     }
 
+    /**
+     * RepositoryImportSpec describes a request to import images from a container image repository.
+     */
     @JsonProperty("from")
-    public io.fabric8.kubernetes.api.model.ObjectReference getFrom() {
+    public ObjectReference getFrom() {
         return from;
     }
 
+    /**
+     * RepositoryImportSpec describes a request to import images from a container image repository.
+     */
     @JsonProperty("from")
-    public void setFrom(io.fabric8.kubernetes.api.model.ObjectReference from) {
+    public void setFrom(ObjectReference from) {
         this.from = from;
     }
 
+    /**
+     * RepositoryImportSpec describes a request to import images from a container image repository.
+     */
     @JsonProperty("importPolicy")
     public TagImportPolicy getImportPolicy() {
         return importPolicy;
     }
 
+    /**
+     * RepositoryImportSpec describes a request to import images from a container image repository.
+     */
     @JsonProperty("importPolicy")
     public void setImportPolicy(TagImportPolicy importPolicy) {
         this.importPolicy = importPolicy;
     }
 
+    /**
+     * includeManifest determines if the manifest for each image is returned in the response
+     */
     @JsonProperty("includeManifest")
     public Boolean getIncludeManifest() {
         return includeManifest;
     }
 
+    /**
+     * includeManifest determines if the manifest for each image is returned in the response
+     */
     @JsonProperty("includeManifest")
     public void setIncludeManifest(Boolean includeManifest) {
         this.includeManifest = includeManifest;
     }
 
+    /**
+     * RepositoryImportSpec describes a request to import images from a container image repository.
+     */
     @JsonProperty("referencePolicy")
     public TagReferencePolicy getReferencePolicy() {
         return referencePolicy;
     }
 
+    /**
+     * RepositoryImportSpec describes a request to import images from a container image repository.
+     */
     @JsonProperty("referencePolicy")
     public void setReferencePolicy(TagReferencePolicy referencePolicy) {
         this.referencePolicy = referencePolicy;
     }
 
+    @JsonIgnore
+    public RepositoryImportSpecBuilder edit() {
+        return new RepositoryImportSpecBuilder(this);
+    }
+
+    @JsonIgnore
+    public RepositoryImportSpecBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -139,6 +175,10 @@ public class RepositoryImportSpec implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

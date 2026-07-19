@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,8 @@
 package io.fabric8.openshift.client.server.mock;
 
 import io.fabric8.kubernetes.client.VersionInfo;
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.openshift.api.model.config.v1.ClusterVersionBuilder;
 import io.fabric8.openshift.api.model.config.v1.ClusterVersionList;
 import io.fabric8.openshift.api.model.config.v1.ClusterVersionListBuilder;
@@ -28,9 +30,9 @@ import java.text.SimpleDateFormat;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class OpenShiftVersionInfoTest {
-  OpenShiftMockServer server;
+  KubernetesMockServer server;
   OpenShiftClient client;
 
   @Test

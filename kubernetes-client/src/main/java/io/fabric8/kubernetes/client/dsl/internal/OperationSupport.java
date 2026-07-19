@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -67,7 +67,7 @@ public class OperationSupport {
   public static final String STRATEGIC_MERGE_JSON_PATCH = "application/strategic-merge-patch+json";
   public static final String JSON_MERGE_PATCH = "application/merge-patch+json";
 
-  private static final Logger LOG = LoggerFactory.getLogger(OperationSupport.class);
+  private static final Logger logger = LoggerFactory.getLogger(OperationSupport.class);
   private static final String CLIENT_STATUS_FLAG = "CLIENT_STATUS_FLAG";
 
   protected OperationContext context;
@@ -570,34 +570,16 @@ public class OperationSupport {
     List<String> warnings = response.headers("Warning");
     if (warnings != null && !warnings.isEmpty()) {
       if (context.fieldValidation == Validation.WARN) {
-        LOG.warn("Recieved warning(s) from request {}: {}", request.uri(), warnings);
+        logger.warn("Received warning(s) from request {}: {}", request.uri(), warnings);
       } else {
-        LOG.debug("Recieved warning(s) from request {}: {}", request.uri(), warnings);
+        logger.debug("Received warning(s) from request {}: {}", request.uri(), warnings);
       }
     }
     if (response.isSuccessful()) {
       return;
     }
 
-    int statusCode = response.code();
-    String customMessage = config.getErrorMessages().get(statusCode);
-
-    if (customMessage != null) {
-      throw requestFailure(request,
-          createStatus(statusCode, combineMessages(customMessage, createStatus(response, getKubernetesSerialization()))));
-    } else {
-      throw requestFailure(request, createStatus(response, getKubernetesSerialization()));
-    }
-  }
-
-  private String combineMessages(String customMessage, Status defaultStatus) {
-    if (defaultStatus != null) {
-      String message = defaultStatus.getMessage();
-      if (message != null && message.length() > 0) {
-        return customMessage + " " + message;
-      }
-    }
-    return customMessage;
+    throw requestFailure(request, createStatus(response, getKubernetesSerialization()));
   }
 
   public static Status createStatus(HttpResponse<?> response, KubernetesSerialization kubernetesSerialization) {
@@ -617,8 +599,8 @@ public class OperationSupport {
             return status;
           }
         }
-      } catch (IOException | KubernetesClientException | IllegalArgumentException e) {
-        // ignored
+      } catch (IOException | RuntimeException e) {
+        logger.debug("Exception convertion response to Status", e);
       }
       if (response.message() != null) {
         statusMessage = response.message();

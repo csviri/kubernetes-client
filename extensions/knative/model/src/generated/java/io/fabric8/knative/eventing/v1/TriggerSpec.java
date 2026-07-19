@@ -2,9 +2,10 @@
 package io.fabric8.knative.eventing.v1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -12,8 +13,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import io.fabric8.knative.internal.eventing.pkg.apis.duck.v1.DeliverySpec;
-import io.fabric8.knative.internal.pkg.apis.duck.v1.Destination;
+import io.fabric8.knative.duck.v1.DeliverySpec;
+import io.fabric8.knative.duck.v1.Destination;
+import io.fabric8.knative.duck.v1.KReference;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -31,17 +34,14 @@ import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "broker",
+    "brokerRef",
     "delivery",
     "filter",
     "filters",
@@ -49,7 +49,6 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -69,55 +68,66 @@ import lombok.experimental.Accessors;
     @BuildableReference(Volume.class),
     @BuildableReference(VolumeMount.class)
 })
-public class TriggerSpec implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class TriggerSpec implements Editable<TriggerSpecBuilder>, KubernetesResource
 {
 
     @JsonProperty("broker")
     private String broker;
+    @JsonProperty("brokerRef")
+    private KReference brokerRef;
     @JsonProperty("delivery")
     private DeliverySpec delivery;
     @JsonProperty("filter")
     private TriggerFilter filter;
     @JsonProperty("filters")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<SubscriptionsAPIFilter> filters = new ArrayList<SubscriptionsAPIFilter>();
+    private List<SubscriptionsAPIFilter> filters = new ArrayList<>();
     @JsonProperty("subscriber")
     private Destination subscriber;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public TriggerSpec() {
     }
 
-    /**
-     * 
-     * @param filter
-     * @param delivery
-     * @param subscriber
-     * @param filters
-     * @param broker
-     */
-    public TriggerSpec(String broker, DeliverySpec delivery, TriggerFilter filter, List<SubscriptionsAPIFilter> filters, Destination subscriber) {
+    public TriggerSpec(String broker, KReference brokerRef, DeliverySpec delivery, TriggerFilter filter, List<SubscriptionsAPIFilter> filters, Destination subscriber) {
         super();
         this.broker = broker;
+        this.brokerRef = brokerRef;
         this.delivery = delivery;
         this.filter = filter;
         this.filters = filters;
         this.subscriber = subscriber;
     }
 
+    /**
+     * Broker is the broker that this trigger receives events from.
+     */
     @JsonProperty("broker")
     public String getBroker() {
         return broker;
     }
 
+    /**
+     * Broker is the broker that this trigger receives events from.
+     */
     @JsonProperty("broker")
     public void setBroker(String broker) {
         this.broker = broker;
+    }
+
+    @JsonProperty("brokerRef")
+    public KReference getBrokerRef() {
+        return brokerRef;
+    }
+
+    @JsonProperty("brokerRef")
+    public void setBrokerRef(KReference brokerRef) {
+        this.brokerRef = brokerRef;
     }
 
     @JsonProperty("delivery")
@@ -140,11 +150,18 @@ public class TriggerSpec implements KubernetesResource
         this.filter = filter;
     }
 
+    /**
+     * Filters is an experimental field that conforms to the CNCF CloudEvents Subscriptions API. It's an array of filter expressions that evaluate to true or false. If any filter expression in the array evaluates to false, the event MUST NOT be sent to the Subscriber. If all the filter expressions in the array evaluate to true, the event MUST be attempted to be delivered. Absence of a filter or empty array implies a value of true. In the event of users specifying both Filter and Filters, then the latter will override the former. This will allow users to try out the effect of the new Filters field without compromising the existing attribute-based Filter and try it out on existing Trigger objects.
+     */
     @JsonProperty("filters")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<SubscriptionsAPIFilter> getFilters() {
         return filters;
     }
 
+    /**
+     * Filters is an experimental field that conforms to the CNCF CloudEvents Subscriptions API. It's an array of filter expressions that evaluate to true or false. If any filter expression in the array evaluates to false, the event MUST NOT be sent to the Subscriber. If all the filter expressions in the array evaluate to true, the event MUST be attempted to be delivered. Absence of a filter or empty array implies a value of true. In the event of users specifying both Filter and Filters, then the latter will override the former. This will allow users to try out the effect of the new Filters field without compromising the existing attribute-based Filter and try it out on existing Trigger objects.
+     */
     @JsonProperty("filters")
     public void setFilters(List<SubscriptionsAPIFilter> filters) {
         this.filters = filters;
@@ -160,7 +177,18 @@ public class TriggerSpec implements KubernetesResource
         this.subscriber = subscriber;
     }
 
+    @JsonIgnore
+    public TriggerSpecBuilder edit() {
+        return new TriggerSpecBuilder(this);
+    }
+
+    @JsonIgnore
+    public TriggerSpecBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -168,6 +196,10 @@ public class TriggerSpec implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

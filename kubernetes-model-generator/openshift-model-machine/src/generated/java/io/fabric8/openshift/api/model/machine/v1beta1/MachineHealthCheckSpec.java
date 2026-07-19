@@ -2,9 +2,10 @@
 package io.fabric8.openshift.api.model.machine.v1beta1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -12,27 +13,32 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
-import io.fabric8.kubernetes.api.model.Duration;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
+import io.fabric8.kubernetes.api.model.LabelSelector;
 import io.fabric8.kubernetes.api.model.LocalObjectReference;
-import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * MachineHealthCheckSpec defines the desired state of MachineHealthCheck
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "maxUnhealthy",
     "nodeStartupTimeout",
     "remediationTemplate",
@@ -41,54 +47,50 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
 })
 @Buildable(editableEnabled = false, validationEnabled = false, generateBuilderPackage = false, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder", refs = {
-    @BuildableReference(ObjectMeta.class),
-    @BuildableReference(io.fabric8.kubernetes.api.model.LabelSelector.class),
+    @BuildableReference(io.fabric8.kubernetes.api.model.ObjectMeta.class),
+    @BuildableReference(LabelSelector.class),
     @BuildableReference(Container.class),
     @BuildableReference(PodTemplateSpec.class),
     @BuildableReference(ResourceRequirements.class),
-    @BuildableReference(io.fabric8.kubernetes.api.model.IntOrString.class),
-    @BuildableReference(io.fabric8.kubernetes.api.model.ObjectReference.class),
+    @BuildableReference(IntOrString.class),
+    @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class MachineHealthCheckSpec implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class MachineHealthCheckSpec implements Editable<MachineHealthCheckSpecBuilder>, KubernetesResource
 {
 
     @JsonProperty("maxUnhealthy")
-    private io.fabric8.kubernetes.api.model.IntOrString maxUnhealthy;
+    private IntOrString maxUnhealthy;
     @JsonProperty("nodeStartupTimeout")
-    private Duration nodeStartupTimeout;
+    private String nodeStartupTimeout;
     @JsonProperty("remediationTemplate")
-    private io.fabric8.kubernetes.api.model.ObjectReference remediationTemplate;
+    private ObjectReference remediationTemplate;
     @JsonProperty("selector")
-    private io.fabric8.kubernetes.api.model.LabelSelector selector;
+    private LabelSelector selector;
     @JsonProperty("unhealthyConditions")
-    private List<UnhealthyCondition> unhealthyConditions = new ArrayList<UnhealthyCondition>();
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<UnhealthyCondition> unhealthyConditions = new ArrayList<>();
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public MachineHealthCheckSpec() {
     }
 
-    /**
-     * 
-     * @param unhealthyConditions
-     * @param selector
-     * @param nodeStartupTimeout
-     * @param maxUnhealthy
-     * @param remediationTemplate
-     */
-    public MachineHealthCheckSpec(io.fabric8.kubernetes.api.model.IntOrString maxUnhealthy, Duration nodeStartupTimeout, io.fabric8.kubernetes.api.model.ObjectReference remediationTemplate, io.fabric8.kubernetes.api.model.LabelSelector selector, List<UnhealthyCondition> unhealthyConditions) {
+    public MachineHealthCheckSpec(IntOrString maxUnhealthy, String nodeStartupTimeout, ObjectReference remediationTemplate, LabelSelector selector, List<UnhealthyCondition> unhealthyConditions) {
         super();
         this.maxUnhealthy = maxUnhealthy;
         this.nodeStartupTimeout = nodeStartupTimeout;
@@ -97,57 +99,99 @@ public class MachineHealthCheckSpec implements KubernetesResource
         this.unhealthyConditions = unhealthyConditions;
     }
 
+    /**
+     * MachineHealthCheckSpec defines the desired state of MachineHealthCheck
+     */
     @JsonProperty("maxUnhealthy")
-    public io.fabric8.kubernetes.api.model.IntOrString getMaxUnhealthy() {
+    public IntOrString getMaxUnhealthy() {
         return maxUnhealthy;
     }
 
+    /**
+     * MachineHealthCheckSpec defines the desired state of MachineHealthCheck
+     */
     @JsonProperty("maxUnhealthy")
-    public void setMaxUnhealthy(io.fabric8.kubernetes.api.model.IntOrString maxUnhealthy) {
+    public void setMaxUnhealthy(IntOrString maxUnhealthy) {
         this.maxUnhealthy = maxUnhealthy;
     }
 
+    /**
+     * MachineHealthCheckSpec defines the desired state of MachineHealthCheck
+     */
     @JsonProperty("nodeStartupTimeout")
-    public Duration getNodeStartupTimeout() {
+    public String getNodeStartupTimeout() {
         return nodeStartupTimeout;
     }
 
+    /**
+     * MachineHealthCheckSpec defines the desired state of MachineHealthCheck
+     */
     @JsonProperty("nodeStartupTimeout")
-    public void setNodeStartupTimeout(Duration nodeStartupTimeout) {
+    public void setNodeStartupTimeout(String nodeStartupTimeout) {
         this.nodeStartupTimeout = nodeStartupTimeout;
     }
 
+    /**
+     * MachineHealthCheckSpec defines the desired state of MachineHealthCheck
+     */
     @JsonProperty("remediationTemplate")
-    public io.fabric8.kubernetes.api.model.ObjectReference getRemediationTemplate() {
+    public ObjectReference getRemediationTemplate() {
         return remediationTemplate;
     }
 
+    /**
+     * MachineHealthCheckSpec defines the desired state of MachineHealthCheck
+     */
     @JsonProperty("remediationTemplate")
-    public void setRemediationTemplate(io.fabric8.kubernetes.api.model.ObjectReference remediationTemplate) {
+    public void setRemediationTemplate(ObjectReference remediationTemplate) {
         this.remediationTemplate = remediationTemplate;
     }
 
+    /**
+     * MachineHealthCheckSpec defines the desired state of MachineHealthCheck
+     */
     @JsonProperty("selector")
-    public io.fabric8.kubernetes.api.model.LabelSelector getSelector() {
+    public LabelSelector getSelector() {
         return selector;
     }
 
+    /**
+     * MachineHealthCheckSpec defines the desired state of MachineHealthCheck
+     */
     @JsonProperty("selector")
-    public void setSelector(io.fabric8.kubernetes.api.model.LabelSelector selector) {
+    public void setSelector(LabelSelector selector) {
         this.selector = selector;
     }
 
+    /**
+     * unhealthyConditions contains a list of the conditions that determine whether a node is considered unhealthy.  The conditions are combined in a logical OR, i.e. if any of the conditions is met, the node is unhealthy.
+     */
     @JsonProperty("unhealthyConditions")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<UnhealthyCondition> getUnhealthyConditions() {
         return unhealthyConditions;
     }
 
+    /**
+     * unhealthyConditions contains a list of the conditions that determine whether a node is considered unhealthy.  The conditions are combined in a logical OR, i.e. if any of the conditions is met, the node is unhealthy.
+     */
     @JsonProperty("unhealthyConditions")
     public void setUnhealthyConditions(List<UnhealthyCondition> unhealthyConditions) {
         this.unhealthyConditions = unhealthyConditions;
     }
 
+    @JsonIgnore
+    public MachineHealthCheckSpecBuilder edit() {
+        return new MachineHealthCheckSpecBuilder(this);
+    }
+
+    @JsonIgnore
+    public MachineHealthCheckSpecBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -155,6 +199,10 @@ public class MachineHealthCheckSpec implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

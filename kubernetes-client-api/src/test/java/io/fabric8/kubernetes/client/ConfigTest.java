@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,18 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client;
 
-import io.fabric8.kubernetes.api.model.ExecConfig;
-import io.fabric8.kubernetes.api.model.ExecConfigBuilder;
+import io.fabric8.kubernetes.api.model.NamedContext;
 import io.fabric8.kubernetes.client.http.TlsVersion;
 import io.fabric8.kubernetes.client.lib.FileSystem;
 import io.fabric8.kubernetes.client.utils.Utils;
-import org.junit.jupiter.api.AfterEach;
+import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,23 +34,61 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.condition.OS.WINDOWS;
 
+@RestoreSystemProperties({
+    "KUBERNETES_SERVICE_HOST",
+    "KUBERNETES_SERVICE_PORT",
+    "http.proxy",
+    "https.proxy",
+    "kubeconfig",
+    "kubenamespace",
+    "kubernetes.auth.basic.password",
+    "kubernetes.auth.basic.username",
+    "kubernetes.auth.serviceAccount.token",
+    "kubernetes.auth.token",
+    "kubernetes.auth.tryServiceAccount",
+    "kubernetes.certs.ca.data",
+    "kubernetes.certs.ca.file",
+    "kubernetes.certs.client.data",
+    "kubernetes.certs.client.file",
+    "kubernetes.certs.client.key.algo",
+    "kubernetes.certs.client.key.data",
+    "kubernetes.certs.client.key.file",
+    "kubernetes.certs.client.key.passphrase",
+    "kubernetes.connection.timeout",
+    "kubernetes.disable.hostname.verification",
+    "kubernetes.impersonate.group",
+    "kubernetes.impersonate.username",
+    "kubernetes.keystore.file",
+    "kubernetes.keystore.passphrase",
+    "kubernetes.master",
+    "kubernetes.max.concurrent.requests",
+    "kubernetes.max.concurrent.requests.per.host",
+    "kubernetes.namespace",
+    "kubernetes.request.timeout",
+    "kubernetes.scale.timeout",
+    "kubernetes.tls.versions",
+    "kubernetes.trust.certificates",
+    "kubernetes.truststore.file",
+    "kubernetes.truststore.passphrase",
+    "kubernetes.upload.request.timeout",
+    "kubernetes.watch.reconnectInterval",
+    "kubernetes.watch.reconnectLimit",
+    "kubernetes.websocket.ping.interval",
+    "no.proxy",
+    "os.name",
+    "proxy.password",
+    "proxy.username",
+    "user.home"
+})
 class ConfigTest {
 
   private static final String TEST_KUBECONFIG_FILE = Utils.filePath(ConfigTest.class.getResource("/test-kubeconfig"));
@@ -81,94 +121,202 @@ class ConfigTest {
       .filePath(ConfigTest.class.getResource("/test-kubeconfig-exec-args-with-spaces"));
 
   private static final String TEST_KUBECONFIG_NO_CURRENT_CONTEXT_FILE = Utils
-      .filePath(ConfigTest.class.getResource("/test-kubeconfig-nocurrentctxt.yml"));
+      .filePath(ConfigTest.class.getResource("/test-kubeconfig-nocurrentctxt"));
 
-  @BeforeEach
-  public void setUp() {
-    System.getProperties().remove(Config.KUBERNETES_MASTER_SYSTEM_PROPERTY);
-    System.getProperties().remove(Config.KUBERNETES_NAMESPACE_SYSTEM_PROPERTY);
-    System.getProperties().remove(Config.KUBERNETES_OAUTH_TOKEN_SYSTEM_PROPERTY);
-    System.getProperties().remove(Config.KUBERNETES_AUTH_BASIC_USERNAME_SYSTEM_PROPERTY);
-    System.getProperties().remove(Config.KUBERNETES_AUTH_BASIC_PASSWORD_SYSTEM_PROPERTY);
-    System.getProperties().remove(Config.KUBERNETES_TRUST_CERT_SYSTEM_PROPERTY);
-    System.getProperties().remove(Config.KUBERNETES_DISABLE_HOSTNAME_VERIFICATION_SYSTEM_PROPERTY);
-    System.getProperties().remove(Config.KUBERNETES_CA_CERTIFICATE_FILE_SYSTEM_PROPERTY);
-    System.getProperties().remove(Config.KUBERNETES_CA_CERTIFICATE_DATA_SYSTEM_PROPERTY);
-    System.getProperties().remove(Config.KUBERNETES_CLIENT_CERTIFICATE_FILE_SYSTEM_PROPERTY);
-    System.getProperties().remove(Config.KUBERNETES_CLIENT_CERTIFICATE_DATA_SYSTEM_PROPERTY);
-    System.getProperties().remove(Config.KUBERNETES_CLIENT_KEY_FILE_SYSTEM_PROPERTY);
-    System.getProperties().remove(Config.KUBERNETES_CLIENT_KEY_DATA_SYSTEM_PROPERTY);
-    System.getProperties().remove(Config.KUBERNETES_CLIENT_KEY_ALGO_SYSTEM_PROPERTY);
-    System.getProperties().remove(Config.KUBERNETES_CLIENT_KEY_PASSPHRASE_SYSTEM_PROPERTY);
-    System.getProperties().remove(Config.KUBERNETES_CLIENT_KEY_FILE_SYSTEM_PROPERTY);
-    System.getProperties().remove(Config.KUBERNETES_MAX_CONCURRENT_REQUESTS);
-    System.getProperties().remove(Config.KUBERNETES_MAX_CONCURRENT_REQUESTS_PER_HOST);
-    System.getProperties().remove(Config.KUBERNETES_WATCH_RECONNECT_INTERVAL_SYSTEM_PROPERTY);
-    System.getProperties().remove(Config.KUBERNETES_WATCH_RECONNECT_LIMIT_SYSTEM_PROPERTY);
-    System.getProperties().remove(Config.KUBERNETES_REQUEST_TIMEOUT_SYSTEM_PROPERTY);
-    System.getProperties().remove(Config.KUBERNETES_HTTP_PROXY);
-    System.getProperties().remove(Config.KUBERNETES_KUBECONFIG_FILE);
-    System.getProperties().remove(Config.KUBERNETES_NAMESPACE_FILE);
-    System.getProperties().remove(Config.KUBERNETES_TLS_VERSIONS);
-    System.getProperties().remove(Config.KUBERNETES_TRUSTSTORE_FILE_PROPERTY);
-    System.getProperties().remove(Config.KUBERNETES_TRUSTSTORE_PASSPHRASE_PROPERTY);
-    System.getProperties().remove(Config.KUBERNETES_KEYSTORE_FILE_PROPERTY);
-    System.getProperties().remove(Config.KUBERNETES_KEYSTORE_PASSPHRASE_PROPERTY);
-    System.getProperties().remove(Config.KUBERNETES_SERVICE_HOST_PROPERTY);
-    System.getProperties().remove(Config.KUBERNETES_SERVICE_PORT_PROPERTY);
-    System.getProperties().remove(Config.KUBERNETES_IMPERSONATE_USERNAME);
-    System.getProperties().remove(Config.KUBERNETES_IMPERSONATE_GROUP);
-  }
+  private static final String TEST_KUBECONFIG_EXEC_FILE_CERT_AUTH = Utils
+      .filePath(ConfigTest.class.getResource("/test-kubeconfig-exec-cert-auth"));
+  private static final String TEST_KUBECONFIG_EXEC_WIN_FILE_CERT_AUTH = Utils
+      .filePath(ConfigTest.class.getResource("/test-kubeconfig-exec-win-cert-auth"));
+  private static final String TEST_KUBECONFIG_EXEC_FILE_CERT_AUTH_EC_INVALID = Utils
+      .filePath(ConfigTest.class.getResource("/test-kubeconfig-exec-cert-auth-ec-invalid"));
+  private static final String TEST_KUBECONFIG_EXEC_WIN_FILE_CERT_AUTH_EC_INVALID = Utils
+      .filePath(ConfigTest.class.getResource("/test-kubeconfig-exec-win-cert-auth-ec-invalid"));
+  private static final String TEST_CERT_GENERATOR_FILE = Utils.filePath(ConfigTest.class.getResource("/cert-generator"));
+  private static final String TEST_KUBECONFIG_TLS_SERVER_NAME_FILE = Utils
+      .filePath(ConfigTest.class.getResource("/test-kubeconfig-tls-server-name"));
 
-  @AfterEach
-  public void tearDown() {
-    setUp();
+  @Nested
+  @DisplayName("System Properties Configured")
+  class SystemPropertiesConfigured {
+    @BeforeEach
+    void setUp() {
+      System.setProperty("kubernetes.master", "http://somehost:80");
+      System.setProperty("kubernetes.namespace", "testns");
+      System.setProperty("kubernetes.auth.token", "token");
+      System.setProperty("kubernetes.auth.basic.username", "user");
+      System.setProperty("kubernetes.auth.basic.password", "pass");
+      System.setProperty("kubernetes.trust.certificates", "true");
+      System.setProperty("kubernetes.disable.hostname.verification", "true");
+      System.setProperty("kubernetes.certs.ca.file", "/path/to/cert");
+      System.setProperty("kubernetes.certs.ca.data", "cacertdata");
+      System.setProperty("kubernetes.certs.client.file", "/path/to/clientcert");
+      System.setProperty("kubernetes.certs.client.data", "clientcertdata");
+      System.setProperty("kubernetes.certs.client.key.file", "/path/to/clientkey");
+      System.setProperty("kubernetes.certs.client.key.data", "clientkeydata");
+      System.setProperty("kubernetes.certs.client.key.algo", "algo");
+      System.setProperty("kubernetes.certs.client.key.passphrase", "passphrase");
+      System.setProperty("kubernetes.certs.client.key.file", "/path/to/clientkey");
+      System.setProperty("kubernetes.max.concurrent.requests", "120");
+      System.setProperty("kubernetes.max.concurrent.requests.per.host", "20");
+      System.setProperty("kubernetes.watch.reconnectInterval", "5000");
+      System.setProperty("kubernetes.watch.reconnectLimit", "5");
+      System.setProperty("kubernetes.request.timeout", "5000");
+      System.setProperty("http.proxy", "httpProxy");
+      System.setProperty("kubernetes.tls.versions", "TLSv1.2,TLSv1.1");
+      System.setProperty("kubernetes.truststore.file", "/path/to/truststore");
+      System.setProperty("kubernetes.truststore.passphrase", "truststorePassphrase");
+      System.setProperty("kubernetes.keystore.file", "/path/to/keystore");
+      System.setProperty("kubernetes.keystore.passphrase", "keystorePassphrase");
+      System.setProperty("kubernetes.upload.request.timeout", "600000");
+      System.setProperty("kubernetes.websocket.ping.interval", "1000");
+      System.setProperty("kubernetes.connection.timeout", "1000");
+      System.setProperty("kubernetes.scale.timeout", "1000");
+      System.setProperty("https.proxy", "httpsProxy");
+      System.setProperty("no.proxy", "no-proxy-url1.io,no-proxy-url2.io");
+      System.setProperty("proxy.username", "proxyUsername");
+      System.setProperty("proxy.password", "proxyPassword");
+    }
+
+    @Test
+    @DisplayName("default config, should load from properties")
+    void defaultConfig_whenInvoked_shouldLoadFromProperties() {
+      //noinspection deprecation
+      assertThat(new ConfigBuilder().build())
+          .isNotNull()
+          .hasFieldOrPropertyWithValue("trustCerts", true)
+          .hasFieldOrPropertyWithValue("disableHostnameVerification", true)
+          .hasFieldOrPropertyWithValue("masterUrl", "http://somehost:80/")
+          .hasFieldOrPropertyWithValue("namespace", "testns")
+          .hasFieldOrPropertyWithValue("username", "user")
+          .hasFieldOrPropertyWithValue("password", "pass")
+          .hasFieldOrPropertyWithValue("caCertFile", "/path/to/cert")
+          .hasFieldOrPropertyWithValue("caCertData", "cacertdata")
+          .hasFieldOrPropertyWithValue("clientCertFile", "/path/to/clientcert")
+          .hasFieldOrPropertyWithValue("clientCertData", "clientcertdata")
+          .hasFieldOrPropertyWithValue("clientKeyFile", "/path/to/clientkey")
+          .hasFieldOrPropertyWithValue("clientKeyData", "clientkeydata")
+          .hasFieldOrPropertyWithValue("clientKeyAlgo", "algo")
+          .hasFieldOrPropertyWithValue("clientKeyPassphrase", "passphrase")
+          .hasFieldOrPropertyWithValue("httpProxy", "httpProxy")
+          .hasFieldOrPropertyWithValue("watchReconnectInterval", 5000)
+          .hasFieldOrPropertyWithValue("watchReconnectLimit", 5)
+          .hasFieldOrPropertyWithValue("requestTimeout", 5000)
+          .hasFieldOrPropertyWithValue("requestConfig.uploadRequestTimeout", 600000)
+          .hasFieldOrPropertyWithValue("tlsVersions", new TlsVersion[] { TlsVersion.TLS_1_2, TlsVersion.TLS_1_1 })
+          .hasFieldOrPropertyWithValue("trustStoreFile", "/path/to/truststore")
+          .hasFieldOrPropertyWithValue("trustStorePassphrase", "truststorePassphrase")
+          .hasFieldOrPropertyWithValue("keyStoreFile", "/path/to/keystore")
+          .hasFieldOrPropertyWithValue("keyStorePassphrase", "keystorePassphrase")
+          .hasFieldOrPropertyWithValue("maxConcurrentRequests", 120)
+          .hasFieldOrPropertyWithValue("maxConcurrentRequestsPerHost", 20)
+          .hasFieldOrPropertyWithValue("websocketPingInterval", 1000L)
+          .hasFieldOrPropertyWithValue("connectionTimeout", 1000)
+          .hasFieldOrPropertyWithValue("scaleTimeout", 1000L)
+          .hasFieldOrPropertyWithValue("watchReconnectInterval", 5000)
+          .hasFieldOrPropertyWithValue("http2Disable", false)
+          .hasFieldOrPropertyWithValue("httpsProxy", "httpsProxy")
+          .hasFieldOrPropertyWithValue("proxyUsername", "proxyUsername")
+          .hasFieldOrPropertyWithValue("proxyPassword", "proxyPassword")
+          .hasFieldOrPropertyWithValue("noProxy", new String[] { "no-proxy-url1.io", "no-proxy-url2.io" })
+          .hasFieldOrPropertyWithValue("autoOAuthToken", "token");
+    }
+
+    @Test
+    @DisplayName("ConfigBuilder, should load from properties")
+    void configBuilder_whenInvoked_shouldLoadFromProperties() {
+      assertThat(new ConfigBuilder().build())
+          .isNotNull()
+          .hasFieldOrPropertyWithValue("trustCerts", true)
+          .hasFieldOrPropertyWithValue("disableHostnameVerification", true)
+          .hasFieldOrPropertyWithValue("masterUrl", "http://somehost:80/")
+          .hasFieldOrPropertyWithValue("namespace", "testns")
+          .hasFieldOrPropertyWithValue("username", "user")
+          .hasFieldOrPropertyWithValue("password", "pass")
+          .hasFieldOrPropertyWithValue("caCertFile", "/path/to/cert")
+          .hasFieldOrPropertyWithValue("caCertData", "cacertdata")
+          .hasFieldOrPropertyWithValue("clientCertFile", "/path/to/clientcert")
+          .hasFieldOrPropertyWithValue("clientCertData", "clientcertdata")
+          .hasFieldOrPropertyWithValue("clientKeyFile", "/path/to/clientkey")
+          .hasFieldOrPropertyWithValue("clientKeyData", "clientkeydata")
+          .hasFieldOrPropertyWithValue("clientKeyAlgo", "algo")
+          .hasFieldOrPropertyWithValue("clientKeyPassphrase", "passphrase")
+          .hasFieldOrPropertyWithValue("httpProxy", "httpProxy")
+          .hasFieldOrPropertyWithValue("watchReconnectInterval", 5000)
+          .hasFieldOrPropertyWithValue("watchReconnectLimit", 5)
+          .hasFieldOrPropertyWithValue("requestTimeout", 5000)
+          .hasFieldOrPropertyWithValue("requestConfig.uploadRequestTimeout", 600000)
+          .hasFieldOrPropertyWithValue("tlsVersions", new TlsVersion[] { TlsVersion.TLS_1_2, TlsVersion.TLS_1_1 })
+          .hasFieldOrPropertyWithValue("trustStoreFile", "/path/to/truststore")
+          .hasFieldOrPropertyWithValue("trustStorePassphrase", "truststorePassphrase")
+          .hasFieldOrPropertyWithValue("keyStoreFile", "/path/to/keystore")
+          .hasFieldOrPropertyWithValue("keyStorePassphrase", "keystorePassphrase")
+          .hasFieldOrPropertyWithValue("maxConcurrentRequests", 120)
+          .hasFieldOrPropertyWithValue("maxConcurrentRequestsPerHost", 20)
+          .hasFieldOrPropertyWithValue("websocketPingInterval", 1000L)
+          .hasFieldOrPropertyWithValue("connectionTimeout", 1000)
+          .hasFieldOrPropertyWithValue("scaleTimeout", 1000L)
+          .hasFieldOrPropertyWithValue("watchReconnectInterval", 5000)
+          .hasFieldOrPropertyWithValue("http2Disable", false)
+          .hasFieldOrPropertyWithValue("httpsProxy", "httpsProxy")
+          .hasFieldOrPropertyWithValue("proxyUsername", "proxyUsername")
+          .hasFieldOrPropertyWithValue("proxyPassword", "proxyPassword")
+          .hasFieldOrPropertyWithValue("noProxy", new String[] { "no-proxy-url1.io", "no-proxy-url2.io" })
+          .hasFieldOrPropertyWithValue("autoOAuthToken", "token");
+    }
+
+    @Test
+    @DisplayName("ConfigBuilder, with builder methods, should override properties")
+    void configBuilder_withBuilderMethods_shouldOverrideFieldsConfiguredViaProperties() {
+      Config config = new ConfigBuilder()
+          .withMasterUrl("http://somehost-via-builder:80")
+          .withNamespace("testns-via-builder")
+          .build();
+
+      assertThat(config)
+          .isNotNull()
+          .hasFieldOrPropertyWithValue("trustCerts", true)
+          .hasFieldOrPropertyWithValue("disableHostnameVerification", true)
+          .hasFieldOrPropertyWithValue("masterUrl", "http://somehost-via-builder:80/")
+          .hasFieldOrPropertyWithValue("namespace", "testns-via-builder")
+          .hasFieldOrPropertyWithValue("username", "user")
+          .hasFieldOrPropertyWithValue("password", "pass")
+          .hasFieldOrPropertyWithValue("caCertFile", "/path/to/cert")
+          .hasFieldOrPropertyWithValue("caCertData", "cacertdata")
+          .hasFieldOrPropertyWithValue("clientCertFile", "/path/to/clientcert")
+          .hasFieldOrPropertyWithValue("clientCertData", "clientcertdata")
+          .hasFieldOrPropertyWithValue("clientKeyFile", "/path/to/clientkey")
+          .hasFieldOrPropertyWithValue("clientKeyData", "clientkeydata")
+          .hasFieldOrPropertyWithValue("clientKeyAlgo", "algo")
+          .hasFieldOrPropertyWithValue("clientKeyPassphrase", "passphrase")
+          .hasFieldOrPropertyWithValue("httpProxy", "httpProxy")
+          .hasFieldOrPropertyWithValue("watchReconnectInterval", 5000)
+          .hasFieldOrPropertyWithValue("watchReconnectLimit", 5)
+          .hasFieldOrPropertyWithValue("requestTimeout", 5000)
+          .hasFieldOrPropertyWithValue("requestConfig.uploadRequestTimeout", 600000)
+          .hasFieldOrPropertyWithValue("tlsVersions", new TlsVersion[] { TlsVersion.TLS_1_2, TlsVersion.TLS_1_1 })
+          .hasFieldOrPropertyWithValue("trustStoreFile", "/path/to/truststore")
+          .hasFieldOrPropertyWithValue("trustStorePassphrase", "truststorePassphrase")
+          .hasFieldOrPropertyWithValue("keyStoreFile", "/path/to/keystore")
+          .hasFieldOrPropertyWithValue("keyStorePassphrase", "keystorePassphrase")
+          .hasFieldOrPropertyWithValue("maxConcurrentRequests", 120)
+          .hasFieldOrPropertyWithValue("maxConcurrentRequestsPerHost", 20)
+          .hasFieldOrPropertyWithValue("websocketPingInterval", 1000L)
+          .hasFieldOrPropertyWithValue("connectionTimeout", 1000)
+          .hasFieldOrPropertyWithValue("scaleTimeout", 1000L)
+          .hasFieldOrPropertyWithValue("watchReconnectInterval", 5000)
+          .hasFieldOrPropertyWithValue("http2Disable", false)
+          .hasFieldOrPropertyWithValue("httpsProxy", "httpsProxy")
+          .hasFieldOrPropertyWithValue("proxyUsername", "proxyUsername")
+          .hasFieldOrPropertyWithValue("proxyPassword", "proxyPassword")
+          .hasFieldOrPropertyWithValue("noProxy", new String[] { "no-proxy-url1.io", "no-proxy-url2.io" })
+          .hasFieldOrPropertyWithValue("autoOAuthToken", "token");
+    }
   }
 
   @Test
-  void testWithSystemProperties() {
-    System.setProperty(Config.KUBERNETES_MASTER_SYSTEM_PROPERTY, "http://somehost:80");
-    System.setProperty(Config.KUBERNETES_NAMESPACE_SYSTEM_PROPERTY, "testns");
-
-    System.setProperty(Config.KUBERNETES_OAUTH_TOKEN_SYSTEM_PROPERTY, "token");
-    System.setProperty(Config.KUBERNETES_AUTH_BASIC_USERNAME_SYSTEM_PROPERTY, "user");
-    System.setProperty(Config.KUBERNETES_AUTH_BASIC_PASSWORD_SYSTEM_PROPERTY, "pass");
-    System.setProperty(Config.KUBERNETES_TRUST_CERT_SYSTEM_PROPERTY, "true");
-    System.setProperty(Config.KUBERNETES_DISABLE_HOSTNAME_VERIFICATION_SYSTEM_PROPERTY, "true");
-    System.setProperty(Config.KUBERNETES_CA_CERTIFICATE_FILE_SYSTEM_PROPERTY, "/path/to/cert");
-    System.setProperty(Config.KUBERNETES_CA_CERTIFICATE_DATA_SYSTEM_PROPERTY, "cacertdata");
-    System.setProperty(Config.KUBERNETES_CLIENT_CERTIFICATE_FILE_SYSTEM_PROPERTY, "/path/to/clientcert");
-    System.setProperty(Config.KUBERNETES_CLIENT_CERTIFICATE_DATA_SYSTEM_PROPERTY, "clientcertdata");
-    System.setProperty(Config.KUBERNETES_CLIENT_KEY_FILE_SYSTEM_PROPERTY, "/path/to/clientkey");
-    System.setProperty(Config.KUBERNETES_CLIENT_KEY_DATA_SYSTEM_PROPERTY, "clientkeydata");
-    System.setProperty(Config.KUBERNETES_CLIENT_KEY_ALGO_SYSTEM_PROPERTY, "algo");
-    System.setProperty(Config.KUBERNETES_CLIENT_KEY_PASSPHRASE_SYSTEM_PROPERTY, "passphrase");
-    System.setProperty(Config.KUBERNETES_CLIENT_KEY_FILE_SYSTEM_PROPERTY, "/path/to/clientkey");
-    System.setProperty(Config.KUBERNETES_MAX_CONCURRENT_REQUESTS, "120");
-    System.setProperty(Config.KUBERNETES_MAX_CONCURRENT_REQUESTS_PER_HOST, "20");
-    System.setProperty(Config.KUBERNETES_WATCH_RECONNECT_INTERVAL_SYSTEM_PROPERTY, "5000");
-    System.setProperty(Config.KUBERNETES_WATCH_RECONNECT_LIMIT_SYSTEM_PROPERTY, "5");
-    System.setProperty(Config.KUBERNETES_REQUEST_TIMEOUT_SYSTEM_PROPERTY, "5000");
-    System.setProperty(Config.KUBERNETES_HTTP_PROXY, "httpProxy");
-
-    System.setProperty(Config.KUBERNETES_TLS_VERSIONS, "TLSv1.2,TLSv1.1");
-
-    System.setProperty(Config.KUBERNETES_TRUSTSTORE_FILE_PROPERTY, "/path/to/truststore");
-    System.setProperty(Config.KUBERNETES_TRUSTSTORE_PASSPHRASE_PROPERTY, "truststorePassphrase");
-    System.setProperty(Config.KUBERNETES_KEYSTORE_FILE_PROPERTY, "/path/to/keystore");
-    System.setProperty(Config.KUBERNETES_KEYSTORE_PASSPHRASE_PROPERTY, "keystorePassphrase");
-
-    System.setProperty(Config.KUBERNETES_UPLOAD_REQUEST_TIMEOUT_SYSTEM_PROPERTY, "600000");
-
-    Config config = new Config();
-    assertConfig(config, true);
-
-    config = new ConfigBuilder().build();
-    assertConfig(config, true);
-  }
-
-  @Test
-  void testWithBuilder() {
+  @DisplayName("when fields configured via builder, then fields get most precedence")
+  void builder_whenInvoked_shouldCreateConfigWithConfiguredFields() {
+    // Given + When
     Config config = new ConfigBuilder()
         .withMasterUrl("http://somehost:80")
         .withApiVersion("v1")
@@ -193,395 +341,533 @@ class ConfigTest {
         .withRequestTimeout(5000)
         .withUploadRequestTimeout(600000)
         .withHttpProxy("httpProxy")
+        .withHttpsProxy("httpsProxy")
+        .withProxyUsername("proxyUsername")
+        .withProxyPassword("proxyPassword")
+        .withNoProxy("no-proxy-url1.io", "no-proxy-url2.io")
         .withTlsVersions(TlsVersion.TLS_1_2, TlsVersion.TLS_1_1)
         .withTrustStoreFile("/path/to/truststore")
         .withTrustStorePassphrase("truststorePassphrase")
         .withKeyStoreFile("/path/to/keystore")
         .withKeyStorePassphrase("keystorePassphrase")
+        .withHttp2Disable(false)
+        .withWebsocketPingInterval(1000L)
+        .withConnectionTimeout(1000)
+        .withScaleTimeout(1000L)
         .build();
-
-    assertConfig(config, false);
+    // Then
+    assertThat(config)
+        .isNotNull()
+        .hasFieldOrPropertyWithValue("trustCerts", true)
+        .hasFieldOrPropertyWithValue("disableHostnameVerification", true)
+        .hasFieldOrPropertyWithValue("masterUrl", "http://somehost:80/")
+        .hasFieldOrPropertyWithValue("namespace", "testns")
+        .hasFieldOrPropertyWithValue("username", "user")
+        .hasFieldOrPropertyWithValue("password", "pass")
+        .hasFieldOrPropertyWithValue("caCertFile", "/path/to/cert")
+        .hasFieldOrPropertyWithValue("caCertData", "cacertdata")
+        .hasFieldOrPropertyWithValue("clientCertFile", "/path/to/clientcert")
+        .hasFieldOrPropertyWithValue("clientCertData", "clientcertdata")
+        .hasFieldOrPropertyWithValue("clientKeyFile", "/path/to/clientkey")
+        .hasFieldOrPropertyWithValue("clientKeyData", "clientkeydata")
+        .hasFieldOrPropertyWithValue("clientKeyAlgo", "algo")
+        .hasFieldOrPropertyWithValue("clientKeyPassphrase", "passphrase")
+        .hasFieldOrPropertyWithValue("httpProxy", "httpProxy")
+        .hasFieldOrPropertyWithValue("watchReconnectInterval", 5000)
+        .hasFieldOrPropertyWithValue("watchReconnectLimit", 5)
+        .hasFieldOrPropertyWithValue("requestTimeout", 5000)
+        .hasFieldOrPropertyWithValue("requestConfig.uploadRequestTimeout", 600000)
+        .hasFieldOrPropertyWithValue("tlsVersions", new TlsVersion[] { TlsVersion.TLS_1_2, TlsVersion.TLS_1_1 })
+        .hasFieldOrPropertyWithValue("trustStoreFile", "/path/to/truststore")
+        .hasFieldOrPropertyWithValue("trustStorePassphrase", "truststorePassphrase")
+        .hasFieldOrPropertyWithValue("keyStoreFile", "/path/to/keystore")
+        .hasFieldOrPropertyWithValue("keyStorePassphrase", "keystorePassphrase")
+        .hasFieldOrPropertyWithValue("maxConcurrentRequests", 120)
+        .hasFieldOrPropertyWithValue("maxConcurrentRequestsPerHost", 20)
+        .hasFieldOrPropertyWithValue("websocketPingInterval", 1000L)
+        .hasFieldOrPropertyWithValue("connectionTimeout", 1000)
+        .hasFieldOrPropertyWithValue("scaleTimeout", 1000L)
+        .hasFieldOrPropertyWithValue("watchReconnectInterval", 5000)
+        .hasFieldOrPropertyWithValue("http2Disable", false)
+        .hasFieldOrPropertyWithValue("httpsProxy", "httpsProxy")
+        .hasFieldOrPropertyWithValue("proxyUsername", "proxyUsername")
+        .hasFieldOrPropertyWithValue("proxyPassword", "proxyPassword")
+        .hasFieldOrPropertyWithValue("noProxy", new String[] { "no-proxy-url1.io", "no-proxy-url2.io" })
+        .hasFieldOrPropertyWithValue("oauthToken", "token");
   }
 
   @Test
-  void testWithBuilderAndSystemProperties() {
-    System.setProperty(Config.KUBERNETES_MASTER_SYSTEM_PROPERTY, "http://tobeoverriden:80");
-    System.setProperty(Config.KUBERNETES_NAMESPACE_SYSTEM_PROPERTY, "tobeoverriden");
-
-    System.setProperty(Config.KUBERNETES_OAUTH_TOKEN_SYSTEM_PROPERTY, "token");
-    System.setProperty(Config.KUBERNETES_AUTH_BASIC_USERNAME_SYSTEM_PROPERTY, "user");
-    System.setProperty(Config.KUBERNETES_AUTH_BASIC_PASSWORD_SYSTEM_PROPERTY, "pass");
-    System.setProperty(Config.KUBERNETES_TRUST_CERT_SYSTEM_PROPERTY, "true");
-    System.setProperty(Config.KUBERNETES_DISABLE_HOSTNAME_VERIFICATION_SYSTEM_PROPERTY, "true");
-    System.setProperty(Config.KUBERNETES_CA_CERTIFICATE_FILE_SYSTEM_PROPERTY, "/path/to/cert");
-    System.setProperty(Config.KUBERNETES_CA_CERTIFICATE_DATA_SYSTEM_PROPERTY, "cacertdata");
-    System.setProperty(Config.KUBERNETES_CLIENT_CERTIFICATE_FILE_SYSTEM_PROPERTY, "/path/to/clientcert");
-    System.setProperty(Config.KUBERNETES_CLIENT_CERTIFICATE_DATA_SYSTEM_PROPERTY, "clientcertdata");
-    System.setProperty(Config.KUBERNETES_CLIENT_KEY_FILE_SYSTEM_PROPERTY, "/path/to/clientkey");
-    System.setProperty(Config.KUBERNETES_CLIENT_KEY_DATA_SYSTEM_PROPERTY, "clientkeydata");
-    System.setProperty(Config.KUBERNETES_CLIENT_KEY_ALGO_SYSTEM_PROPERTY, "algo");
-    System.setProperty(Config.KUBERNETES_CLIENT_KEY_PASSPHRASE_SYSTEM_PROPERTY, "passphrase");
-    System.setProperty(Config.KUBERNETES_CLIENT_KEY_FILE_SYSTEM_PROPERTY, "/path/to/clientkey");
-    System.setProperty(Config.KUBERNETES_MAX_CONCURRENT_REQUESTS, "120");
-    System.setProperty(Config.KUBERNETES_MAX_CONCURRENT_REQUESTS_PER_HOST, "20");
-    System.setProperty(Config.KUBERNETES_WATCH_RECONNECT_INTERVAL_SYSTEM_PROPERTY, "5000");
-    System.setProperty(Config.KUBERNETES_WATCH_RECONNECT_LIMIT_SYSTEM_PROPERTY, "5");
-    System.setProperty(Config.KUBERNETES_REQUEST_TIMEOUT_SYSTEM_PROPERTY, "5000");
-    System.setProperty(Config.KUBERNETES_HTTP_PROXY, "httpProxy");
-
-    System.setProperty(Config.KUBERNETES_TLS_VERSIONS, "TLSv1.2,TLSv1.1");
-
-    System.setProperty(Config.KUBERNETES_TRUSTSTORE_FILE_PROPERTY, "/path/to/truststore");
-    System.setProperty(Config.KUBERNETES_TRUSTSTORE_PASSPHRASE_PROPERTY, "truststorePassphrase");
-    System.setProperty(Config.KUBERNETES_KEYSTORE_FILE_PROPERTY, "/path/to/keystore");
-    System.setProperty(Config.KUBERNETES_KEYSTORE_PASSPHRASE_PROPERTY, "keystorePassphrase");
-
-    System.setProperty(Config.KUBERNETES_UPLOAD_REQUEST_TIMEOUT_SYSTEM_PROPERTY, "600000");
-
-    Config config = new ConfigBuilder()
-        .withMasterUrl("http://somehost:80")
-        .withNamespace("testns")
-        .build();
-
-    assertConfig(config, true);
+  @DisplayName("no additional config, should use default value for webSocketPingInterval")
+  void builder_whenInvoked_shouldHonorDefaultWebsocketPingInterval() {
+    // Given + When
+    Config config = new ConfigBuilder().build();
+    // Then
+    assertThat(config.getWebsocketPingInterval())
+        .isEqualTo(30000L);
   }
 
   @Test
-  void testMasterUrlWithServiceAccount() {
-    System.setProperty(Config.KUBERNETES_KUBECONFIG_FILE, "/dev/null");
-    System.setProperty(Config.KUBERNETES_SERVICE_HOST_PROPERTY, "10.0.0.1");
-    System.setProperty(Config.KUBERNETES_SERVICE_PORT_PROPERTY, "443");
-    Config config = Config.autoConfigure(null);
-    assertNotNull(config);
-    assertEquals("https://10.0.0.1:443/", config.getMasterUrl());
-    assertEquals(null, config.getFile());
+  void testBuilderAdditionalProperties() {
+    // Given + When
+    Config config = new ConfigBuilder().withAdditionalProperties(Map.of("a", "b")).build();
+    // Then
+    assertThat(config.getAdditionalProperties())
+        .isEqualTo(Map.of("a", "b"));
+  }
+
+  @Nested
+  @DisplayName("Inside Kubernetes cluster")
+  class InCluster {
+    @BeforeEach
+    void setUp() {
+      System.setProperty("kubeconfig", "/dev/null");
+      System.clearProperty("kubernetes.master");
+    }
+
+    @Test
+    @DisplayName("when KUBERNETES_SERVICE_HOST,KUBERNETES_SERVICE_PORT env variables present, then compute masterUrl from environment variables")
+    void autoConfigure_whenKubernetesServiceEnvironmentVariablesPresent_thenComputeMasterUrlFromEnvironmentVariables() {
+      // Given
+      System.setProperty("KUBERNETES_SERVICE_HOST", "10.0.0.1");
+      System.setProperty("KUBERNETES_SERVICE_PORT", "443");
+      // When
+      Config config = Config.autoConfigure(null);
+      // Then
+      assertThat(config)
+          .hasFieldOrPropertyWithValue("masterUrl", "https://10.0.0.1:443/")
+          .hasFieldOrPropertyWithValue("file", null);
+    }
+
+    @Test
+    @DisplayName("refresh() creates new instance when invoked")
+    void refresh_whenInvoked_shouldCreateNewInstance() {
+      Config config = Config.autoConfigure(null);
+      assertThat(config)
+          .hasFieldOrPropertyWithValue("file", null)
+          .hasFieldOrPropertyWithValue("autoConfigure", true);
+
+      // ensure that refresh creates a new instance
+      Config refresh = config.refresh();
+      assertThat(refresh)
+          .isNotSameAs(config)
+          .hasFieldOrPropertyWithValue("file", null)
+          .hasFieldOrPropertyWithValue("autoConfigure", true);
+    }
+
+    @Test
+    @DisplayName("when KUBERNETES_SERVICE_HOST,KUBERNETES_SERVICE_PORT env variables present with IPv6 address, then compute masterUrl from environment variables")
+    void autoConfigure_whenKubernetesServiceEnvironmentVariablesPresentWithIPv6_thenComputeMasterUrlFromEnvironmentVariables() {
+      // Given
+      System.setProperty("KUBERNETES_SERVICE_HOST", "2001:db8:1f70::999:de8:7648:6e8");
+      System.setProperty("KUBERNETES_SERVICE_PORT", "443");
+      // When
+      Config config = Config.autoConfigure(null);
+      // Then
+      assertThat(config)
+          .hasFieldOrPropertyWithValue("masterUrl", "https://[2001:db8:1f70::999:de8:7648:6e8]:443/")
+          .hasFieldOrPropertyWithValue("file", null);
+    }
+
+    @Test
+    @DisplayName("when ServiceAccount token file provided, then use it as autoOAuthToken")
+    void whenServiceAccountTokenPathProvided_thenUseThatToken() {
+      // Given
+      System.setProperty("kubernetes.auth.serviceAccount.token",
+          Utils.filePath(ConfigTest.class.getResource("/test-serviceaccount/token")));
+      // When
+      Config config = new ConfigBuilder().build();
+      // Then
+      assertThat(config.getAutoOAuthToken()).contains("token-from-mounted-serviceaccount");
+    }
+
+    @Test
+    @DisplayName("when ServiceAccount certificate file provided, then use it as caCertFile")
+    void whenServiceAccountCertFilePathProvided_thenUseThatToken() {
+      // Given
+      String certFilePath = Utils.filePath(ConfigTest.class.getResource("/test-serviceaccount/ca.crt"));
+      System.setProperty("kubernetes.certs.ca.file", certFilePath);
+      // When
+      Config config = new ConfigBuilder().build();
+      // Then
+      assertThat(config.getCaCertFile()).isEqualTo(certFilePath);
+    }
+
+    @Test
+    @DisplayName("when kubernetes.tryNamespacePath=false, then do NOT read ServiceAccount files")
+    void whenTryNamespacePathDisabled_thenDoNotUseServiceAccountAttributes() {
+      // Given
+      System.setProperty("kubernetes.auth.tryServiceAccount", "false");
+      System.setProperty("kubernetes.auth.serviceAccount.token",
+          Utils.filePath(ConfigTest.class.getResource("/test-serviceaccount/token")));
+      // When
+      Config config = new ConfigBuilder().build();
+      // Then
+      assertThat(config.getAutoOAuthToken()).isNull();
+    }
+  }
+
+  @Nested
+  @DisplayName("kubeconfig present")
+  class KubeConfigPresent {
+    @BeforeEach
+    void setUp() {
+      System.setProperty("kubeconfig", TEST_KUBECONFIG_FILE);
+      System.clearProperty("kubernetes.namespace");
+    }
+
+    @Test
+    @DisplayName("default config should auto configure from kubeconfig")
+    void defaultConfig_shouldAutoConfigureFromKubeConfig() {
+      assertThat(new ConfigBuilder().build())
+          .isNotNull()
+          .hasFieldOrPropertyWithValue("masterUrl", "https://172.28.128.4:8443/")
+          .hasFieldOrPropertyWithValue("namespace", "testns")
+          .hasFieldOrPropertyWithValue("autoOAuthToken", "token")
+          .satisfies(c -> assertThat(c.getCaCertFile()).endsWith("testns/ca.pem".replace("/", File.separator)))
+          .satisfies(c -> assertThat(new File(c.getCaCertFile())).isAbsolute())
+          .hasFieldOrPropertyWithValue("file", new File(TEST_KUBECONFIG_FILE));
+    }
+
+    @Test
+    @DisplayName("Config.autoConfigure with overridden context")
+    void overrideContext() {
+      assertThat(Config.autoConfigure("production/172-28-128-4:8443/root"))
+          .isNotNull()
+          .hasFieldOrPropertyWithValue("masterUrl", "https://172.28.128.4:8443/")
+          .hasFieldOrPropertyWithValue("namespace", "production")
+          .hasFieldOrPropertyWithValue("autoOAuthToken", "supertoken")
+          .satisfies(c -> assertThat(c.getCaCertFile()).endsWith("testns/ca.pem".replace("/", File.separator)))
+          .satisfies(c -> assertThat(new File(c.getCaCertFile())).isAbsolute());
+    }
+  }
+
+  @Nested
+  @DisplayName("load fromKubeConfig")
+  class FromKubeConfig {
+    @BeforeEach
+    void setUp() {
+      System.clearProperty("kubeconfig");
+      System.clearProperty("kubernetes.master");
+    }
+
+    @Test
+    @DisplayName("standard kubeconfig file")
+    void fromKubeConfigContent() throws IOException {
+      // Given + When
+      final Config config = Config.fromKubeconfig(prepareKubeConfigYamlFrom(TEST_KUBECONFIG_FILE));
+      // Then
+      assertThat(config)
+          .hasFieldOrPropertyWithValue("masterUrl", "https://172.28.128.4:8443/")
+          .hasFieldOrPropertyWithValue("autoConfigure", false)
+          .hasFieldOrPropertyWithValue("file", null)
+          .isSameAs(config.refresh());
+    }
+
+    @Test
+    @DisplayName("kubeconfig with EC Private Data in client key")
+    void shouldAutoDetectClientKeyAlgo() throws IOException {
+      // Given + When
+      final Config config = Config.fromKubeconfig(prepareKubeConfigYamlFrom(TEST_EC_KUBECONFIG_FILE));
+      // Then
+      assertThat(config.getClientKeyAlgo()).isEqualTo("EC");
+    }
+
+    private String prepareKubeConfigYamlFrom(String filePath) throws IOException {
+      File configFile = new File(filePath);
+      return String.join(System.lineSeparator(), Files.readAllLines(configFile.toPath()));
+    }
   }
 
   @Test
-  void testAutoConfig() {
-    System.setProperty(Config.KUBERNETES_KUBECONFIG_FILE, "/dev/null");
-    Config config = Config.autoConfigure(null);
-    assertNotNull(config);
-    assertNull(config.getFile());
-    assertTrue(config.getAutoConfigure());
-
-    // ensure that refresh creates a new instance
-    Config refresh = config.refresh();
-    assertNotSame(config, refresh);
-    assertNull(refresh.getFile());
-    assertTrue(refresh.getAutoConfigure());
-  }
-
-  @Test
-  void testMasterUrlWithServiceAccountIPv6() {
-    System.setProperty(Config.KUBERNETES_KUBECONFIG_FILE, "/dev/null");
-    System.setProperty(Config.KUBERNETES_SERVICE_HOST_PROPERTY, "2001:db8:1f70::999:de8:7648:6e8");
-    System.setProperty(Config.KUBERNETES_SERVICE_PORT_PROPERTY, "443");
-    Config config = Config.autoConfigure(null);
-    assertNotNull(config);
-    assertEquals("https://[2001:db8:1f70::999:de8:7648:6e8]:443/", config.getMasterUrl());
-    assertEquals(null, config.getFile());
-  }
-
-  @Test
-  void testWithKubeConfig() {
-    System.setProperty(Config.KUBERNETES_KUBECONFIG_FILE, TEST_KUBECONFIG_FILE);
-    Config config = new Config();
-    assertNotNull(config);
-
-    assertEquals("https://172.28.128.4:8443/", config.getMasterUrl());
-    assertEquals("testns", config.getNamespace());
-    assertEquals("token", config.getAutoOAuthToken());
-    assertTrue(config.getCaCertFile().endsWith("testns/ca.pem".replace("/", File.separator)));
-    assertTrue(new File(config.getCaCertFile()).isAbsolute());
-    assertEquals(new File(TEST_KUBECONFIG_FILE), config.getFile());
-  }
-
-  @Test
-  void testWithKubeConfigAndOverrideContext() {
-    System.setProperty(Config.KUBERNETES_KUBECONFIG_FILE, TEST_KUBECONFIG_FILE);
+  @DisplayName("when multiple kube config files in property, then pick first one")
+  void autoConfigure_withMultipleKubeConfigAndOverrideContext_shouldPickFirstFile() {
+    // Given
+    System.setProperty("kubeconfig", TEST_KUBECONFIG_FILE + File.pathSeparator + "some-other-file");
+    // When
     Config config = Config.autoConfigure("production/172-28-128-4:8443/root");
-    assertNotNull(config);
-
-    assertEquals("https://172.28.128.4:8443/", config.getMasterUrl());
-    assertEquals("production", config.getNamespace());
-    assertEquals("supertoken", config.getAutoOAuthToken());
-    assertTrue(config.getCaCertFile().endsWith("testns/ca.pem".replace("/", File.separator)));
-    assertTrue(new File(config.getCaCertFile()).isAbsolute());
+    // Then
+    assertThat(config)
+        .isNotNull()
+        .hasFieldOrPropertyWithValue("masterUrl", "https://172.28.128.4:8443/")
+        .hasFieldOrPropertyWithValue("namespace", "production")
+        .hasFieldOrPropertyWithValue("autoOAuthToken", "supertoken")
+        .satisfies(c -> assertThat(c.getCaCertFile()).endsWith("testns/ca.pem".replace("/", File.separator)))
+        .satisfies(c -> assertThat(new File(c.getCaCertFile())).isAbsolute());
   }
 
   @Test
-  void testWithMultipleKubeConfigAndOverrideContext() {
-    System.setProperty(Config.KUBERNETES_KUBECONFIG_FILE, TEST_KUBECONFIG_FILE + File.pathSeparator + "some-other-file");
-
-    Config config = Config.autoConfigure("production/172-28-128-4:8443/root");
-    assertNotNull(config);
-
-    assertEquals("https://172.28.128.4:8443/", config.getMasterUrl());
-    assertEquals("production", config.getNamespace());
-    assertEquals("supertoken", config.getAutoOAuthToken());
-    assertTrue(config.getCaCertFile().endsWith("testns/ca.pem".replace("/", File.separator)));
-    assertTrue(new File(config.getCaCertFile()).isAbsolute());
+  @DisplayName("when kubenamespace file property provided, then read namespace from this file")
+  void whenNamespacePathFilePropertyConfigured_shouldUpdateNamespace() {
+    // Given
+    System.setProperty("kubeconfig", "no-kubeconfig-file");
+    System.setProperty("kubenamespace", TEST_NAMESPACE_FILE);
+    System.setProperty("kubernetes.master", "http://somehost:80");
+    // When
+    Config config = new ConfigBuilder().build();
+    // Then
+    assertThat(config)
+        .isNotNull()
+        .hasFieldOrPropertyWithValue("masterUrl", "http://somehost:80/")
+        .hasFieldOrPropertyWithValue("namespace", "testnsfrompath");
   }
 
   @Test
-  void testWithKubeConfigAndSystemProperties() {
-    System.setProperty(Config.KUBERNETES_KUBECONFIG_FILE, TEST_KUBECONFIG_FILE);
-    System.setProperty(Config.KUBERNETES_MASTER_SYSTEM_PROPERTY, "http://somehost:80");
-
-    Config config = new Config();
-    assertNotNull(config);
-    assertEquals("http://somehost:80/", config.getMasterUrl());
-    assertEquals("testns", config.getNamespace());
-    assertEquals("token", config.getAutoOAuthToken());
-    assertEquals(new File(TEST_KUBECONFIG_FILE), config.getFile());
+  @DisplayName("kubenamespace property configured with non existent file, then do NOT update Config's namespace")
+  void whenNamespacePathFilePropertyConfiguredWithNonExistentFile_shouldNotUpdateNamespace() {
+    // Given
+    System.setProperty("kubeconfig", "no-kubeconfig-file");
+    System.setProperty("kubenamespace", "nonamespace");
+    System.setProperty("kubernetes.master", "http://somehost:80");
+    // When
+    Config config = new ConfigBuilder().build();
+    // Then
+    assertThat(config)
+        .isNotNull()
+        .hasFieldOrPropertyWithValue("masterUrl", "http://somehost:80/")
+        .hasFieldOrPropertyWithValue("namespace", null);
   }
 
   @Test
-  void testWithKubeConfigAndSytemPropertiesAndBuilder() {
-    System.setProperty(Config.KUBERNETES_KUBECONFIG_FILE, TEST_KUBECONFIG_FILE);
-    System.setProperty(Config.KUBERNETES_MASTER_SYSTEM_PROPERTY, "http://somehost:80");
+  @DisplayName("kubenamespace property and kubernetes.namespace property provided, then kubernetes.namespace takes precedence")
+  void whenNamespacePathFilePropertyAndNamespacePropertyProvided_thenNamespacePropertyTakesPrecedence() {
+    // Given
+    System.setProperty("kubenamespace", TEST_NAMESPACE_FILE);
+    System.setProperty("kubernetes.master", "http://somehost:80");
+    System.setProperty("kubernetes.namespace", "testns");
+    // When
+    Config config = new ConfigBuilder().build();
+    // Then
+    assertThat(config)
+        .isNotNull()
+        .hasFieldOrPropertyWithValue("masterUrl", "http://somehost:80/")
+        .hasFieldOrPropertyWithValue("namespace", "testns");
+  }
 
+  @Test
+  @DisplayName("no currentContext set in kubeconfig, then do NOT set currentContext in kubeconfig")
+  void whenNoCurrentContextInKubeConfig_thenDoNotSetCurrentContext() {
+    // Given
+    System.setProperty("kubeconfig", TEST_KUBECONFIG_NO_CURRENT_CONTEXT_FILE);
+    // When
+    Config config = new ConfigBuilder().build();
+    // Then
+    assertThat(config)
+        .isNotNull()
+        .hasFieldOrPropertyWithValue("currentContext", null)
+        .hasFieldOrPropertyWithValue("namespace", null)
+        .hasFieldOrPropertyWithValue("masterUrl", "https://kubernetes.default.svc/")
+        .extracting(Config::getContexts)
+        .asInstanceOf(InstanceOfAssertFactories.list(NamedContext.class))
+        .hasSize(3);
+  }
+
+  @Test
+  @DisplayName("kubenamespace, kubernetes.namespace and ConfigBuilder.withNamespace provided, ConfigBuilder.withNamespace takes precedence")
+  void whenNamespacePathAndSystemPropertiesAndBuilderProvided_thenBuilderTakesPrecedence() {
+    // Given
+    System.setProperty("kubenamespace", TEST_NAMESPACE_FILE);
+    System.setProperty("kubernetes.master", "http://somehost:80");
+    System.setProperty("kubernetes.namespace", "tobeoverriden");
+    // When
     Config config = new ConfigBuilder()
         .withNamespace("testns2")
         .build();
-
-    assertNotNull(config);
-    assertEquals("http://somehost:80/", config.getMasterUrl());
-    assertEquals("token", config.getAutoOAuthToken());
-    assertEquals("testns2", config.getNamespace());
+    // Then
+    assertThat(config)
+        .hasFieldOrPropertyWithValue("masterUrl", "http://somehost:80/")
+        .hasFieldOrPropertyWithValue("namespace", "testns2");
   }
 
   @Test
-  void testFromKubeconfigContent() throws IOException {
-    File configFile = new File(TEST_KUBECONFIG_FILE);
-    final String configYAML = String.join("\n", Files.readAllLines(configFile.toPath()));
-    final Config config = Config.fromKubeconfig(configYAML);
-    assertEquals("https://172.28.128.4:8443/", config.getMasterUrl());
-
-    assertFalse(config.getAutoConfigure());
-    assertNull(config.getFile());
-    assertSame(config, config.refresh());
-  }
-
-  @Test
-  void testFromKubeconfigKeyAlgo() throws IOException {
-    File configFile = new File(TEST_EC_KUBECONFIG_FILE);
-    final String configYAML = String.join("\n", Files.readAllLines(configFile.toPath()));
-    final Config config = Config.fromKubeconfig(configYAML);
-    assertEquals("EC", config.getClientKeyAlgo());
-  }
-
-  @Test
-  void testWithNamespacePath() {
-    System.setProperty(Config.KUBERNETES_KUBECONFIG_FILE, "nokubeconfigfile");
-    System.setProperty(Config.KUBERNETES_NAMESPACE_FILE, TEST_NAMESPACE_FILE);
-    System.setProperty(Config.KUBERNETES_MASTER_SYSTEM_PROPERTY, "http://somehost:80");
-
-    Config config = new Config();
-    assertNotNull(config);
-    assertEquals("http://somehost:80/", config.getMasterUrl());
-    assertEquals("testnsfrompath", config.getNamespace());
-  }
-
-  @Test
-  void testWithNonExistingNamespacePath() {
-    System.setProperty(Config.KUBERNETES_KUBECONFIG_FILE, "nokubeconfigfile");
-    System.setProperty(Config.KUBERNETES_NAMESPACE_FILE, "nonamespace");
-    System.setProperty(Config.KUBERNETES_MASTER_SYSTEM_PROPERTY, "http://somehost:80");
-
-    Config config = new Config();
-    assertNotNull(config);
-    assertEquals("http://somehost:80/", config.getMasterUrl());
-    assertNull(config.getNamespace());
-  }
-
-  @Test
-  void testWithNamespacePathAndSystemProperties() {
-    System.setProperty(Config.KUBERNETES_NAMESPACE_FILE, TEST_NAMESPACE_FILE);
-    System.setProperty(Config.KUBERNETES_MASTER_SYSTEM_PROPERTY, "http://somehost:80");
-    System.setProperty(Config.KUBERNETES_NAMESPACE_SYSTEM_PROPERTY, "testns");
-
-    Config config = new Config();
-    assertNotNull(config);
-    assertEquals("http://somehost:80/", config.getMasterUrl());
-    assertEquals("testns", config.getNamespace());
-  }
-
-  @Test
-  void testWithKubeConfigAndNoContext() {
-    System.setProperty(Config.KUBERNETES_KUBECONFIG_FILE, TEST_KUBECONFIG_NO_CURRENT_CONTEXT_FILE);
-    Config config = new Config();
-    assertNotNull(config);
-
-    assertNull(config.getCurrentContext());
-    assertEquals(3, config.getContexts().size());
-    assertEquals(Config.DEFAULT_MASTER_URL + "/", config.getMasterUrl());
-    assertNull(config.getNamespace());
-  }
-
-  @Test
-  void testWithNamespacePathAndSytemPropertiesAndBuilder() {
-    System.setProperty(Config.KUBERNETES_NAMESPACE_FILE, TEST_NAMESPACE_FILE);
-    System.setProperty(Config.KUBERNETES_MASTER_SYSTEM_PROPERTY, "http://somehost:80");
-    System.setProperty(Config.KUBERNETES_NAMESPACE_SYSTEM_PROPERTY, "tobeoverriden");
-
-    Config config = new ConfigBuilder()
-        .withNamespace("testns2")
-        .build();
-
-    assertNotNull(config);
-    assertEquals("http://somehost:80/", config.getMasterUrl());
-    assertEquals("testns2", config.getNamespace());
-  }
-
-  @Test
-  void testWithCustomHeader() {
+  @DisplayName("customHeaders configured via builder, then set customHeaders in Config")
+  void whenCustomHeaderProvidedViaBuilder_thenSetCustomHeaderInConfig() {
+    // Given
     Map<String, String> customHeaders = new HashMap<>();
     customHeaders.put("user-id", "test-user");
     customHeaders.put("cluster-id", "test-cluster");
+    // When
     Config config = new ConfigBuilder()
         .withCustomHeaders(customHeaders)
         .build();
-
-    assertNotNull(config);
-    assertNotNull(config.getCustomHeaders());
-    assertEquals(2, config.getCustomHeaders().size());
+    // Then
+    assertThat(config)
+        .isNotNull()
+        .extracting(Config::getCustomHeaders)
+        .asInstanceOf(InstanceOfAssertFactories.MAP)
+        .hasSize(2);
   }
 
   @Test
+  @DisplayName("when impersonate-username, impersonate-extras configured via System Properties and ConfigBuilder, then ConfigBuilder takes precedence")
   void shouldSetImpersonateUsernameAndGroupFromSystemProperty() {
-
-    System.setProperty(Config.KUBERNETES_IMPERSONATE_USERNAME, "username");
-    System.setProperty(Config.KUBERNETES_IMPERSONATE_GROUP, "group");
-
+    // Given
+    System.setProperty("kubernetes.impersonate.username", "username");
+    System.setProperty("kubernetes.impersonate.group", "group");
     final Map<String, List<String>> extras = new HashMap<>();
     extras.put("c", Collections.singletonList("d"));
-
+    // When
     final Config config = new ConfigBuilder()
         .withImpersonateUsername("a")
         .withImpersonateExtras(extras)
         .build();
-
-    assertEquals("a", config.getImpersonateUsername());
-    assertArrayEquals(new String[] { "group" }, config.getImpersonateGroups());
-    assertEquals(Collections.singletonList("d"), config.getImpersonateExtras().get("c"));
-
+    // Then
+    assertThat(config)
+        .hasFieldOrPropertyWithValue("requestConfig.impersonateUsername", "a")
+        .hasFieldOrPropertyWithValue("requestConfig.impersonateGroups", new String[] { "group" })
+        .hasFieldOrPropertyWithValue("requestConfig.impersonateExtras",
+            Collections.singletonMap("c", Collections.singletonList("d")));
   }
 
   @Test
-  void honorClientAuthenticatorCommands() throws Exception {
-    switch (FileSystem.getCurrent()) {
-      case WINDOWS:
-        System.setProperty(Config.KUBERNETES_KUBECONFIG_FILE, TEST_KUBECONFIG_EXEC_WIN_FILE);
-        break;
-      default:
-        Files.setPosixFilePermissions(Paths.get(TEST_TOKEN_GENERATOR_FILE), PosixFilePermissions.fromString("rwxrwxr-x"));
-        System.setProperty(Config.KUBERNETES_KUBECONFIG_FILE, TEST_KUBECONFIG_EXEC_FILE);
-    }
+  @EnabledOnOs(OS.WINDOWS)
+  void honorClientAuthenticatorCommandsOnWindows() {
+    // Given
+    System.setProperty("kubeconfig", TEST_KUBECONFIG_EXEC_WIN_FILE);
+    // When
+    Config config = new ConfigBuilder().build();
+    // Then
+    assertThat(config)
+        .isNotNull()
+        .hasFieldOrPropertyWithValue("autoOAuthToken", "HELLO WORLD");
+  }
 
-    Config config = Config.autoConfigure(null);
-    assertNotNull(config);
-    assertEquals("HELLO WORLD", config.getAutoOAuthToken());
+  @Test
+  @DisabledOnOs(OS.WINDOWS)
+  void honorClientAuthenticatorCommands() throws Exception {
+    // Given
+    Files.setPosixFilePermissions(Paths.get(TEST_TOKEN_GENERATOR_FILE), PosixFilePermissions.fromString("rwxrwxr-x"));
+    System.setProperty("kubeconfig", TEST_KUBECONFIG_EXEC_FILE);
+    // When
+    Config config = new ConfigBuilder().build();
+    // Then
+    assertThat(config)
+        .isNotNull()
+        .hasFieldOrPropertyWithValue("autoOAuthToken", "HELLO WORLD");
   }
 
   @Test
   void should_accept_client_authentication_commands_with_null_args() throws Exception {
-    try {
-      if (FileSystem.getCurrent() == FileSystem.WINDOWS) {
-        System.setProperty(Config.KUBERNETES_KUBECONFIG_FILE, TEST_KUBECONFIG_EXEC_FILE_WIN_NULL_ARGS);
-      } else {
-        Files.setPosixFilePermissions(Paths.get(TEST_TOKEN_GENERATOR_FILE), PosixFilePermissions.fromString("rwxrwxr-x"));
-        System.setProperty(Config.KUBERNETES_KUBECONFIG_FILE, TEST_KUBECONFIG_EXEC_FILE_NULL_ARGS);
-      }
-
-      Config config = Config.autoConfigure(null);
-      assertNotNull(config);
-      assertEquals("HELLO", config.getAutoOAuthToken());
-    } finally {
-      System.clearProperty(Config.KUBERNETES_KUBECONFIG_FILE);
+    // Given
+    if (FileSystem.getCurrent() == FileSystem.WINDOWS) {
+      System.setProperty("kubeconfig", TEST_KUBECONFIG_EXEC_FILE_WIN_NULL_ARGS);
+    } else {
+      Files.setPosixFilePermissions(Paths.get(TEST_TOKEN_GENERATOR_FILE), PosixFilePermissions.fromString("rwxrwxr-x"));
+      System.setProperty("kubeconfig", TEST_KUBECONFIG_EXEC_FILE_NULL_ARGS);
     }
+    // When
+    Config config = Config.autoConfigure(null);
+    // Then
+    assertThat(config)
+        .hasFieldOrPropertyWithValue("autoOAuthToken", "HELLO");
+  }
+
+  @Test
+  @DisplayName("when arguments in kubeconfig, then add client cert data to Config")
+  void autoConfigure_whenCommandLineArgsProvided_thenLoadClientCertData() throws Exception {
+    // Given
+    if (FileSystem.getCurrent() == FileSystem.WINDOWS) {
+      System.setProperty("kubeconfig", TEST_KUBECONFIG_EXEC_WIN_FILE_CERT_AUTH);
+    } else {
+      Files.setPosixFilePermissions(Paths.get(TEST_CERT_GENERATOR_FILE), PosixFilePermissions.fromString("rwxrwxr-x"));
+      System.setProperty("kubeconfig", TEST_KUBECONFIG_EXEC_FILE_CERT_AUTH);
+    }
+    // When
+    Config config = Config.autoConfigure(null);
+    // Then
+    assertThat(config)
+        .hasFieldOrPropertyWithValue("clientCertData", "CERT DATA")
+        .hasFieldOrPropertyWithValue("clientKeyData", "KEY DATA");
+  }
+
+  @Test
+  @DisplayName("when invalid arguments in kubeconfig, then do not add client cert data to Config")
+  void autoConfigure_whenInvalidArgsProvided_thenDoNotLoadClientCertData() throws Exception {
+    // Given
+    if (FileSystem.getCurrent() == FileSystem.WINDOWS) {
+      System.setProperty("kubeconfig", TEST_KUBECONFIG_EXEC_WIN_FILE_CERT_AUTH_EC_INVALID);
+    } else {
+      Files.setPosixFilePermissions(Paths.get(TEST_CERT_GENERATOR_FILE), PosixFilePermissions.fromString("rwxrwxr-x"));
+      System.setProperty("kubeconfig", TEST_KUBECONFIG_EXEC_FILE_CERT_AUTH_EC_INVALID);
+    }
+    // When
+    Config config = Config.autoConfigure(null);
+    // Then
+    assertThat(config)
+        .hasFieldOrPropertyWithValue("clientCertData", null)
+        .hasFieldOrPropertyWithValue("clientKeyData", null);
   }
 
   @Test
   void should_accept_client_authentication_commands_args_with_spaces() throws Exception {
-    try {
-      if (FileSystem.getCurrent() == FileSystem.WINDOWS) {
-        System.setProperty(Config.KUBERNETES_KUBECONFIG_FILE, TEST_KUBECONFIG_EXEC_FILE_ARGS_WITH_SPACES_WIN);
-      } else {
-        Files.setPosixFilePermissions(Paths.get(TEST_TOKEN_GENERATOR_FILE_WITH_SPACES),
-            PosixFilePermissions.fromString("rwxrwxr-x"));
-        System.setProperty(Config.KUBERNETES_KUBECONFIG_FILE, TEST_KUBECONFIG_EXEC_FILE_ARGS_WITH_SPACES);
-      }
-
-      Config config = Config.autoConfigure(null);
-      assertNotNull(config);
-      assertEquals("HELLO W O R L D", config.getAutoOAuthToken());
-    } finally {
-      System.clearProperty(Config.KUBERNETES_KUBECONFIG_FILE);
+    // Given
+    if (FileSystem.getCurrent() == FileSystem.WINDOWS) {
+      System.setProperty("kubeconfig", TEST_KUBECONFIG_EXEC_FILE_ARGS_WITH_SPACES_WIN);
+    } else {
+      Files.setPosixFilePermissions(Paths.get(TEST_TOKEN_GENERATOR_FILE_WITH_SPACES),
+          PosixFilePermissions.fromString("rwxrwxr-x"));
+      System.setProperty("kubeconfig", TEST_KUBECONFIG_EXEC_FILE_ARGS_WITH_SPACES);
     }
+    // When
+    Config config = Config.autoConfigure(null);
+    // Then
+    assertThat(config)
+        .isNotNull()
+        .hasFieldOrPropertyWithValue("autoOAuthToken", "HELLO W O R L D");
   }
 
   @Test
   void should_accept_client_authentication_commands_with_spaces() throws Exception {
-    try {
-      if (FileSystem.getCurrent() == FileSystem.WINDOWS) {
-        System.setProperty(Config.KUBERNETES_KUBECONFIG_FILE, TEST_KUBECONFIG_EXEC_FILE_WITH_SPACES_WIN);
-      } else {
-        Files.setPosixFilePermissions(Paths.get(TEST_TOKEN_GENERATOR_FILE_WITH_SPACES),
-            PosixFilePermissions.fromString("rwxrwxr-x"));
-        System.setProperty(Config.KUBERNETES_KUBECONFIG_FILE, TEST_KUBECONFIG_EXEC_FILE_WITH_SPACES);
-      }
-
-      Config config = Config.autoConfigure(null);
-      assertNotNull(config);
-      assertEquals("HELLO WORLD", config.getAutoOAuthToken());
-    } finally {
-      System.clearProperty(Config.KUBERNETES_KUBECONFIG_FILE);
+    // Given
+    if (FileSystem.getCurrent() == FileSystem.WINDOWS) {
+      System.setProperty("kubeconfig", TEST_KUBECONFIG_EXEC_FILE_WITH_SPACES_WIN);
+    } else {
+      Files.setPosixFilePermissions(Paths.get(TEST_TOKEN_GENERATOR_FILE_WITH_SPACES),
+          PosixFilePermissions.fromString("rwxrwxr-x"));
+      System.setProperty("kubeconfig", TEST_KUBECONFIG_EXEC_FILE_WITH_SPACES);
     }
+    // When
+    Config config = Config.autoConfigure(null);
+    // Then
+    assertThat(config)
+        .isNotNull()
+        .hasFieldOrPropertyWithValue("autoOAuthToken", "HELLO WORLD");
   }
 
   @Test
   void shouldBeUsedTokenSuppliedByProvider() {
-
+    // Given
     Config config = new ConfigBuilder().withOauthToken("oauthToken")
         .withOauthTokenProvider(() -> "PROVIDER_TOKEN")
         .build();
 
+    // When + Then
     // this is mostly a configuration error, and
     // the provider does not modify the oauthtoken field
-    assertEquals("oauthToken", config.getOauthToken());
+    assertThat(config.getOauthToken()).isEqualTo("oauthToken");
   }
 
   @Test
-  void shouldHonorDefaultWebsocketPingInterval() {
-    Config config = new ConfigBuilder().build();
-
-    assertEquals(30000L, config.getWebsocketPingInterval());
-  }
-
-  @Test
-  void testKubeConfigWithAuthConfigProvider() throws URISyntaxException {
-    System.setProperty("kubeconfig", new File(getClass().getResource("/test-kubeconfig").toURI()).getAbsolutePath());
-    Config config = Config.autoConfigure("production/172-28-128-4:8443/mmosley");
-
-    assertEquals("https://172.28.128.4:8443/", config.getMasterUrl());
-    assertEquals(
-        "eyJraWQiOiJDTj1vaWRjaWRwLnRyZW1vbG8ubGFuLCBPVT1EZW1vLCBPPVRybWVvbG8gU2VjdXJpdHksIEw9QXJsaW5ndG9uLCBTVD1WaXJnaW5pYSwgQz1VUy1DTj1rdWJlLWNhLTEyMDIxNDc5MjEwMzYwNzMyMTUyIiwiYWxnIjoiUlMyNTYifQ.eyJpc3MiOiJodHRwczovL29pZGNpZHAudHJlbW9sby5sYW46ODQ0My9hdXRoL2lkcC9PaWRjSWRQIiwiYXVkIjoia3ViZXJuZXRlcyIsImV4cCI6MTQ4MzU0OTUxMSwianRpIjoiMm96US15TXdFcHV4WDlHZUhQdy1hZyIsImlhdCI6MTQ4MzU0OTQ1MSwibmJmIjoxNDgzNTQ5MzMxLCJzdWIiOiI0YWViMzdiYS1iNjQ1LTQ4ZmQtYWIzMC0xYTAxZWU0MWUyMTgifQ.w6p4J_6qQ1HzTG9nrEOrubxIMb9K5hzcMPxc9IxPx2K4xO9l-oFiUw93daH3m5pluP6K7eOE6txBuRVfEcpJSwlelsOsW8gb8VJcnzMS9EnZpeA0tW_p-mnkFc3VcfyXuhe5R3G7aa5d8uHv70yJ9Y3-UhjiN9EhpMdfPAoEB9fYKKkJRzF7utTTIPGrSaSU6d2pcpfYKaxIwePzEkT4DfcQthoZdy9ucNvvLoi1DIC-UocFD8HLs8LYKEqSxQvOcvnThbObJ9af71EwmuE21fO5KzMW20KtAeget1gnldOosPtz1G5EwvaQ401-RPQzPGMVBld0_zMCAwZttJ4knw",
-        config.getAutoOAuthToken());
-  }
-
-  @Test
-  void testEmptyConfig() {
+  @DisplayName("kubeconfig contains auth-provider, then read token from auth-provider section")
+  void whenKubeConfigWithAuthConfigProvider_thenLoadTokenFromAuthProvider() throws URISyntaxException {
     // Given
-    Config emptyConfig = null;
-
+    System.setProperty("kubeconfig", new File(getClass().getResource("/test-kubeconfig").toURI()).getAbsolutePath());
     // When
-    emptyConfig = Config.empty();
+    Config config = Config.autoConfigure("production/172-28-128-4:8443/mmosley");
+    // Then
+    assertThat(config)
+        .hasFieldOrPropertyWithValue("masterUrl", "https://172.28.128.4:8443/")
+        .hasFieldOrPropertyWithValue("autoOAuthToken",
+            "eyJraWQiOiJDTj1vaWRjaWRwLnRyZW1vbG8ubGFuLCBPVT1EZW1vLCBPPVRybWVvbG8gU2VjdXJpdHksIEw9QXJsaW5ndG9uLCBTVD1WaXJnaW5pYSwgQz1VUy1DTj1rdWJlLWNhLTEyMDIxNDc5MjEwMzYwNzMyMTUyIiwiYWxnIjoiUlMyNTYifQ.eyJpc3MiOiJodHRwczovL29pZGNpZHAudHJlbW9sby5sYW46ODQ0My9hdXRoL2lkcC9PaWRjSWRQIiwiYXVkIjoia3ViZXJuZXRlcyIsImV4cCI6MTQ4MzU0OTUxMSwianRpIjoiMm96US15TXdFcHV4WDlHZUhQdy1hZyIsImlhdCI6MTQ4MzU0OTQ1MSwibmJmIjoxNDgzNTQ5MzMxLCJzdWIiOiI0YWViMzdiYS1iNjQ1LTQ4ZmQtYWIzMC0xYTAxZWU0MWUyMTgifQ.w6p4J_6qQ1HzTG9nrEOrubxIMb9K5hzcMPxc9IxPx2K4xO9l-oFiUw93daH3m5pluP6K7eOE6txBuRVfEcpJSwlelsOsW8gb8VJcnzMS9EnZpeA0tW_p-mnkFc3VcfyXuhe5R3G7aa5d8uHv70yJ9Y3-UhjiN9EhpMdfPAoEB9fYKKkJRzF7utTTIPGrSaSU6d2pcpfYKaxIwePzEkT4DfcQthoZdy9ucNvvLoi1DIC-UocFD8HLs8LYKEqSxQvOcvnThbObJ9af71EwmuE21fO5KzMW20KtAeget1gnldOosPtz1G5EwvaQ401-RPQzPGMVBld0_zMCAwZttJ4knw");
+  }
 
+  @Test
+  @DisplayName("Config.empty() should create an empty non auto-configured instance with default values")
+  void emptyConfig() {
+    // When
+    Config emptyConfig = Config.empty();
     // Then
     assertThat(emptyConfig)
-        .hasFieldOrPropertyWithValue("masterUrl", "https://kubernetes.default.svc")
+        .hasFieldOrPropertyWithValue("masterUrl", "https://kubernetes.default.svc/")
         .hasFieldOrPropertyWithValue("contexts", Collections.emptyList())
         .hasFieldOrPropertyWithValue("maxConcurrentRequests", 64)
         .hasFieldOrPropertyWithValue("maxConcurrentRequestsPerHost", 5)
@@ -600,212 +886,82 @@ class ConfigTest {
         .hasFieldOrPropertyWithValue("impersonateExtras", Collections.emptyMap())
         .hasFieldOrPropertyWithValue("http2Disable", false)
         .hasFieldOrPropertyWithValue("tlsVersions", new TlsVersion[] { TlsVersion.TLS_1_3, TlsVersion.TLS_1_2 })
-        .hasFieldOrPropertyWithValue("errorMessages", Collections.emptyMap())
         .satisfies(e -> assertThat(e.getCurrentContext()).isNull())
         .satisfies(e -> assertThat(e.getImpersonateGroups()).isEmpty())
         .satisfies(e -> assertThat(e.getUserAgent()).isNotNull());
   }
 
-  private void assertConfig(Config config, boolean autoToken) {
-    assertNotNull(config);
-    assertTrue(config.isTrustCerts());
-    assertTrue(config.isDisableHostnameVerification());
-    assertEquals("http://somehost:80/", config.getMasterUrl());
-    assertEquals("testns", config.getNamespace());
-    if (autoToken) {
-      assertEquals("token", config.getAutoOAuthToken());
-    } else {
-      assertEquals("token", config.getOauthToken());
+  @Nested
+  @DisplayName("Config.getHomeDir")
+  class GetHomeDir {
+    @Nested
+    @DisplayName("os.name=Windows")
+    class OsNameWindows {
+      @BeforeEach
+      void setUp() {
+        System.setProperty("os.name", "Windows");
+      }
+
+      @Test
+      void shouldUseHomeDriveHomePathOnWindows_WhenHomeEnvVariableIsNotSet() {
+        // Given
+        Map<String, String> envVars = new HashMap<>();
+        envVars.put("HOMEDRIVE", "C:\\Users\\");
+        envVars.put("HOMEPATH", "user");
+        envVars.put("USERPROFILE", "C:\\Users\\user\\workspace\\myworkspace\\tools\\cygwin\\");
+
+        // When + Then
+        assertThat(Config.getHomeDir(f -> true, envVars::get)).isEqualTo("C:\\Users\\user");
+      }
+
+      @Test
+      void shouldUseUserprofileOnWindows_WhenHomeHomeDriveHomePathEnvVariablesAreNotSet() {
+        // Given
+        Map<String, String> envVars = new HashMap<>();
+        envVars.put("USERPROFILE", "C:\\Users\\user\\workspace\\myworkspace\\tools\\cygwin\\");
+
+        // When + Then
+        assertThat(Config.getHomeDir(f -> true, envVars::get))
+            .isEqualTo("C:\\Users\\user\\workspace\\myworkspace\\tools\\cygwin\\");
+      }
+
+      @Test
+      void shouldUseHomeEnvVariableOnWindows_WhenHomeEnvVariableIsSet() {
+        // Given
+        Map<String, String> envVars = new HashMap<>();
+        envVars.put("HOMEDRIVE", "C:\\Users\\");
+        envVars.put("HOMEPATH", "user");
+        envVars.put("HOME", "C:\\Users\\user\\workspace\\myworkspace\\tools\\cygwin\\");
+
+        // When + Then
+        assertThat(Config.getHomeDir(f -> true, envVars::get))
+            .isEqualTo("C:\\Users\\user\\workspace\\myworkspace\\tools\\cygwin\\");
+      }
+
     }
-    assertEquals("user", config.getUsername());
-    assertEquals("pass", config.getPassword());
-    assertEquals("/path/to/cert", config.getCaCertFile());
-    assertEquals("cacertdata", config.getCaCertData());
-    assertEquals("/path/to/clientcert", config.getClientCertFile());
-    assertEquals("clientcertdata", config.getClientCertData());
 
-    assertEquals("/path/to/clientkey", config.getClientKeyFile());
-    assertEquals("clientkeydata", config.getClientKeyData());
-    assertEquals("algo", config.getClientKeyAlgo());
-    assertEquals("passphrase", config.getClientKeyPassphrase());
-
-    assertEquals("httpProxy", config.getHttpProxy());
-
-    assertEquals(5000, config.getWatchReconnectInterval());
-    assertEquals(5, config.getWatchReconnectLimit());
-    assertEquals(5000, config.getRequestTimeout());
-    assertEquals(600000, config.getRequestConfig().getUploadRequestTimeout());
-
-    assertArrayEquals(new TlsVersion[] { TlsVersion.TLS_1_2, TlsVersion.TLS_1_1 }, config.getTlsVersions());
-
-    assertEquals("/path/to/truststore", config.getTrustStoreFile());
-    assertEquals("truststorePassphrase", config.getTrustStorePassphrase());
-    assertEquals("/path/to/keystore", config.getKeyStoreFile());
-    assertEquals("keystorePassphrase", config.getKeyStorePassphrase());
-
-    assertEquals(120, config.getMaxConcurrentRequests());
-    assertEquals(20, config.getMaxConcurrentRequestsPerHost());
-    assertThat(config.getErrorMessages()).isEmpty();
-  }
-
-  @Test
-  void testGetAuthenticatorCommandFromExecConfig() throws IOException {
-    // Given
-    File commandFolder = Files.createTempDirectory("test").toFile();
-    File commandFile = new File(commandFolder, "aws");
-    boolean isNewFileCreated = commandFile.createNewFile();
-    String systemPathValue = getTestPathValue(commandFolder);
-    ExecConfig execConfig = new ExecConfigBuilder()
-        .withApiVersion("client.authentication.k8s.io/v1alpha1")
-        .addToArgs("--region", "us-west2", "eks", "get-token", "--cluster-name", "api-eks.example.com")
-        .withCommand("aws")
-        .build();
-
-    // When
-    List<String> processBuilderArgs = Config.getAuthenticatorCommandFromExecConfig(execConfig, new File("~/.kube/config"),
-        systemPathValue);
-
-    // Then
-    assertTrue(isNewFileCreated);
-    assertNotNull(processBuilderArgs);
-    assertEquals(3, processBuilderArgs.size());
-    assertPlatformPrefixes(processBuilderArgs);
-    List<String> commandParts = Arrays.asList(processBuilderArgs.get(2).split(" "));
-    assertEquals(commandFile.getAbsolutePath(), commandParts.get(0));
-    assertEquals("--region", commandParts.get(1));
-    assertEquals("us-west2", commandParts.get(2));
-    assertEquals("eks", commandParts.get(3));
-    assertEquals("get-token", commandParts.get(4));
-    assertEquals("--cluster-name", commandParts.get(5));
-    assertEquals("api-eks.example.com", commandParts.get(6));
-  }
-
-  @Test
-  void testGetAuthenticatorCommandFromExecConfigNullArgs() throws IOException {
-    // Given
-    File commandFolder = Files.createTempDirectory("test").toFile();
-    File commandFile = new File(commandFolder, "gke-gcloud-auth-plugin");
-    String systemPathValue = getTestPathValue(commandFolder);
-    ExecConfig execConfigNoArgs = new ExecConfigBuilder()
-        .withApiVersion("client.authentication.k8s.io/v1alpha1")
-        .withCommand(commandFile.getPath())
-        .build();
-    // Simulate "user.exec.args: null" like e.g. in the configuration for the gke-gcloud-auth-plugin.
-    execConfigNoArgs.setArgs(null);
-
-    // When
-    List<String> processBuilderArgs = Config.getAuthenticatorCommandFromExecConfig(
-        execConfigNoArgs, null, systemPathValue);
-
-    // Then
-    assertNotNull(processBuilderArgs);
-    assertEquals(3, processBuilderArgs.size());
-    assertPlatformPrefixes(processBuilderArgs);
-    assertEquals(commandFile.getPath(), processBuilderArgs.get(2));
-  }
-
-  private void assertPlatformPrefixes(List<String> processBuilderArgs) {
-    List<String> platformArgsExpected = Utils.getCommandPlatformPrefix();
-    assertEquals(platformArgsExpected.get(0), processBuilderArgs.get(0));
-    assertEquals(platformArgsExpected.get(1), processBuilderArgs.get(1));
-  }
-
-  private String getTestPathValue(File commandFolder) {
-    if (Utils.isWindowsOperatingSystem()) {
-      return "C:\\Program Files\\Java\\jdk14.0_23\\bin" + File.pathSeparator +
-          commandFolder.getAbsolutePath() + File.pathSeparator +
-          "C:\\Program Files\\Apache Software Foundation\\apache-maven-3.3.1";
-    } else {
-      return "/usr/java/jdk-14.0.1/bin" + File.pathSeparator +
-          commandFolder.getAbsolutePath() + File.pathSeparator +
-          "/opt/apache-maven/bin";
-    }
-  }
-
-  @Test
-  void getHomeDir_shouldUseHomedriveHomepathOnWindows_WhenHomeEnvVariableIsNotSet() {
-    String osNamePropToRestore = System.getProperty("os.name");
-    try {
-
-      System.setProperty("os.name", "Windows");
-
-      Map<String, String> envVars = new HashMap<String, String>();
-      envVars.put("HOMEDRIVE", "C:\\Users\\");
-      envVars.put("HOMEPATH", "user");
-      envVars.put("USERPROFILE", "C:\\Users\\user\\workspace\\myworkspace\\tools\\cygwin\\");
-
-      assertEquals("C:\\Users\\user", Config.getHomeDir(f -> true, envVars::get));
-
-    } finally {
-      System.setProperty("os.name", osNamePropToRestore);
-    }
-  }
-
-  @Test
-  void getHomeDir_shouldUseUserprofileOnWindows_WhenHomeHomedriveHomepathEnvVariablesAreNotSet() {
-    String osNamePropToRestore = System.getProperty("os.name");
-    try {
-
-      System.setProperty("os.name", "Windows");
-
-      Map<String, String> envVars = new HashMap<String, String>();
-      envVars.put("USERPROFILE", "C:\\Users\\user\\workspace\\myworkspace\\tools\\cygwin\\");
-
-      assertEquals("C:\\Users\\user\\workspace\\myworkspace\\tools\\cygwin\\",
-          Config.getHomeDir(f -> true, envVars::get));
-
-    } finally {
-      System.setProperty("os.name", osNamePropToRestore);
-    }
-  }
-
-  @Test
-  void getHomeDir_shouldUseHomeEnvVariableOnWindows_WhenHomeEnvVariableIsSet() {
-    String osNamePropToRestore = System.getProperty("os.name");
-    try {
-
-      System.setProperty("os.name", "Windows");
-
-      Map<String, String> envVars = new HashMap<String, String>();
+    @Test
+    @EnabledOnOs(WINDOWS)
+    void shouldUseHomeEnvVariable_WhenEnabledOnWindows_WhenHomeEnvVariableIsSet() {
+      // Given
+      Map<String, String> envVars = new HashMap<>();
       envVars.put("HOMEDRIVE", "C:\\Users\\");
       envVars.put("HOMEPATH", "user");
       envVars.put("HOME", "C:\\Users\\user\\workspace\\myworkspace\\tools\\cygwin\\");
 
-      assertEquals("C:\\Users\\user\\workspace\\myworkspace\\tools\\cygwin\\",
-          Config.getHomeDir(f -> true, envVars::get));
-
-    } finally {
-      System.setProperty("os.name", osNamePropToRestore);
+      // When + Then
+      assertThat(Config.getHomeDir(f -> true, envVars::get))
+          .isEqualTo("C:\\Users\\user\\workspace\\myworkspace\\tools\\cygwin\\");
     }
-  }
 
-  @Test
-  @EnabledOnOs({ WINDOWS })
-  void getHomeDir_shouldUseHomeEnvVariable_WhenEnabledOnWindows_WhenHomeEnvVariableIsSet() {
-
-    Map<String, String> envVars = new HashMap<String, String>();
-    envVars.put("HOMEDRIVE", "C:\\Users\\");
-    envVars.put("HOMEPATH", "user");
-    envVars.put("HOME", "C:\\Users\\user\\workspace\\myworkspace\\tools\\cygwin\\");
-
-    assertEquals("C:\\Users\\user\\workspace\\myworkspace\\tools\\cygwin\\",
-        Config.getHomeDir(f -> true, envVars::get));
-
-  }
-
-  @Test
-  void getHomeDir_shouldReturnUserHomeProp_WhenHomeEnvVariablesAreNotSet() {
-    String userHomePropToRestore = System.getProperty("user.home");
-    try {
-
+    @Test
+    void shouldReturnUserHomeProp_WhenHomeEnvVariablesAreNotSet() {
+      // Given
       System.setProperty("user.home", "/home/user");
-
       Map<String, String> emptyEnvVars = Collections.emptyMap();
 
-      assertEquals("/home/user", Config.getHomeDir(f -> true, emptyEnvVars::get));
-
-    } finally {
-      System.setProperty("user.home", userHomePropToRestore);
+      // When + Then
+      assertThat(Config.getHomeDir(f -> true, emptyEnvVars::get)).isEqualTo("/home/user");
     }
   }
 
@@ -823,5 +979,49 @@ class ConfigTest {
     assertThat(updatedConfig)
         .isSameAs(config)
         .hasFieldOrPropertyWithValue("oauthToken", "token-from-user");
+  }
+
+  @Test
+  void givenEmptyKubeConfig_whenConfigCreated_thenShouldNotProduceNPE() throws URISyntaxException {
+    // Given
+    System.setProperty("kubeconfig",
+        new File(Objects.requireNonNull(getClass().getResource("/test-empty-kubeconfig")).toURI()).getAbsolutePath());
+
+    // When
+    Config config = new ConfigBuilder().build();
+
+    // Then
+    assertThat(config).isNotNull();
+  }
+
+  @Test
+  @DisplayName("kubeconfig with tls-server-name, then read tlsServerName from cluster config")
+  void whenKubeConfigWithTlsServerName_thenLoadTlsServerName() {
+    // Given
+    System.setProperty("kubeconfig", TEST_KUBECONFIG_TLS_SERVER_NAME_FILE);
+    // When
+    Config config = new ConfigBuilder().build();
+    // Then
+    assertThat(config)
+        .isNotNull()
+        .hasFieldOrPropertyWithValue("masterUrl", "https://127.0.0.1:6443/")
+        .hasFieldOrPropertyWithValue("tlsServerName", "api.example.cluster.local")
+        .hasFieldOrPropertyWithValue("trustCerts", true);
+  }
+
+  @Test
+  @DisplayName("ConfigBuilder with tlsServerName, then set tlsServerName in Config")
+  void whenTlsServerNameProvidedViaBuilder_thenSetTlsServerName() {
+    // Given + When
+    Config config = new ConfigBuilder()
+        .withMasterUrl("https://127.0.0.1:6443")
+        .withTlsServerName("custom.server.name")
+        .withTrustCerts(true)
+        .build();
+    // Then
+    assertThat(config)
+        .isNotNull()
+        .hasFieldOrPropertyWithValue("masterUrl", "https://127.0.0.1:6443/")
+        .hasFieldOrPropertyWithValue("tlsServerName", "custom.server.name");
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,6 +42,7 @@ public class Pluralize implements UnaryOperator<String> {
     EXCEPTIONS.put("podmetrics", "pods");
     EXCEPTIONS.put("nodemetrics", "nodes");
     EXCEPTIONS.put("networkattachmentdefinition", "network-attachment-definitions");
+    EXCEPTIONS.put("egressqos", "egressqoses");
   }
 
   private static final List<UnaryOperator<String>> PLURALS = Arrays.asList(

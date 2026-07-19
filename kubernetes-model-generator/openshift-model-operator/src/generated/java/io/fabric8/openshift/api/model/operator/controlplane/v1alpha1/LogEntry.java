@@ -1,8 +1,9 @@
 
 package io.fabric8.openshift.api.model.operator.controlplane.v1alpha1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,8 +11,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
-import io.fabric8.kubernetes.api.model.Duration;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
@@ -21,19 +24,20 @@ import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * LogEntry records events
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "latency",
     "message",
     "reason",
@@ -42,7 +46,6 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -56,40 +59,36 @@ import lombok.experimental.Accessors;
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class LogEntry implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class LogEntry implements Editable<LogEntryBuilder>, KubernetesResource
 {
 
     @JsonProperty("latency")
-    private Duration latency;
+    private String latency;
     @JsonProperty("message")
-    private java.lang.String message;
+    private String message;
     @JsonProperty("reason")
-    private java.lang.String reason;
+    private String reason;
     @JsonProperty("success")
     private Boolean success;
     @JsonProperty("time")
     private String time;
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public LogEntry() {
     }
 
-    /**
-     * 
-     * @param reason
-     * @param success
-     * @param latency
-     * @param time
-     * @param message
-     */
-    public LogEntry(Duration latency, java.lang.String message, java.lang.String reason, Boolean success, String time) {
+    public LogEntry(String latency, String message, String reason, Boolean success, String time) {
         super();
         this.latency = latency;
         this.message = message;
@@ -98,64 +97,109 @@ public class LogEntry implements KubernetesResource
         this.time = time;
     }
 
+    /**
+     * LogEntry records events
+     */
     @JsonProperty("latency")
-    public Duration getLatency() {
+    public String getLatency() {
         return latency;
     }
 
+    /**
+     * LogEntry records events
+     */
     @JsonProperty("latency")
-    public void setLatency(Duration latency) {
+    public void setLatency(String latency) {
         this.latency = latency;
     }
 
+    /**
+     * message explaining status in a human readable format.
+     */
     @JsonProperty("message")
-    public java.lang.String getMessage() {
+    public String getMessage() {
         return message;
     }
 
+    /**
+     * message explaining status in a human readable format.
+     */
     @JsonProperty("message")
-    public void setMessage(java.lang.String message) {
+    public void setMessage(String message) {
         this.message = message;
     }
 
+    /**
+     * reason for status in a machine readable format.
+     */
     @JsonProperty("reason")
-    public java.lang.String getReason() {
+    public String getReason() {
         return reason;
     }
 
+    /**
+     * reason for status in a machine readable format.
+     */
     @JsonProperty("reason")
-    public void setReason(java.lang.String reason) {
+    public void setReason(String reason) {
         this.reason = reason;
     }
 
+    /**
+     * success indicates if the log entry indicates a success or failure.
+     */
     @JsonProperty("success")
     public Boolean getSuccess() {
         return success;
     }
 
+    /**
+     * success indicates if the log entry indicates a success or failure.
+     */
     @JsonProperty("success")
     public void setSuccess(Boolean success) {
         this.success = success;
     }
 
+    /**
+     * LogEntry records events
+     */
     @JsonProperty("time")
     public String getTime() {
         return time;
     }
 
+    /**
+     * LogEntry records events
+     */
     @JsonProperty("time")
     public void setTime(String time) {
         this.time = time;
     }
 
+    @JsonIgnore
+    public LogEntryBuilder edit() {
+        return new LogEntryBuilder(this);
+    }
+
+    @JsonIgnore
+    public LogEntryBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
-    public Map<java.lang.String, Object> getAdditionalProperties() {
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 
     @JsonAnySetter
-    public void setAdditionalProperty(java.lang.String name, Object value) {
+    public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

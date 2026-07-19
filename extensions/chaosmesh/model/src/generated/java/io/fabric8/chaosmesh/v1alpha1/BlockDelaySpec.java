@@ -1,8 +1,9 @@
 
 package io.fabric8.chaosmesh.v1alpha1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -27,23 +29,21 @@ import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * BlockDelaySpec describes the block delay specification
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "correlation",
     "jitter",
     "latency"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -63,7 +63,8 @@ import lombok.experimental.Accessors;
     @BuildableReference(Volume.class),
     @BuildableReference(VolumeMount.class)
 })
-public class BlockDelaySpec implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class BlockDelaySpec implements Editable<BlockDelaySpecBuilder>, KubernetesResource
 {
 
     @JsonProperty("correlation")
@@ -73,21 +74,14 @@ public class BlockDelaySpec implements KubernetesResource
     @JsonProperty("latency")
     private String latency;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public BlockDelaySpec() {
     }
 
-    /**
-     * 
-     * @param jitter
-     * @param correlation
-     * @param latency
-     */
     public BlockDelaySpec(String correlation, String jitter, String latency) {
         super();
         this.correlation = correlation;
@@ -95,37 +89,66 @@ public class BlockDelaySpec implements KubernetesResource
         this.latency = latency;
     }
 
+    /**
+     * BlockDelaySpec describes the block delay specification
+     */
     @JsonProperty("correlation")
     public String getCorrelation() {
         return correlation;
     }
 
+    /**
+     * BlockDelaySpec describes the block delay specification
+     */
     @JsonProperty("correlation")
     public void setCorrelation(String correlation) {
         this.correlation = correlation;
     }
 
+    /**
+     * BlockDelaySpec describes the block delay specification
+     */
     @JsonProperty("jitter")
     public String getJitter() {
         return jitter;
     }
 
+    /**
+     * BlockDelaySpec describes the block delay specification
+     */
     @JsonProperty("jitter")
     public void setJitter(String jitter) {
         this.jitter = jitter;
     }
 
+    /**
+     * Latency defines the latency of every io request.
+     */
     @JsonProperty("latency")
     public String getLatency() {
         return latency;
     }
 
+    /**
+     * Latency defines the latency of every io request.
+     */
     @JsonProperty("latency")
     public void setLatency(String latency) {
         this.latency = latency;
     }
 
+    @JsonIgnore
+    public BlockDelaySpecBuilder edit() {
+        return new BlockDelaySpecBuilder(this);
+    }
+
+    @JsonIgnore
+    public BlockDelaySpecBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -133,6 +156,10 @@ public class BlockDelaySpec implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

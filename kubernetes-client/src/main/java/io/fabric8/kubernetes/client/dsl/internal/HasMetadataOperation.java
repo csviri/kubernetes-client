@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.dsl.internal;
 
 import io.fabric8.kubernetes.api.builder.Visitor;
@@ -30,8 +29,6 @@ import io.fabric8.kubernetes.client.dsl.base.PatchContext;
 import io.fabric8.kubernetes.client.dsl.base.PatchType;
 import io.fabric8.kubernetes.client.utils.KubernetesResourceUtil;
 import io.fabric8.kubernetes.client.utils.Utils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -44,8 +41,6 @@ import java.util.function.UnaryOperator;
 
 public class HasMetadataOperation<T extends HasMetadata, L extends KubernetesResourceList<T>, R extends Resource<T>>
     extends BaseOperation<T, L, R> {
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(HasMetadataOperation.class);
 
   public static final DeletionPropagation DEFAULT_PROPAGATION_POLICY = DeletionPropagation.BACKGROUND;
   public static final long DEFAULT_GRACE_PERIOD_IN_SECONDS = -1L;
@@ -183,6 +178,9 @@ public class HasMetadataOperation<T extends HasMetadata, L extends KubernetesRes
           try {
             resource.getMetadata().setResourceVersion(resourceVersion);
             return handleUpdate(resource);
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw KubernetesClientException.launderThrowable(forOperationType(REPLACE_OPERATION), e);
           } catch (Exception e) {
             throw KubernetesClientException.launderThrowable(forOperationType(REPLACE_OPERATION), e);
           }
@@ -230,6 +228,9 @@ public class HasMetadataOperation<T extends HasMetadata, L extends KubernetesRes
     final UnaryOperator<T> visitor = resource -> {
       try {
         return handlePatch(context, theBase, resource);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw KubernetesClientException.launderThrowable(forOperationType(PATCH_OPERATION), e);
       } catch (Exception e) {
         throw KubernetesClientException.launderThrowable(forOperationType(PATCH_OPERATION), e);
       }
@@ -325,8 +326,8 @@ public class HasMetadataOperation<T extends HasMetadata, L extends KubernetesRes
         int specReplicas = Optional.ofNullable(scale.getSpec().getReplicas()).orElse(0);
         if (count == statusReplicas && count == specReplicas) {
           completion.complete(null);
-        } else if (LOGGER.isDebugEnabled()) {
-          LOGGER.debug("Only {}/{} replicas scheduled for {}: {} in namespace: {} seconds so waiting...",
+        } else if (logger.isDebugEnabled()) {
+          logger.debug("Only {}/{} replicas scheduled for {}: {} in namespace: {} seconds so waiting...",
               specReplicas, count, getKind(), getName(), namespace);
         }
       } catch (KubernetesClientException e) {

@@ -1,9 +1,9 @@
 
 package io.fabric8.volumesnapshot.api.model;
 
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -11,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -18,6 +19,7 @@ import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.LabelSelector;
 import io.fabric8.kubernetes.api.model.LocalObjectReference;
+import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
@@ -28,13 +30,13 @@ import io.fabric8.kubernetes.model.annotation.Group;
 import io.fabric8.kubernetes.model.annotation.Version;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
-import io.sundr.transform.annotations.TemplateTransformation;
-import io.sundr.transform.annotations.TemplateTransformations;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * VolumeSnapshotClass specifies parameters that a underlying storage system uses when creating a volume snapshot. A specific VolumeSnapshotClass is used by specifying its name in a VolumeSnapshot object. VolumeSnapshotClasses are non-namespaced
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
@@ -47,13 +49,12 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
 })
 @Buildable(editableEnabled = false, validationEnabled = false, generateBuilderPackage = false, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder", refs = {
-    @BuildableReference(io.fabric8.kubernetes.api.model.ObjectMeta.class),
+    @BuildableReference(ObjectMeta.class),
     @BuildableReference(LabelSelector.class),
     @BuildableReference(Container.class),
     @BuildableReference(PodTemplateSpec.class),
@@ -67,57 +68,35 @@ import lombok.experimental.Accessors;
     @BuildableReference(Volume.class),
     @BuildableReference(VolumeMount.class)
 })
-@TemplateTransformations({
-    @TemplateTransformation(value = "/manifest.vm", outputPath = "META-INF/services/io.fabric8.kubernetes.api.model.KubernetesResource", gather = true)
-})
 @Version("v1")
 @Group("snapshot.storage.k8s.io")
-public class VolumeSnapshotClass implements HasMetadata
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class VolumeSnapshotClass implements Editable<VolumeSnapshotClassBuilder>, HasMetadata
 {
 
-    /**
-     * 
-     * (Required)
-     * 
-     */
     @JsonProperty("apiVersion")
-    private java.lang.String apiVersion = "snapshot.storage.k8s.io/v1";
+    private String apiVersion = "snapshot.storage.k8s.io/v1";
     @JsonProperty("deletionPolicy")
-    private java.lang.String deletionPolicy;
+    private String deletionPolicy;
     @JsonProperty("driver")
-    private java.lang.String driver;
-    /**
-     * 
-     * (Required)
-     * 
-     */
+    private String driver;
     @JsonProperty("kind")
-    private java.lang.String kind = "VolumeSnapshotClass";
+    private String kind = "VolumeSnapshotClass";
     @JsonProperty("metadata")
-    private io.fabric8.kubernetes.api.model.ObjectMeta metadata;
+    private ObjectMeta metadata;
     @JsonProperty("parameters")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private Map<String, String> parameters = new LinkedHashMap<String, String>();
+    private Map<String, String> parameters = new LinkedHashMap<>();
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public VolumeSnapshotClass() {
     }
 
-    /**
-     * 
-     * @param metadata
-     * @param apiVersion
-     * @param driver
-     * @param kind
-     * @param deletionPolicy
-     * @param parameters
-     */
-    public VolumeSnapshotClass(java.lang.String apiVersion, java.lang.String deletionPolicy, java.lang.String driver, java.lang.String kind, io.fabric8.kubernetes.api.model.ObjectMeta metadata, Map<String, String> parameters) {
+    public VolumeSnapshotClass(String apiVersion, String deletionPolicy, String driver, String kind, ObjectMeta metadata, Map<String, String> parameters) {
         super();
         this.apiVersion = apiVersion;
         this.deletionPolicy = deletionPolicy;
@@ -128,93 +107,125 @@ public class VolumeSnapshotClass implements HasMetadata
     }
 
     /**
-     * 
-     * (Required)
-     * 
+     * APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
      */
     @JsonProperty("apiVersion")
-    public java.lang.String getApiVersion() {
+    public String getApiVersion() {
         return apiVersion;
     }
 
     /**
-     * 
-     * (Required)
-     * 
+     * APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
      */
     @JsonProperty("apiVersion")
-    public void setApiVersion(java.lang.String apiVersion) {
+    public void setApiVersion(String apiVersion) {
         this.apiVersion = apiVersion;
     }
 
+    /**
+     * deletionPolicy determines whether a VolumeSnapshotContent created through the VolumeSnapshotClass should be deleted when its bound VolumeSnapshot is deleted. Supported values are "Retain" and "Delete". "Retain" means that the VolumeSnapshotContent and its physical snapshot on underlying storage system are kept. "Delete" means that the VolumeSnapshotContent and its physical snapshot on underlying storage system are deleted. Required.
+     */
     @JsonProperty("deletionPolicy")
-    public java.lang.String getDeletionPolicy() {
+    public String getDeletionPolicy() {
         return deletionPolicy;
     }
 
+    /**
+     * deletionPolicy determines whether a VolumeSnapshotContent created through the VolumeSnapshotClass should be deleted when its bound VolumeSnapshot is deleted. Supported values are "Retain" and "Delete". "Retain" means that the VolumeSnapshotContent and its physical snapshot on underlying storage system are kept. "Delete" means that the VolumeSnapshotContent and its physical snapshot on underlying storage system are deleted. Required.
+     */
     @JsonProperty("deletionPolicy")
-    public void setDeletionPolicy(java.lang.String deletionPolicy) {
+    public void setDeletionPolicy(String deletionPolicy) {
         this.deletionPolicy = deletionPolicy;
     }
 
+    /**
+     * driver is the name of the storage driver that handles this VolumeSnapshotClass. Required.
+     */
     @JsonProperty("driver")
-    public java.lang.String getDriver() {
+    public String getDriver() {
         return driver;
     }
 
+    /**
+     * driver is the name of the storage driver that handles this VolumeSnapshotClass. Required.
+     */
     @JsonProperty("driver")
-    public void setDriver(java.lang.String driver) {
+    public void setDriver(String driver) {
         this.driver = driver;
     }
 
     /**
-     * 
-     * (Required)
-     * 
+     * Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
      */
     @JsonProperty("kind")
-    public java.lang.String getKind() {
+    public String getKind() {
         return kind;
     }
 
     /**
-     * 
-     * (Required)
-     * 
+     * Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
      */
     @JsonProperty("kind")
-    public void setKind(java.lang.String kind) {
+    public void setKind(String kind) {
         this.kind = kind;
     }
 
+    /**
+     * VolumeSnapshotClass specifies parameters that a underlying storage system uses when creating a volume snapshot. A specific VolumeSnapshotClass is used by specifying its name in a VolumeSnapshot object. VolumeSnapshotClasses are non-namespaced
+     */
     @JsonProperty("metadata")
-    public io.fabric8.kubernetes.api.model.ObjectMeta getMetadata() {
+    public ObjectMeta getMetadata() {
         return metadata;
     }
 
+    /**
+     * VolumeSnapshotClass specifies parameters that a underlying storage system uses when creating a volume snapshot. A specific VolumeSnapshotClass is used by specifying its name in a VolumeSnapshot object. VolumeSnapshotClasses are non-namespaced
+     */
     @JsonProperty("metadata")
-    public void setMetadata(io.fabric8.kubernetes.api.model.ObjectMeta metadata) {
+    public void setMetadata(ObjectMeta metadata) {
         this.metadata = metadata;
     }
 
+    /**
+     * parameters is a key-value map with storage driver specific parameters for creating snapshots. These values are opaque to Kubernetes.
+     */
     @JsonProperty("parameters")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public Map<String, String> getParameters() {
         return parameters;
     }
 
+    /**
+     * parameters is a key-value map with storage driver specific parameters for creating snapshots. These values are opaque to Kubernetes.
+     */
     @JsonProperty("parameters")
     public void setParameters(Map<String, String> parameters) {
         this.parameters = parameters;
     }
 
+    @JsonIgnore
+    public VolumeSnapshotClassBuilder edit() {
+        return new VolumeSnapshotClassBuilder(this);
+    }
+
+    @JsonIgnore
+    public VolumeSnapshotClassBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
-    public Map<java.lang.String, Object> getAdditionalProperties() {
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 
     @JsonAnySetter
-    public void setAdditionalProperty(java.lang.String name, Object value) {
+    public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

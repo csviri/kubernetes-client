@@ -2,10 +2,10 @@
 package io.fabric8.openshift.api.model.miscellaneous.cloudcredential.v1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -13,7 +13,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
@@ -23,29 +26,30 @@ import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * CredentialsRequestStatus defines the observed state of CredentialsRequest
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "conditions",
     "lastSyncCloudCredsSecretResourceVersion",
     "lastSyncGeneration",
+    "lastSyncInfrastructureResourceVersion",
     "lastSyncTimestamp",
     "providerStatus",
     "provisioned"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -59,122 +63,189 @@ import lombok.experimental.Accessors;
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class CredentialsRequestStatus implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class CredentialsRequestStatus implements Editable<CredentialsRequestStatusBuilder>, KubernetesResource
 {
 
     @JsonProperty("conditions")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<CredentialsRequestCondition> conditions = new ArrayList<CredentialsRequestCondition>();
+    private List<CredentialsRequestCondition> conditions = new ArrayList<>();
     @JsonProperty("lastSyncCloudCredsSecretResourceVersion")
-    private java.lang.String lastSyncCloudCredsSecretResourceVersion;
+    private String lastSyncCloudCredsSecretResourceVersion;
     @JsonProperty("lastSyncGeneration")
     private Long lastSyncGeneration;
+    @JsonProperty("lastSyncInfrastructureResourceVersion")
+    private String lastSyncInfrastructureResourceVersion;
     @JsonProperty("lastSyncTimestamp")
     private String lastSyncTimestamp;
     @JsonProperty("providerStatus")
-    @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private Map<String, Object> providerStatus = new LinkedHashMap<String, Object>();
+    @JsonDeserialize(using = io.fabric8.kubernetes.internal.KubernetesDeserializer.class)
+    private Object providerStatus;
     @JsonProperty("provisioned")
     private Boolean provisioned;
     @JsonIgnore
-    private Map<java.lang.String, java.lang.Object> additionalProperties = new HashMap<java.lang.String, java.lang.Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public CredentialsRequestStatus() {
     }
 
-    /**
-     * 
-     * @param lastSyncTimestamp
-     * @param provisioned
-     * @param lastSyncCloudCredsSecretResourceVersion
-     * @param lastSyncGeneration
-     * @param conditions
-     * @param providerStatus
-     */
-    public CredentialsRequestStatus(List<CredentialsRequestCondition> conditions, java.lang.String lastSyncCloudCredsSecretResourceVersion, Long lastSyncGeneration, String lastSyncTimestamp, Map<String, Object> providerStatus, Boolean provisioned) {
+    public CredentialsRequestStatus(List<CredentialsRequestCondition> conditions, String lastSyncCloudCredsSecretResourceVersion, Long lastSyncGeneration, String lastSyncInfrastructureResourceVersion, String lastSyncTimestamp, Object providerStatus, Boolean provisioned) {
         super();
         this.conditions = conditions;
         this.lastSyncCloudCredsSecretResourceVersion = lastSyncCloudCredsSecretResourceVersion;
         this.lastSyncGeneration = lastSyncGeneration;
+        this.lastSyncInfrastructureResourceVersion = lastSyncInfrastructureResourceVersion;
         this.lastSyncTimestamp = lastSyncTimestamp;
         this.providerStatus = providerStatus;
         this.provisioned = provisioned;
     }
 
+    /**
+     * Conditions includes detailed status for the CredentialsRequest
+     */
     @JsonProperty("conditions")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<CredentialsRequestCondition> getConditions() {
         return conditions;
     }
 
+    /**
+     * Conditions includes detailed status for the CredentialsRequest
+     */
     @JsonProperty("conditions")
     public void setConditions(List<CredentialsRequestCondition> conditions) {
         this.conditions = conditions;
     }
 
+    /**
+     * LastSyncCloudCredsSecretResourceVersion is the resource version of the cloud credentials secret resource when the credentials request resource was last synced. Used to determine if the cloud credentials have been updated since the last sync.
+     */
     @JsonProperty("lastSyncCloudCredsSecretResourceVersion")
-    public java.lang.String getLastSyncCloudCredsSecretResourceVersion() {
+    public String getLastSyncCloudCredsSecretResourceVersion() {
         return lastSyncCloudCredsSecretResourceVersion;
     }
 
+    /**
+     * LastSyncCloudCredsSecretResourceVersion is the resource version of the cloud credentials secret resource when the credentials request resource was last synced. Used to determine if the cloud credentials have been updated since the last sync.
+     */
     @JsonProperty("lastSyncCloudCredsSecretResourceVersion")
-    public void setLastSyncCloudCredsSecretResourceVersion(java.lang.String lastSyncCloudCredsSecretResourceVersion) {
+    public void setLastSyncCloudCredsSecretResourceVersion(String lastSyncCloudCredsSecretResourceVersion) {
         this.lastSyncCloudCredsSecretResourceVersion = lastSyncCloudCredsSecretResourceVersion;
     }
 
+    /**
+     * LastSyncGeneration is the generation of the credentials request resource that was last synced. Used to determine if the object has changed and requires a sync.
+     */
     @JsonProperty("lastSyncGeneration")
     public Long getLastSyncGeneration() {
         return lastSyncGeneration;
     }
 
+    /**
+     * LastSyncGeneration is the generation of the credentials request resource that was last synced. Used to determine if the object has changed and requires a sync.
+     */
     @JsonProperty("lastSyncGeneration")
     public void setLastSyncGeneration(Long lastSyncGeneration) {
         this.lastSyncGeneration = lastSyncGeneration;
     }
 
+    /**
+     * LastSyncInfrastructureResourceVersion is the resource version of the Infrastructure resource. It is used to determine if the user provided tags have been updated since the last sync.
+     */
+    @JsonProperty("lastSyncInfrastructureResourceVersion")
+    public String getLastSyncInfrastructureResourceVersion() {
+        return lastSyncInfrastructureResourceVersion;
+    }
+
+    /**
+     * LastSyncInfrastructureResourceVersion is the resource version of the Infrastructure resource. It is used to determine if the user provided tags have been updated since the last sync.
+     */
+    @JsonProperty("lastSyncInfrastructureResourceVersion")
+    public void setLastSyncInfrastructureResourceVersion(String lastSyncInfrastructureResourceVersion) {
+        this.lastSyncInfrastructureResourceVersion = lastSyncInfrastructureResourceVersion;
+    }
+
+    /**
+     * CredentialsRequestStatus defines the observed state of CredentialsRequest
+     */
     @JsonProperty("lastSyncTimestamp")
     public String getLastSyncTimestamp() {
         return lastSyncTimestamp;
     }
 
+    /**
+     * CredentialsRequestStatus defines the observed state of CredentialsRequest
+     */
     @JsonProperty("lastSyncTimestamp")
     public void setLastSyncTimestamp(String lastSyncTimestamp) {
         this.lastSyncTimestamp = lastSyncTimestamp;
     }
 
+    /**
+     * CredentialsRequestStatus defines the observed state of CredentialsRequest
+     */
     @JsonProperty("providerStatus")
-    public Map<String, Object> getProviderStatus() {
+    public Object getProviderStatus() {
         return providerStatus;
     }
 
+    /**
+     * CredentialsRequestStatus defines the observed state of CredentialsRequest
+     */
     @JsonProperty("providerStatus")
-    public void setProviderStatus(Map<String, Object> providerStatus) {
+    @JsonDeserialize(using = io.fabric8.kubernetes.internal.KubernetesDeserializer.class)
+    public void setProviderStatus(Object providerStatus) {
         this.providerStatus = providerStatus;
     }
 
+    /**
+     * Provisioned is true once the credentials have been initially provisioned.
+     */
     @JsonProperty("provisioned")
     public Boolean getProvisioned() {
         return provisioned;
     }
 
+    /**
+     * Provisioned is true once the credentials have been initially provisioned.
+     */
     @JsonProperty("provisioned")
     public void setProvisioned(Boolean provisioned) {
         this.provisioned = provisioned;
     }
 
+    @JsonIgnore
+    public CredentialsRequestStatusBuilder edit() {
+        return new CredentialsRequestStatusBuilder(this);
+    }
+
+    @JsonIgnore
+    public CredentialsRequestStatusBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
-    public Map<java.lang.String, java.lang.Object> getAdditionalProperties() {
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 
     @JsonAnySetter
-    public void setAdditionalProperty(java.lang.String name, java.lang.Object value) {
+    public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

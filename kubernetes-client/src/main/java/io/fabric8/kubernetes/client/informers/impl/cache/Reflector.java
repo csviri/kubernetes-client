@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,27 +34,33 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 
 public class Reflector<T extends HasMetadata, L extends KubernetesResourceList<T>> {
 
-  private static final Logger log = LoggerFactory.getLogger(Reflector.class);
+  private static final Logger logger = LoggerFactory.getLogger(Reflector.class);
 
   private static long MIN_TIMEOUT = TimeUnit.MINUTES.toSeconds(5);
 
   private volatile String lastSyncResourceVersion;
   private final ListerWatcher<T, L> listerWatcher;
-  private final SyncableStore<T> store;
+  private final ProcessorStore<T> store;
   private final ReflectorWatcher watcher;
   private volatile boolean watching;
+  private volatile boolean pendingBeforeListNotification = true;
+  @SuppressWarnings("java:S3077") // CompletableFuture is thread-safe; volatile ensures reference visibility
   private volatile CompletableFuture<AbstractWatchManager<T>> watchFuture;
+  @SuppressWarnings("java:S3077") // CompletableFuture is thread-safe; volatile ensures reference visibility
   private volatile CompletableFuture<?> reconnectFuture;
   private final CompletableFuture<Void> startFuture = new CompletableFuture<>();
   private final CompletableFuture<Void> stopFuture = new CompletableFuture<>();
   private final ExponentialBackoffIntervalCalculator retryIntervalCalculator;
+  private final Executor executor;
   //default behavior - retry if started and it's not a watcherexception
+  @SuppressWarnings("java:S3077") // volatile reference-swap; the handler lambda is stateless
   private volatile ExceptionHandler handler = (b, t) -> b && !(t instanceof WatcherException);
   private long minTimeout = MIN_TIMEOUT;
 
@@ -62,12 +68,26 @@ public class Reflector<T extends HasMetadata, L extends KubernetesResourceList<T
 
   private boolean cachedListing = true;
 
-  public Reflector(ListerWatcher<T, L> listerWatcher, SyncableStore<T> store) {
+  private static class WatchListState {
+    Set<String> nextKeys = new ConcurrentSkipListSet<>();
+    private CompletableFuture<Void> listDone = new CompletableFuture<>();
+  }
+
+  private boolean watchList;
+  @SuppressWarnings("java:S3077") // inner fields (ConcurrentSkipListSet, CompletableFuture) are thread-safe
+  private volatile WatchListState watchListState;
+
+  public Reflector(ListerWatcher<T, L> listerWatcher, ProcessorStore<T> store) {
+    this(listerWatcher, store, Runnable::run);
+  }
+
+  public Reflector(ListerWatcher<T, L> listerWatcher, ProcessorStore<T> store, Executor executor) {
     this.listerWatcher = listerWatcher;
     this.store = store;
     this.watcher = new ReflectorWatcher();
     this.retryIntervalCalculator = new ExponentialBackoffIntervalCalculator(listerWatcher.getWatchReconnectInterval(),
         ExponentialBackoffIntervalCalculator.UNLIMITED_RETRIES);
+    this.executor = executor;
   }
 
   public CompletableFuture<Void> start() {
@@ -115,25 +135,28 @@ public class Reflector<T extends HasMetadata, L extends KubernetesResourceList<T
     if (isStopped()) {
       return CompletableFuture.completedFuture(null);
     }
-    Set<String> nextKeys = new ConcurrentSkipListSet<>();
-    CompletableFuture<Void> theFuture = processList(nextKeys, null).thenCompose(result -> {
-      store.retainAll(nextKeys);
-      final String latestResourceVersion = result.getMetadata().getResourceVersion();
-      lastSyncResourceVersion = latestResourceVersion;
-      log.debug("Listing items ({}) for {} at v{}", nextKeys.size(), this, latestResourceVersion);
-      return startWatcher(latestResourceVersion);
-    }).thenAccept(w -> {
-      if (w != null) {
-        if (!isStopped()) {
-          if (log.isDebugEnabled()) {
-            log.debug("Watch started for {}", Reflector.this);
-          }
-          watching = true;
-        } else {
-          stopWatch(w);
-        }
-      }
-    });
+
+    if (pendingBeforeListNotification) {
+      pendingBeforeListNotification = false;
+      store.onBeforeList(lastSyncResourceVersion);
+    }
+
+    CompletableFuture<Void> theFuture = null;
+    if (watchList) {
+      watchListState = new WatchListState();
+      CompletableFuture<Void> cf = watchListState.listDone;
+      theFuture = establishWatch(startWatcher(lastSyncResourceVersion)).thenCompose(ignored -> cf);
+    } else {
+      Set<String> nextKeys = new ConcurrentSkipListSet<>();
+      CompletableFuture<? extends Watch> startWatcher = processList(nextKeys, null).thenCompose(result -> {
+        final String latestResourceVersion = result.getMetadata().getResourceVersion();
+        CompletableFuture<?> cf = new CompletableFuture<>();
+        syncList(nextKeys, latestResourceVersion, cf);
+        return cf.thenCompose(ignored -> startWatcher(latestResourceVersion));
+      });
+      theFuture = establishWatch(startWatcher);
+    }
+
     theFuture.whenComplete((v, t) -> {
       if (t != null) {
         onException("listSyncAndWatch", t);
@@ -145,12 +168,51 @@ public class Reflector<T extends HasMetadata, L extends KubernetesResourceList<T
     return theFuture;
   }
 
+  /**
+   * There are 4 steps here
+   * <ol>
+   * <li>sync the underlying store based upon the keySet
+   * <li>update the last sync version
+   * <li>emit the onList event
+   * <li>signal the watch to start
+   * </ol>
+   */
+  private void syncList(Set<String> nextKeys, final String latestResourceVersion, CompletableFuture<?> cf) {
+    logger.debug("Listing items ({}) for {} at v{}", nextKeys.size(), this, latestResourceVersion);
+    boolean wasEmpty = store.syncList(nextKeys);
+    boolean startWatchImmediately = cachedListing && lastSyncResourceVersion == null;
+    lastSyncResourceVersion = latestResourceVersion;
+    Executor executor = store.onList(latestResourceVersion, wasEmpty && nextKeys.isEmpty());
+    // re-arm so the next list/watch cycle (HTTP GONE or onException reconnect) fires onBeforeList
+    pendingBeforeListNotification = true;
+    if (startWatchImmediately) {
+      cf.complete(null);
+    } else {
+      executor.execute(() -> cf.complete(null));
+    }
+  }
+
+  private CompletableFuture<Void> establishWatch(CompletableFuture<? extends Watch> future) {
+    return future.thenAccept(w -> {
+      if (w != null) {
+        if (!isStopped()) {
+          if (logger.isDebugEnabled()) {
+            logger.debug("Watch started for {}", Reflector.this);
+          }
+          watching = true;
+        } else {
+          stopWatch(w);
+        }
+      }
+    });
+  }
+
   private void onException(String operation, Throwable t) {
     if (handler.retryAfterException(startFuture.isDone() && !startFuture.isCompletedExceptionally(), t)) {
-      log.warn("{} failed for {}, will retry", operation, Reflector.this, t);
+      logger.warn("{} failed for {}, will retry", operation, Reflector.this, t);
       reconnect();
     } else {
-      log.error("{} failed for {}, will stop", operation, Reflector.this, t);
+      logger.error("{} failed for {}, will stop", operation, Reflector.this, t);
       startFuture.completeExceptionally(t);
       stopFuture.completeExceptionally(t);
     }
@@ -160,9 +222,7 @@ public class Reflector<T extends HasMetadata, L extends KubernetesResourceList<T
     if (isStopped()) {
       return;
     }
-    // this can be run in the scheduler thread because
-    // any further operations will happen on the io thread
-    reconnectFuture = Utils.schedule(Runnable::run, this::listSyncAndWatch,
+    reconnectFuture = Utils.schedule(executor, this::listSyncAndWatch,
         retryIntervalCalculator.nextReconnectInterval(), TimeUnit.MILLISECONDS);
   }
 
@@ -195,7 +255,7 @@ public class Reflector<T extends HasMetadata, L extends KubernetesResourceList<T
   }
 
   private void stopWatch(Watch w) {
-    log.debug("Stopping watcher for {} at v{}", this, lastSyncResourceVersion);
+    logger.debug("Stopping watcher for {} at v{}", this, lastSyncResourceVersion);
     w.close();
     watchStopped(); // proactively report as stopped
   }
@@ -204,7 +264,7 @@ public class Reflector<T extends HasMetadata, L extends KubernetesResourceList<T
     if (isStopped()) {
       return CompletableFuture.completedFuture(null);
     }
-    log.debug("Starting watcher for {} at v{}", this, latestResourceVersion);
+    logger.debug("Starting watcher for {} at v{}", this, latestResourceVersion);
     // there's no need to stop the old watch, that will happen automatically when this call completes
     CompletableFuture<AbstractWatchManager<T>> future = listerWatcher.submitWatch(
         new ListOptionsBuilder().withResourceVersion(latestResourceVersion)
@@ -212,6 +272,9 @@ public class Reflector<T extends HasMetadata, L extends KubernetesResourceList<T
             // so instead we'll terminate below and set a fail-safe here
             // .withTimeoutSeconds((long) ((Math.random() + 1) * minTimeout))
             .withTimeoutSeconds(minTimeout * 2)
+            .withAllowWatchBookmarks(true) // should always allow bookmarks to process the lastResourceVersion here
+            .withSendInitialEvents(watchListState != null ? true : null)
+            .withResourceVersionMatch(watchListState != null ? "NotOlderThan" : null)
             .build(),
         watcher);
 
@@ -222,7 +285,7 @@ public class Reflector<T extends HasMetadata, L extends KubernetesResourceList<T
       timeoutFuture.cancel(true);
     }
     timeoutFuture = new CompletableFuture<>();
-    Utils.scheduleWithVariableRate(timeoutFuture, Runnable::run,
+    Utils.scheduleWithVariableRate(timeoutFuture, executor,
         () -> future.thenAccept(AbstractWatchManager::closeRequest), timeout.getAsLong(), timeout, TimeUnit.SECONDS);
     watchFuture = future;
     return watchFuture;
@@ -245,7 +308,15 @@ public class Reflector<T extends HasMetadata, L extends KubernetesResourceList<T
   }
 
   public boolean isWatching() {
-    return watching;
+    return watching && Optional.of(watchFuture).map(f -> {
+      if (f.isDone()) {
+        if (f.isCompletedExceptionally()) {
+          return null;
+        }
+        return f.getNow(null);
+      }
+      return null;
+    }).map(AbstractWatchManager::isWatching).orElse(false);
   }
 
   class ReflectorWatcher implements Watcher<T> {
@@ -260,11 +331,31 @@ public class Reflector<T extends HasMetadata, L extends KubernetesResourceList<T
       if (resource == null) {
         throw new KubernetesClientException("Unrecognized resource for " + Reflector.this);
       }
-      if (log.isDebugEnabled()) {
-        log.debug("Event received {} {} resourceVersion v{} for {}", action.name(),
+      if (logger.isDebugEnabled()) {
+        logger.debug("Event received {} {} resourceVersion v{} for {}", action.name(),
             resource.getKind(),
             resource.getMetadata().getResourceVersion(), Reflector.this);
       }
+
+      if (watchListState != null) {
+        switch (action) {
+          case ADDED:
+            String key = store.getKey(resource);
+            watchListState.nextKeys.add(key);
+            break;
+          case BOOKMARK:
+            // done with the initial events, trigger that we are ready and switch to regular
+            // watching
+            syncList(watchListState.nextKeys, resource.getMetadata().getResourceVersion(), watchListState.listDone);
+            watchListState = null;
+            return; // don't fall through to the general action handling as the lastSyncResourceVersion was already set
+          case MODIFIED:
+          case DELETED:
+            onClose(new WatcherException("Unexpected event before list ending bookmark: " + action));
+            return;
+        }
+      }
+
       switch (action) {
         case ERROR:
           throw new KubernetesClientException("ERROR event");
@@ -287,8 +378,8 @@ public class Reflector<T extends HasMetadata, L extends KubernetesResourceList<T
       // not the user, it is expected that the watch retry will handle this
       watchStopped();
       if (exception.isHttpGone()) {
-        if (log.isDebugEnabled()) {
-          log.debug("Watch restarting due to http gone for {}", Reflector.this);
+        if (logger.isDebugEnabled()) {
+          logger.debug("Watch restarting due to http gone for {}", Reflector.this);
         }
         // start a whole new list/watch cycle
         reconnect();
@@ -300,7 +391,7 @@ public class Reflector<T extends HasMetadata, L extends KubernetesResourceList<T
     @Override
     public void onClose() {
       watchStopped();
-      log.debug("Watch gracefully closed for {}", Reflector.this);
+      logger.debug("Watch gracefully closed for {}", Reflector.this);
     }
 
     @Override
@@ -328,6 +419,10 @@ public class Reflector<T extends HasMetadata, L extends KubernetesResourceList<T
 
   public void usingInitialState() {
     this.cachedListing = false;
+  }
+
+  public void setWatchList(boolean watchList) {
+    this.watchList = watchList;
   }
 
 }

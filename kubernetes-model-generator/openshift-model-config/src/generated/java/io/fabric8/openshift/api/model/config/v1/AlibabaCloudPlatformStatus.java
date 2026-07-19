@@ -2,9 +2,10 @@
 package io.fabric8.openshift.api.model.config.v1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -12,36 +13,38 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
 import io.fabric8.kubernetes.api.model.LocalObjectReference;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
-import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * AlibabaCloudPlatformStatus holds the current status of the Alibaba Cloud infrastructure provider.
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "region",
     "resourceGroupID",
     "resourceTags"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -53,11 +56,16 @@ import lombok.experimental.Accessors;
     @BuildableReference(PodTemplateSpec.class),
     @BuildableReference(ResourceRequirements.class),
     @BuildableReference(IntOrString.class),
-    @BuildableReference(ObjectReference.class),
+    @BuildableReference(io.fabric8.kubernetes.api.model.ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class AlibabaCloudPlatformStatus implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class AlibabaCloudPlatformStatus implements Editable<AlibabaCloudPlatformStatusBuilder>, KubernetesResource
 {
 
     @JsonProperty("region")
@@ -66,23 +74,16 @@ public class AlibabaCloudPlatformStatus implements KubernetesResource
     private String resourceGroupID;
     @JsonProperty("resourceTags")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<AlibabaCloudResourceTag> resourceTags = new ArrayList<AlibabaCloudResourceTag>();
+    private List<AlibabaCloudResourceTag> resourceTags = new ArrayList<>();
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public AlibabaCloudPlatformStatus() {
     }
 
-    /**
-     * 
-     * @param resourceTags
-     * @param resourceGroupID
-     * @param region
-     */
     public AlibabaCloudPlatformStatus(String region, String resourceGroupID, List<AlibabaCloudResourceTag> resourceTags) {
         super();
         this.region = region;
@@ -90,37 +91,67 @@ public class AlibabaCloudPlatformStatus implements KubernetesResource
         this.resourceTags = resourceTags;
     }
 
+    /**
+     * region specifies the region for Alibaba Cloud resources created for the cluster.
+     */
     @JsonProperty("region")
     public String getRegion() {
         return region;
     }
 
+    /**
+     * region specifies the region for Alibaba Cloud resources created for the cluster.
+     */
     @JsonProperty("region")
     public void setRegion(String region) {
         this.region = region;
     }
 
+    /**
+     * resourceGroupID is the ID of the resource group for the cluster.
+     */
     @JsonProperty("resourceGroupID")
     public String getResourceGroupID() {
         return resourceGroupID;
     }
 
+    /**
+     * resourceGroupID is the ID of the resource group for the cluster.
+     */
     @JsonProperty("resourceGroupID")
     public void setResourceGroupID(String resourceGroupID) {
         this.resourceGroupID = resourceGroupID;
     }
 
+    /**
+     * resourceTags is a list of additional tags to apply to Alibaba Cloud resources created for the cluster.
+     */
     @JsonProperty("resourceTags")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<AlibabaCloudResourceTag> getResourceTags() {
         return resourceTags;
     }
 
+    /**
+     * resourceTags is a list of additional tags to apply to Alibaba Cloud resources created for the cluster.
+     */
     @JsonProperty("resourceTags")
     public void setResourceTags(List<AlibabaCloudResourceTag> resourceTags) {
         this.resourceTags = resourceTags;
     }
 
+    @JsonIgnore
+    public AlibabaCloudPlatformStatusBuilder edit() {
+        return new AlibabaCloudPlatformStatusBuilder(this);
+    }
+
+    @JsonIgnore
+    public AlibabaCloudPlatformStatusBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -128,6 +159,10 @@ public class AlibabaCloudPlatformStatus implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

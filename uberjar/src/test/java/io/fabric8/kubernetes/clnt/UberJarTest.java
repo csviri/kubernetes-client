@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -148,11 +148,14 @@ class UberJarTest {
   }
 
   private String getMajorVersion(String projectVersion) {
-    return projectVersion.split("\\.")[0];
+    return projectVersion.split("[.\\-]")[0];
   }
 
   private String getMinorVersion(String projectVersion) {
     String[] versionParts = projectVersion.split("\\.");
+    if (versionParts.length < 2) {
+      return "0";
+    }
     String minorPatchVersion = projectVersion.substring(versionParts[0].length() + 1);
     if (minorPatchVersion.contains("-SNAPSHOT")) { // SNAPSHOT VERSION
       return minorPatchVersion.split("-")[0];

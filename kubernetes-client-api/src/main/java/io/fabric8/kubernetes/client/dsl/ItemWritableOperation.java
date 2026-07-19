@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.dsl;
 
 import io.fabric8.kubernetes.api.model.StatusDetails;
@@ -68,7 +67,7 @@ public interface ItemWritableOperation<T> extends DeletableWithOptions, ItemRepl
   T updateStatus(T item);
 
   /**
-   * See {@link EditReplacePatchable#patchStatus()}
+   * See {@link NonDeletingOperation#patchStatus()}
    *
    * @param item kubernetes object
    * @return updated object

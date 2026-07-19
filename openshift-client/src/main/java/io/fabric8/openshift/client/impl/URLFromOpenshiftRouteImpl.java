@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.openshift.client.impl;
 
 import io.fabric8.kubernetes.api.model.Service;
@@ -37,7 +36,7 @@ public class URLFromOpenshiftRouteImpl implements ServiceToURLProvider {
   public String getURL(Service service, String portName, String namespace, KubernetesClient client) {
     String serviceName = service.getMetadata().getName();
     ServicePort port = URLFromServiceUtil.getServicePortByName(service, portName);
-    if (port != null && port.getName() != null && client.isAdaptable(OpenShiftClient.class)) {
+    if (port != null && port.getName() != null) {
       try {
         String serviceProtocol = port.getProtocol();
         OpenShiftClient openShiftClient = client.adapt(OpenShiftClient.class);

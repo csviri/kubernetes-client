@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,14 +15,33 @@
  */
 package io.fabric8.generator.annotation;
 
-import java.lang.annotation.*;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-/*
- * Java representation of the `maximum` field of JSONSchemaProps
- * https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#jsonschemaprops-v1-apiextensions-k8s-io
+/**
+ * Java representation of the {@code maximum} field of JSONSchemaProps.
+ *
+ * @see <a href=
+ *      "https://kubernetes.io/docs/reference/kubernetes-api/extend-resources/custom-resource-definition-v1/#JSONSchemaProps">
+ *      Kubernetes Docs - API Reference - CRD v1 - JSONSchemaProps
+ *      </a>
  */
-@Target({ ElementType.ANNOTATION_TYPE, ElementType.FIELD, ElementType.METHOD })
+@Target({ ElementType.ANNOTATION_TYPE, ElementType.FIELD, ElementType.METHOD, ElementType.TYPE_USE })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Max {
+  /**
+   * @return the value of the maximum constraint
+   */
   double value();
+
+  /**
+   * Specifies whether the specified maximum is inclusive or exclusive.
+   * By default, it is inclusive.
+   *
+   * @return {@code true} if the value must be lower or equal to the specified maximum,
+   *         {@code false} if the value must be lower
+   */
+  boolean inclusive() default true;
 }

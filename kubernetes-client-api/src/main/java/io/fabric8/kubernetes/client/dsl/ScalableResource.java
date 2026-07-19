@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,9 +15,19 @@
  */
 package io.fabric8.kubernetes.client.dsl;
 
+import java.util.concurrent.TimeUnit;
+
 public interface ScalableResource<T> extends Resource<T>,
     Loggable,
     Containerable<String, Loggable>,
     TimestampBytesLimitTerminateTimeTailPrettyLoggable, TimeoutableScalable<T> {
+
+  @Override
+  ScalableResource<T> withTimeout(long timeout, TimeUnit unit);
+
+  @Override
+  default ScalableResource<T> withTimeoutInMillis(long timeoutInMillis) {
+    return withTimeout(timeoutInMillis, TimeUnit.MILLISECONDS);
+  }
 
 }

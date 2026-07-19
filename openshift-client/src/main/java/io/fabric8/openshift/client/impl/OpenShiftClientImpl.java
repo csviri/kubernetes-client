@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,22 +47,14 @@ import io.fabric8.openshift.api.model.Build;
 import io.fabric8.openshift.api.model.BuildConfig;
 import io.fabric8.openshift.api.model.BuildConfigList;
 import io.fabric8.openshift.api.model.BuildList;
-import io.fabric8.openshift.api.model.ClusterNetwork;
-import io.fabric8.openshift.api.model.ClusterNetworkList;
 import io.fabric8.openshift.api.model.ClusterRole;
 import io.fabric8.openshift.api.model.ClusterRoleBinding;
 import io.fabric8.openshift.api.model.ClusterRoleBindingList;
 import io.fabric8.openshift.api.model.ClusterRoleList;
 import io.fabric8.openshift.api.model.DeploymentConfig;
 import io.fabric8.openshift.api.model.DeploymentConfigList;
-import io.fabric8.openshift.api.model.EgressNetworkPolicy;
-import io.fabric8.openshift.api.model.EgressNetworkPolicyList;
 import io.fabric8.openshift.api.model.Group;
 import io.fabric8.openshift.api.model.GroupList;
-import io.fabric8.openshift.api.model.HelmChartRepository;
-import io.fabric8.openshift.api.model.HelmChartRepositoryList;
-import io.fabric8.openshift.api.model.HostSubnet;
-import io.fabric8.openshift.api.model.HostSubnetList;
 import io.fabric8.openshift.api.model.Identity;
 import io.fabric8.openshift.api.model.IdentityList;
 import io.fabric8.openshift.api.model.Image;
@@ -79,8 +71,6 @@ import io.fabric8.openshift.api.model.ImageTag;
 import io.fabric8.openshift.api.model.ImageTagList;
 import io.fabric8.openshift.api.model.LocalResourceAccessReview;
 import io.fabric8.openshift.api.model.LocalSubjectAccessReview;
-import io.fabric8.openshift.api.model.NetNamespace;
-import io.fabric8.openshift.api.model.NetNamespaceList;
 import io.fabric8.openshift.api.model.OAuthAccessToken;
 import io.fabric8.openshift.api.model.OAuthAccessTokenList;
 import io.fabric8.openshift.api.model.OAuthAuthorizeToken;
@@ -127,13 +117,20 @@ import io.fabric8.openshift.api.model.miscellaneous.cloudcredential.v1.Credentia
 import io.fabric8.openshift.api.model.miscellaneous.cloudcredential.v1.CredentialsRequestList;
 import io.fabric8.openshift.api.model.miscellaneous.cncf.cni.v1.NetworkAttachmentDefinition;
 import io.fabric8.openshift.api.model.miscellaneous.cncf.cni.v1.NetworkAttachmentDefinitionList;
-import io.fabric8.openshift.api.model.miscellaneous.imageregistry.operator.v1.ConfigList;
+import io.fabric8.openshift.api.model.miscellaneous.helm.v1beta1.HelmChartRepository;
+import io.fabric8.openshift.api.model.miscellaneous.helm.v1beta1.HelmChartRepositoryList;
+import io.fabric8.openshift.api.model.miscellaneous.helm.v1beta1.ProjectHelmChartRepository;
+import io.fabric8.openshift.api.model.miscellaneous.helm.v1beta1.ProjectHelmChartRepositoryList;
 import io.fabric8.openshift.api.model.miscellaneous.metal3.v1alpha1.BareMetalHost;
 import io.fabric8.openshift.api.model.miscellaneous.metal3.v1alpha1.BareMetalHostList;
-import io.fabric8.openshift.api.model.miscellaneous.network.operator.v1.EgressRouter;
-import io.fabric8.openshift.api.model.miscellaneous.network.operator.v1.EgressRouterList;
-import io.fabric8.openshift.api.model.miscellaneous.network.operator.v1.OperatorPKI;
-import io.fabric8.openshift.api.model.miscellaneous.network.operator.v1.OperatorPKIList;
+import io.fabric8.openshift.api.model.miscellaneous.metal3.v1beta1.Metal3Remediation;
+import io.fabric8.openshift.api.model.miscellaneous.metal3.v1beta1.Metal3RemediationList;
+import io.fabric8.openshift.api.model.miscellaneous.metal3.v1beta1.Metal3RemediationTemplate;
+import io.fabric8.openshift.api.model.miscellaneous.metal3.v1beta1.Metal3RemediationTemplateList;
+import io.fabric8.openshift.api.model.operator.network.v1.EgressRouter;
+import io.fabric8.openshift.api.model.operator.network.v1.EgressRouterList;
+import io.fabric8.openshift.api.model.operator.network.v1.OperatorPKI;
+import io.fabric8.openshift.api.model.operator.network.v1.OperatorPKIList;
 import io.fabric8.openshift.client.NamespacedOpenShiftClient;
 import io.fabric8.openshift.client.OpenShiftConfig;
 import io.fabric8.openshift.client.dsl.BuildConfigResource;
@@ -141,7 +138,7 @@ import io.fabric8.openshift.client.dsl.BuildResource;
 import io.fabric8.openshift.client.dsl.DeployableScalableResource;
 import io.fabric8.openshift.client.dsl.MachineConfigurationAPIGroupDSL;
 import io.fabric8.openshift.client.dsl.NameableCreateOrDeleteable;
-import io.fabric8.openshift.client.dsl.OpenShiftClusterAutoscalingAPIGroupDSL;
+import io.fabric8.openshift.client.dsl.OpenShiftAutoscalingAPIGroupDSL;
 import io.fabric8.openshift.client.dsl.OpenShiftConfigAPIGroupDSL;
 import io.fabric8.openshift.client.dsl.OpenShiftConsoleAPIGroupDSL;
 import io.fabric8.openshift.client.dsl.OpenShiftHiveAPIGroupDSL;
@@ -165,7 +162,6 @@ import io.fabric8.openshift.client.dsl.internal.project.ProjectOperationsImpl;
 import io.fabric8.openshift.client.internal.OpenShiftOAuthInterceptor;
 
 import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URL;
 import java.text.ParseException;
 import java.util.List;
@@ -255,8 +251,8 @@ public class OpenShiftClientImpl extends KubernetesClientImpl
   }
 
   @Override
-  public OpenShiftClusterAutoscalingAPIGroupDSL clusterAutoscaling() {
-    return adapt(OpenShiftClusterAutoscalingAPIGroupClient.class);
+  public OpenShiftAutoscalingAPIGroupDSL openShiftAutoscaling() {
+    return adapt(OpenShiftAutoscalingAPIGroupClient.class);
   }
 
   @Override
@@ -349,9 +345,19 @@ public class OpenShiftClientImpl extends KubernetesClientImpl
   }
 
   @Override
-  public NonNamespaceOperation<io.fabric8.openshift.api.model.miscellaneous.imageregistry.operator.v1.Config, ConfigList, Resource<io.fabric8.openshift.api.model.miscellaneous.imageregistry.operator.v1.Config>> imageRegistryOperatorConfigs() {
-    return resources(io.fabric8.openshift.api.model.miscellaneous.imageregistry.operator.v1.Config.class,
-        ConfigList.class);
+  public NonNamespaceOperation<io.fabric8.openshift.api.model.operator.imageregistry.v1.Config, io.fabric8.openshift.api.model.operator.imageregistry.v1.ConfigList, Resource<io.fabric8.openshift.api.model.operator.imageregistry.v1.Config>> imageRegistryOperatorConfigs() {
+    return resources(io.fabric8.openshift.api.model.operator.imageregistry.v1.Config.class,
+        io.fabric8.openshift.api.model.operator.imageregistry.v1.ConfigList.class);
+  }
+
+  @Override
+  public MixedOperation<Metal3Remediation, Metal3RemediationList, Resource<Metal3Remediation>> metal3Remediations() {
+    return resources(Metal3Remediation.class, Metal3RemediationList.class);
+  }
+
+  @Override
+  public MixedOperation<Metal3RemediationTemplate, Metal3RemediationTemplateList, Resource<Metal3RemediationTemplate>> metal3RemediationTemplates() {
+    return resources(Metal3RemediationTemplate.class, Metal3RemediationTemplateList.class);
   }
 
   @Override
@@ -409,6 +415,11 @@ public class OpenShiftClientImpl extends KubernetesClientImpl
   @Override
   public ProjectOperation projects() {
     return new ProjectOperationsImpl(this);
+  }
+
+  @Override
+  public MixedOperation<ProjectHelmChartRepository, ProjectHelmChartRepositoryList, Resource<ProjectHelmChartRepository>> projectHelmChartRepositories() {
+    return resources(ProjectHelmChartRepository.class, ProjectHelmChartRepositoryList.class);
   }
 
   @Override
@@ -562,26 +573,6 @@ public class OpenShiftClientImpl extends KubernetesClientImpl
   }
 
   @Override
-  public NonNamespaceOperation<NetNamespace, NetNamespaceList, Resource<NetNamespace>> netNamespaces() {
-    return resources(NetNamespace.class, NetNamespaceList.class);
-  }
-
-  @Override
-  public NonNamespaceOperation<ClusterNetwork, ClusterNetworkList, Resource<ClusterNetwork>> clusterNetworks() {
-    return resources(ClusterNetwork.class, ClusterNetworkList.class);
-  }
-
-  @Override
-  public MixedOperation<EgressNetworkPolicy, EgressNetworkPolicyList, Resource<EgressNetworkPolicy>> egressNetworkPolicies() {
-    return resources(EgressNetworkPolicy.class, EgressNetworkPolicyList.class);
-  }
-
-  @Override
-  public NonNamespaceOperation<HostSubnet, HostSubnetList, Resource<HostSubnet>> hostSubnets() {
-    return resources(HostSubnet.class, HostSubnetList.class);
-  }
-
-  @Override
   public NonNamespaceOperation<APIRequestCount, APIRequestCountList, Resource<APIRequestCount>> apiRequestCounts() {
     return resources(APIRequestCount.class, APIRequestCountList.class);
   }
@@ -702,30 +693,6 @@ public class OpenShiftClientImpl extends KubernetesClientImpl
   @Override
   public NamespacedOpenShiftClient inAnyNamespace() {
     return super.inAnyNamespace().adapt(NamespacedOpenShiftClient.class);
-  }
-
-  /**
-   * Checks if a custom URL for OpenShift has been used.
-   *
-   * @param config The openshift configuration.
-   * @return True if both master and openshift url have the same root.
-   */
-  static boolean hasCustomOpenShiftUrl(OpenShiftConfig config) {
-    try {
-      URI masterUri = new URI(config.getMasterUrl()).resolve("/");
-      URI openshfitUri = new URI(config.getOpenShiftUrl()).resolve("/");
-      return !masterUri.equals(openshfitUri);
-    } catch (Exception e) {
-      throw KubernetesClientException.launderThrowable(e);
-    }
-  }
-
-  @Override
-  public boolean isSupported() {
-    OpenShiftConfig oConfig = getConfiguration();
-    return hasCustomOpenShiftUrl(oConfig)
-        || oConfig.isDisableApiGroupCheck()
-        || hasApiGroup(BASE_API_GROUP, false);
   }
 
 }

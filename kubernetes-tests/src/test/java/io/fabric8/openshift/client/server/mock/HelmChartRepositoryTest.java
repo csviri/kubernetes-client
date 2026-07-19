@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,10 +15,12 @@
  */
 package io.fabric8.openshift.client.server.mock;
 
-import io.fabric8.openshift.api.model.HelmChartRepository;
-import io.fabric8.openshift.api.model.HelmChartRepositoryBuilder;
-import io.fabric8.openshift.api.model.HelmChartRepositoryList;
-import io.fabric8.openshift.api.model.HelmChartRepositoryListBuilder;
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
+import io.fabric8.openshift.api.model.miscellaneous.helm.v1beta1.HelmChartRepository;
+import io.fabric8.openshift.api.model.miscellaneous.helm.v1beta1.HelmChartRepositoryBuilder;
+import io.fabric8.openshift.api.model.miscellaneous.helm.v1beta1.HelmChartRepositoryList;
+import io.fabric8.openshift.api.model.miscellaneous.helm.v1beta1.HelmChartRepositoryListBuilder;
 import io.fabric8.openshift.client.OpenShiftClient;
 import org.junit.jupiter.api.Test;
 
@@ -26,10 +28,10 @@ import java.net.HttpURLConnection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class HelmChartRepositoryTest {
   private OpenShiftClient client;
-  private OpenShiftMockServer server;
+  KubernetesMockServer server;
 
   @Test
   void get() {
@@ -74,7 +76,7 @@ class HelmChartRepositoryTest {
         .once();
 
     // When
-    boolean isDeleted = client.helmChartRepositories().withName("test-delete").delete().size() == 1;
+    boolean isDeleted = client.helmChartRepositories().withName("test-delete").withGracePeriod(0).delete().size() == 1;
 
     // Then
     assertThat(isDeleted).isTrue();

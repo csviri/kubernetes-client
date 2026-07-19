@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
@@ -45,7 +46,7 @@ import java.util.stream.Stream;
 
 public class DefaultSharedIndexInformer<T extends HasMetadata, L extends KubernetesResourceList<T>>
     implements SharedIndexInformer<T> {
-  private static final Logger log = LoggerFactory.getLogger(DefaultSharedIndexInformer.class);
+  private static final Logger logger = LoggerFactory.getLogger(DefaultSharedIndexInformer.class);
 
   private static final long MINIMUM_RESYNC_PERIOD_MILLIS = 1000L;
 
@@ -88,7 +89,8 @@ public class DefaultSharedIndexInformer<T extends HasMetadata, L extends Kuberne
     this.processor = new SharedProcessor<>(informerExecutor, description);
 
     processorStore = new ProcessorStore<>(this.indexer, this.processor);
-    this.reflector = new Reflector<>(listerWatcher, processorStore);
+    this.reflector = new Reflector<>(listerWatcher, processorStore, informerExecutor);
+    this.reflector.setWatchList(listerWatcher.getConfig().isWatchList());
   }
 
   /**
@@ -103,23 +105,37 @@ public class DefaultSharedIndexInformer<T extends HasMetadata, L extends Kuberne
   }
 
   @Override
+  public SharedIndexInformer<T> removeEventHandler(ResourceEventHandler<? super T> handler) {
+    var listener = this.processor.removeProcessorListener(handler);
+    if (!started.get() && listener.isPresent()) {
+      var listenerResyncPeriod = listener.orElseThrow().getResyncPeriodInMillis();
+      if (listenerResyncPeriod != 0 && resyncCheckPeriodMillis == listenerResyncPeriod) {
+        this.processor.getMinimalNonZeroResyncPeriod()
+            .ifPresent(l -> this.resyncCheckPeriodMillis = l);
+      }
+    }
+    return this;
+  }
+
+  @Override
   public SharedIndexInformer<T> addEventHandlerWithResyncPeriod(ResourceEventHandler<? super T> handler,
       long resyncPeriodMillis) {
     if (stopped) {
-      log.info("DefaultSharedIndexInformer#Handler was not added to {} because it has stopped already", this);
+      logger.info("DefaultSharedIndexInformer#Handler was not added to {} because it has stopped already", this);
       return this;
     }
 
     if (resyncPeriodMillis > 0) {
       if (resyncPeriodMillis < MINIMUM_RESYNC_PERIOD_MILLIS) {
-        log.warn("DefaultSharedIndexInformer#resyncPeriod {} is too small for {}. Changing it to minimal allowed value of {}",
+        logger.warn(
+            "DefaultSharedIndexInformer#resyncPeriod {} is too small for {}. Changing it to minimal allowed value of {}",
             resyncPeriodMillis, this, MINIMUM_RESYNC_PERIOD_MILLIS);
         resyncPeriodMillis = MINIMUM_RESYNC_PERIOD_MILLIS;
       }
 
       if (resyncPeriodMillis < this.resyncCheckPeriodMillis) {
         if (started.get()) {
-          log.warn(
+          logger.warn(
               "DefaultSharedIndexInformer#resyncPeriod {} is smaller than resyncCheckPeriod {} and the {} informer has already started. Changing it to {}",
               resyncPeriodMillis, resyncCheckPeriodMillis, this, resyncCheckPeriodMillis);
           resyncPeriodMillis = resyncCheckPeriodMillis;
@@ -159,11 +175,15 @@ public class DefaultSharedIndexInformer<T extends HasMetadata, L extends Kuberne
       }
     }
 
-    log.debug("Ready to run resync and reflector for {} with resync {}", this, resyncCheckPeriodMillis);
+    logger.debug("Ready to run resync and reflector for {} with resync {}", this, resyncCheckPeriodMillis);
 
     scheduleResync(processor::shouldResync);
 
     return reflector.start();
+  }
+
+  public CompletableFuture<Void> started() {
+    return reflector.getStartFuture();
   }
 
   @Override
@@ -227,18 +247,39 @@ public class DefaultSharedIndexInformer<T extends HasMetadata, L extends Kuberne
   synchronized void scheduleResync(BooleanSupplier resyncFunc) {
     // schedule the resync runnable
     if (resyncCheckPeriodMillis > 0) {
-      resyncFuture = Utils.scheduleAtFixedRate(informerExecutor, () -> {
-        if (log.isDebugEnabled()) {
-          log.debug("Checking for resync at interval for {}", this);
-        }
-        if (resyncFunc.getAsBoolean()) {
-          log.debug("Resync running for {}", this);
-          processorStore.resync();
+      CompletableFuture<?> scheduledResync = Utils.scheduleAtFixedRate(informerExecutor, () -> {
+        // A failure in a single resync cycle must not propagate out of this command: the periodic
+        // scheduler re-arms the next cycle only when the previous one completes normally, so an
+        // uncaught exception here would permanently (and silently) stop all future resyncs while
+        // the watch keeps running. Catch, log, and let the schedule fire again next interval (#7435).
+        try {
+          if (logger.isDebugEnabled()) {
+            logger.debug("Checking for resync at interval for {}", this);
+          }
+          if (resyncFunc.getAsBoolean()) {
+            logger.debug("Resync running for {}", this);
+            processorStore.resync();
+          }
+        } catch (Exception e) {
+          logger.warn("Resync for {} failed; it will be retried at the next interval", this, e);
         }
       }, resyncCheckPeriodMillis,
           resyncCheckPeriodMillis, TimeUnit.MILLISECONDS);
+      // Safety net: the periodic schedule above is expected to keep firing until the informer is
+      // stopped (which cancels it). Should it instead terminate exceptionally (e.g. an Error such
+      // as OutOfMemoryError escaping the per-cycle catch above), surface it rather than letting
+      // resync die silently, which is the exact failure mode reported in #7435. Note this does not
+      // cover the informer executor rejecting a cycle: that throws synchronously before the
+      // schedule's whenComplete is wired up, leaving the future uncompleted (deferred follow-up).
+      scheduledResync.whenComplete((v, e) -> {
+        if (e != null && !(e instanceof CancellationException)) {
+          logger.warn("Resync scheduling for {} stopped unexpectedly; resync will not resume until the informer is restarted",
+              this, e);
+        }
+      });
+      resyncFuture = scheduledResync;
     } else {
-      log.debug("Resync skipped due to 0 full resync period for {}", this);
+      logger.debug("Resync skipped due to 0 full resync period for {}", this);
     }
   }
 

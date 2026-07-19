@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,7 @@
  */
 package io.fabric8.openshift.client.server.mock;
 
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.openshift.api.model.SecurityContextConstraints;
 import io.fabric8.openshift.api.model.SecurityContextConstraintsBuilder;
 import io.fabric8.openshift.api.model.SecurityContextConstraintsList;
@@ -23,12 +24,13 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collections;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnableOpenShiftMockClient(crud = true)
+@EnableKubernetesMockClient(crud = true, https = false)
 class SecurityContextConstraintsCrudTest {
 
   private static final Logger logger = LoggerFactory.getLogger(SecurityContextConstraintsCrudTest.class);
@@ -61,36 +63,33 @@ class SecurityContextConstraintsCrudTest {
 
     //test of Creation
 
-    scc = client.securityContextConstraints().create(scc);
-    assertNotNull(scc);
-    assertEquals("test-scc", scc.getMetadata().getName());
-    assertTrue(scc.getAllowPrivilegedContainer());
-    assertEquals("RunAsAny", scc.getRunAsUser().getType());
-    assertEquals("RunAsAny", scc.getFsGroup().getType());
-    assertEquals("RunAsAny", scc.getSeLinuxContext().getType());
-    assertEquals("RunAsAny", scc.getSupplementalGroups().getType());
-    assertEquals(1, scc.getUsers().size());
-    assertEquals("admin", scc.getUsers().get(0));
-    assertEquals(1, scc.getGroups().size());
-    assertEquals("admin-group", scc.getGroups().get(0));
+    scc = client.securityContextConstraints().resource(scc).create();
+    assertThat(scc)
+        .isNotNull()
+        .hasFieldOrPropertyWithValue("metadata.name", "test-scc")
+        .hasFieldOrPropertyWithValue("allowPrivilegedContainer", true)
+        .hasFieldOrPropertyWithValue("runAsUser.type", "RunAsAny")
+        .hasFieldOrPropertyWithValue("fsGroup.type", "RunAsAny")
+        .hasFieldOrPropertyWithValue("seLinuxContext.type", "RunAsAny")
+        .hasFieldOrPropertyWithValue("supplementalGroups.type", "RunAsAny")
+        .hasFieldOrPropertyWithValue("users", Collections.singletonList("admin"))
+        .hasFieldOrPropertyWithValue("groups", Collections.singletonList("admin-group"));
 
     //test of list
     SecurityContextConstraintsList sccList = client.securityContextConstraints().list();
 
     logger.info(sccList.toString());
 
-    assertNotNull(sccList);
-    assertEquals(1, sccList.getItems().size());
-    assertEquals("test-scc", sccList.getItems().get(0).getMetadata().getName());
-    assertTrue(sccList.getItems().get(0).getAllowPrivilegedContainer());
-    assertEquals("RunAsAny", sccList.getItems().get(0).getRunAsUser().getType());
-    assertEquals("RunAsAny", sccList.getItems().get(0).getFsGroup().getType());
-    assertEquals("RunAsAny", sccList.getItems().get(0).getSeLinuxContext().getType());
-    assertEquals("RunAsAny", sccList.getItems().get(0).getSupplementalGroups().getType());
-    assertEquals(1, sccList.getItems().get(0).getUsers().size());
-    assertEquals("admin", sccList.getItems().get(0).getUsers().get(0));
-    assertEquals(1, sccList.getItems().get(0).getGroups().size());
-    assertEquals("admin-group", sccList.getItems().get(0).getGroups().get(0));
+    assertThat(sccList.getItems())
+        .singleElement()
+        .hasFieldOrPropertyWithValue("metadata.name", "test-scc")
+        .hasFieldOrPropertyWithValue("allowPrivilegedContainer", true)
+        .hasFieldOrPropertyWithValue("runAsUser.type", "RunAsAny")
+        .hasFieldOrPropertyWithValue("fsGroup.type", "RunAsAny")
+        .hasFieldOrPropertyWithValue("seLinuxContext.type", "RunAsAny")
+        .hasFieldOrPropertyWithValue("supplementalGroups.type", "RunAsAny")
+        .hasFieldOrPropertyWithValue("users", Collections.singletonList("admin"))
+        .hasFieldOrPropertyWithValue("groups", Collections.singletonList("admin-group"));
 
     //test of updation
     SecurityContextConstraints scc2 = new SecurityContextConstraintsBuilder()
@@ -116,17 +115,16 @@ class SecurityContextConstraintsCrudTest {
 
     logger.info("Updated SecurityContextConstraints : " + scc.toString());
 
-    assertNotNull(scc);
-    assertEquals("test-scc", scc.getMetadata().getName());
-    assertFalse(scc.getAllowPrivilegedContainer());
-    assertEquals("RunAsAny", scc.getRunAsUser().getType());
-    assertEquals("RunAsAny", scc.getFsGroup().getType());
-    assertEquals("RunAsAny", scc.getSeLinuxContext().getType());
-    assertEquals("RunAsAny", scc.getSupplementalGroups().getType());
-    assertEquals(1, scc.getUsers().size());
-    assertEquals("admin", scc.getUsers().get(0));
-    assertEquals(1, scc.getGroups().size());
-    assertEquals("admin-group", scc.getGroups().get(0));
+    assertThat(scc)
+        .isNotNull()
+        .hasFieldOrPropertyWithValue("metadata.name", "test-scc")
+        .hasFieldOrPropertyWithValue("allowPrivilegedContainer", false)
+        .hasFieldOrPropertyWithValue("runAsUser.type", "RunAsAny")
+        .hasFieldOrPropertyWithValue("fsGroup.type", "RunAsAny")
+        .hasFieldOrPropertyWithValue("seLinuxContext.type", "RunAsAny")
+        .hasFieldOrPropertyWithValue("supplementalGroups.type", "RunAsAny")
+        .hasFieldOrPropertyWithValue("users", Collections.singletonList("admin"))
+        .hasFieldOrPropertyWithValue("groups", Collections.singletonList("admin-group"));
 
     //test of deletion
     boolean deleted = client.securityContextConstraints().delete(scc).size() == 1;

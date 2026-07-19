@@ -2,10 +2,10 @@
 package io.fabric8.knative.eventing.v1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -13,7 +13,9 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import io.fabric8.knative.internal.pkg.apis.Condition;
+import io.fabric8.knative.duck.v1.AuthStatus;
+import io.fabric8.knative.pkg.apis.Condition;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -31,25 +33,28 @@ import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * TriggerStatus represents the current state of a Trigger.
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "annotations",
+    "auth",
     "conditions",
+    "deadLetterSinkAudience",
+    "deadLetterSinkCACerts",
     "deadLetterSinkUri",
     "observedGeneration",
+    "subscriberAudience",
+    "subscriberCACerts",
     "subscriberUri"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -69,106 +74,240 @@ import lombok.experimental.Accessors;
     @BuildableReference(Volume.class),
     @BuildableReference(VolumeMount.class)
 })
-public class TriggerStatus implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class TriggerStatus implements Editable<TriggerStatusBuilder>, KubernetesResource
 {
 
     @JsonProperty("annotations")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private Map<String, String> annotations = new LinkedHashMap<String, String>();
+    private Map<String, String> annotations = new LinkedHashMap<>();
+    @JsonProperty("auth")
+    private AuthStatus auth;
     @JsonProperty("conditions")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<Condition> conditions = new ArrayList<Condition>();
+    private List<Condition> conditions = new ArrayList<>();
+    @JsonProperty("deadLetterSinkAudience")
+    private String deadLetterSinkAudience;
+    @JsonProperty("deadLetterSinkCACerts")
+    private String deadLetterSinkCACerts;
     @JsonProperty("deadLetterSinkUri")
-    private java.lang.String deadLetterSinkUri;
+    private String deadLetterSinkUri;
     @JsonProperty("observedGeneration")
     private Long observedGeneration;
+    @JsonProperty("subscriberAudience")
+    private String subscriberAudience;
+    @JsonProperty("subscriberCACerts")
+    private String subscriberCACerts;
     @JsonProperty("subscriberUri")
-    private java.lang.String subscriberUri;
+    private String subscriberUri;
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public TriggerStatus() {
     }
 
-    /**
-     * 
-     * @param subscriberUri
-     * @param deadLetterSinkUri
-     * @param annotations
-     * @param conditions
-     * @param observedGeneration
-     */
-    public TriggerStatus(Map<String, String> annotations, List<Condition> conditions, java.lang.String deadLetterSinkUri, Long observedGeneration, java.lang.String subscriberUri) {
+    public TriggerStatus(Map<String, String> annotations, AuthStatus auth, List<Condition> conditions, String deadLetterSinkAudience, String deadLetterSinkCACerts, String deadLetterSinkUri, Long observedGeneration, String subscriberAudience, String subscriberCACerts, String subscriberUri) {
         super();
         this.annotations = annotations;
+        this.auth = auth;
         this.conditions = conditions;
+        this.deadLetterSinkAudience = deadLetterSinkAudience;
+        this.deadLetterSinkCACerts = deadLetterSinkCACerts;
         this.deadLetterSinkUri = deadLetterSinkUri;
         this.observedGeneration = observedGeneration;
+        this.subscriberAudience = subscriberAudience;
+        this.subscriberCACerts = subscriberCACerts;
         this.subscriberUri = subscriberUri;
     }
 
+    /**
+     * Annotations is additional Status fields for the Resource to save some additional State as well as convey more information to the user. This is roughly akin to Annotations on any k8s resource, just the reconciler conveying richer information outwards.
+     */
     @JsonProperty("annotations")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public Map<String, String> getAnnotations() {
         return annotations;
     }
 
+    /**
+     * Annotations is additional Status fields for the Resource to save some additional State as well as convey more information to the user. This is roughly akin to Annotations on any k8s resource, just the reconciler conveying richer information outwards.
+     */
     @JsonProperty("annotations")
     public void setAnnotations(Map<String, String> annotations) {
         this.annotations = annotations;
     }
 
+    /**
+     * TriggerStatus represents the current state of a Trigger.
+     */
+    @JsonProperty("auth")
+    public AuthStatus getAuth() {
+        return auth;
+    }
+
+    /**
+     * TriggerStatus represents the current state of a Trigger.
+     */
+    @JsonProperty("auth")
+    public void setAuth(AuthStatus auth) {
+        this.auth = auth;
+    }
+
+    /**
+     * Conditions the latest available observations of a resource's current state.
+     */
     @JsonProperty("conditions")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<Condition> getConditions() {
         return conditions;
     }
 
+    /**
+     * Conditions the latest available observations of a resource's current state.
+     */
     @JsonProperty("conditions")
     public void setConditions(List<Condition> conditions) {
         this.conditions = conditions;
     }
 
+    /**
+     * DeadLetterSinkAudience is the OIDC audience of the DeadLetterSink
+     */
+    @JsonProperty("deadLetterSinkAudience")
+    public String getDeadLetterSinkAudience() {
+        return deadLetterSinkAudience;
+    }
+
+    /**
+     * DeadLetterSinkAudience is the OIDC audience of the DeadLetterSink
+     */
+    @JsonProperty("deadLetterSinkAudience")
+    public void setDeadLetterSinkAudience(String deadLetterSinkAudience) {
+        this.deadLetterSinkAudience = deadLetterSinkAudience;
+    }
+
+    /**
+     * DeadLetterSinkCACerts are Certification Authority (CA) certificates in PEM format according to https://www.rfc-editor.org/rfc/rfc7468.
+     */
+    @JsonProperty("deadLetterSinkCACerts")
+    public String getDeadLetterSinkCACerts() {
+        return deadLetterSinkCACerts;
+    }
+
+    /**
+     * DeadLetterSinkCACerts are Certification Authority (CA) certificates in PEM format according to https://www.rfc-editor.org/rfc/rfc7468.
+     */
+    @JsonProperty("deadLetterSinkCACerts")
+    public void setDeadLetterSinkCACerts(String deadLetterSinkCACerts) {
+        this.deadLetterSinkCACerts = deadLetterSinkCACerts;
+    }
+
+    /**
+     * TriggerStatus represents the current state of a Trigger.
+     */
     @JsonProperty("deadLetterSinkUri")
-    public java.lang.String getDeadLetterSinkUri() {
+    public String getDeadLetterSinkUri() {
         return deadLetterSinkUri;
     }
 
+    /**
+     * TriggerStatus represents the current state of a Trigger.
+     */
     @JsonProperty("deadLetterSinkUri")
-    public void setDeadLetterSinkUri(java.lang.String deadLetterSinkUri) {
+    public void setDeadLetterSinkUri(String deadLetterSinkUri) {
         this.deadLetterSinkUri = deadLetterSinkUri;
     }
 
+    /**
+     * ObservedGeneration is the 'Generation' of the Service that was last processed by the controller.
+     */
     @JsonProperty("observedGeneration")
     public Long getObservedGeneration() {
         return observedGeneration;
     }
 
+    /**
+     * ObservedGeneration is the 'Generation' of the Service that was last processed by the controller.
+     */
     @JsonProperty("observedGeneration")
     public void setObservedGeneration(Long observedGeneration) {
         this.observedGeneration = observedGeneration;
     }
 
+    /**
+     * SubscriberAudience is the OIDC audience of the subscriber.
+     */
+    @JsonProperty("subscriberAudience")
+    public String getSubscriberAudience() {
+        return subscriberAudience;
+    }
+
+    /**
+     * SubscriberAudience is the OIDC audience of the subscriber.
+     */
+    @JsonProperty("subscriberAudience")
+    public void setSubscriberAudience(String subscriberAudience) {
+        this.subscriberAudience = subscriberAudience;
+    }
+
+    /**
+     * SubscriberCACerts is the Certification Authority (CA) certificates in PEM format according to https://www.rfc-editor.org/rfc/rfc7468 of the receiver for this Trigger.
+     */
+    @JsonProperty("subscriberCACerts")
+    public String getSubscriberCACerts() {
+        return subscriberCACerts;
+    }
+
+    /**
+     * SubscriberCACerts is the Certification Authority (CA) certificates in PEM format according to https://www.rfc-editor.org/rfc/rfc7468 of the receiver for this Trigger.
+     */
+    @JsonProperty("subscriberCACerts")
+    public void setSubscriberCACerts(String subscriberCACerts) {
+        this.subscriberCACerts = subscriberCACerts;
+    }
+
+    /**
+     * TriggerStatus represents the current state of a Trigger.
+     */
     @JsonProperty("subscriberUri")
-    public java.lang.String getSubscriberUri() {
+    public String getSubscriberUri() {
         return subscriberUri;
     }
 
+    /**
+     * TriggerStatus represents the current state of a Trigger.
+     */
     @JsonProperty("subscriberUri")
-    public void setSubscriberUri(java.lang.String subscriberUri) {
+    public void setSubscriberUri(String subscriberUri) {
         this.subscriberUri = subscriberUri;
     }
 
+    @JsonIgnore
+    public TriggerStatusBuilder edit() {
+        return new TriggerStatusBuilder(this);
+    }
+
+    @JsonIgnore
+    public TriggerStatusBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
-    public Map<java.lang.String, Object> getAdditionalProperties() {
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 
     @JsonAnySetter
-    public void setAdditionalProperty(java.lang.String name, Object value) {
+    public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

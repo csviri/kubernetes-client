@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,7 +50,7 @@ import static io.fabric8.kubernetes.client.internal.CertUtils.createTrustStore;
 
 public final class SSLUtils {
 
-  private static final Logger LOG = LoggerFactory.getLogger(SSLUtils.class);
+  private static final Logger logger = LoggerFactory.getLogger(SSLUtils.class);
 
   private SSLUtils() {
     //Utility
@@ -69,7 +69,7 @@ public final class SSLUtils {
       conn.connect();
       return true;
     } catch (Throwable t) {
-      LOG.warn("SSL handshake failed. Falling back to insecure connection.");
+      logger.warn("SSL handshake failed. Falling back to insecure connection.");
     } finally {
       if (conn != null) {
         conn.disconnect();
@@ -118,6 +118,7 @@ public final class SSLUtils {
         config.getTrustStorePassphrase());
   }
 
+  @SuppressWarnings("java:S4830") // trust-all TrustManager is gated by the documented isTrustCerts opt-in for dev clusters with self-signed certs
   public static TrustManager[] trustManagers(String certData, String certFile, boolean isTrustCerts, String trustStoreFile,
       String trustStorePassphrase) throws CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException {
     TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());

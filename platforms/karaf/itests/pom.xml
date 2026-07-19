@@ -21,7 +21,7 @@
   <parent>
     <artifactId>karaf</artifactId>
     <groupId>io.fabric8.kubernetes</groupId>
-    <version>6.8-SNAPSHOT</version>
+    <version>999-SNAPSHOT</version>
   </parent>
 
   <artifactId>kubernetes-karaf-itests</artifactId>
@@ -29,6 +29,7 @@
 
   <properties>
     <sonar.skip>true</sonar.skip>
+    <maven.deploy.skip>true</maven.deploy.skip>
   </properties>
 
   <dependencies>
@@ -101,7 +102,7 @@
       <plugin>
         <groupId>org.apache.servicemix.tooling</groupId>
         <artifactId>depends-maven-plugin</artifactId>
-        <version>1.4.0</version>
+        <version>1.5.0</version>
         <executions>
           <execution>
             <id>generate-depends-file</id>
@@ -165,6 +166,7 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <skip>${karaf.itest.skip}</skip>
+          <parallel>none</parallel>
           <systemPropertyVariables>
             <features.xml>${project.build.directory}/features.xml</features.xml>
             <features.repo>${project.build.directory}/features-repo</features.repo>

@@ -1,8 +1,9 @@
 
 package io.fabric8.openshift.api.model.config.v1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,29 +11,32 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
 import io.fabric8.kubernetes.api.model.LocalObjectReference;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
-import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * KeystonePasswordIdentityProvider provides identities for users authenticating using keystone password credentials
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "ca",
     "domainName",
     "tlsClientCert",
@@ -41,7 +45,6 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -53,11 +56,16 @@ import lombok.experimental.Accessors;
     @BuildableReference(PodTemplateSpec.class),
     @BuildableReference(ResourceRequirements.class),
     @BuildableReference(IntOrString.class),
-    @BuildableReference(ObjectReference.class),
+    @BuildableReference(io.fabric8.kubernetes.api.model.ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class KeystoneIdentityProvider implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class KeystoneIdentityProvider implements Editable<KeystoneIdentityProviderBuilder>, KubernetesResource
 {
 
     @JsonProperty("ca")
@@ -71,23 +79,14 @@ public class KeystoneIdentityProvider implements KubernetesResource
     @JsonProperty("url")
     private String url;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public KeystoneIdentityProvider() {
     }
 
-    /**
-     * 
-     * @param tlsClientKey
-     * @param tlsClientCert
-     * @param domainName
-     * @param ca
-     * @param url
-     */
     public KeystoneIdentityProvider(ConfigMapNameReference ca, String domainName, SecretNameReference tlsClientCert, SecretNameReference tlsClientKey, String url) {
         super();
         this.ca = ca;
@@ -97,57 +96,98 @@ public class KeystoneIdentityProvider implements KubernetesResource
         this.url = url;
     }
 
+    /**
+     * KeystonePasswordIdentityProvider provides identities for users authenticating using keystone password credentials
+     */
     @JsonProperty("ca")
     public ConfigMapNameReference getCa() {
         return ca;
     }
 
+    /**
+     * KeystonePasswordIdentityProvider provides identities for users authenticating using keystone password credentials
+     */
     @JsonProperty("ca")
     public void setCa(ConfigMapNameReference ca) {
         this.ca = ca;
     }
 
+    /**
+     * domainName is required for keystone v3
+     */
     @JsonProperty("domainName")
     public String getDomainName() {
         return domainName;
     }
 
+    /**
+     * domainName is required for keystone v3
+     */
     @JsonProperty("domainName")
     public void setDomainName(String domainName) {
         this.domainName = domainName;
     }
 
+    /**
+     * KeystonePasswordIdentityProvider provides identities for users authenticating using keystone password credentials
+     */
     @JsonProperty("tlsClientCert")
     public SecretNameReference getTlsClientCert() {
         return tlsClientCert;
     }
 
+    /**
+     * KeystonePasswordIdentityProvider provides identities for users authenticating using keystone password credentials
+     */
     @JsonProperty("tlsClientCert")
     public void setTlsClientCert(SecretNameReference tlsClientCert) {
         this.tlsClientCert = tlsClientCert;
     }
 
+    /**
+     * KeystonePasswordIdentityProvider provides identities for users authenticating using keystone password credentials
+     */
     @JsonProperty("tlsClientKey")
     public SecretNameReference getTlsClientKey() {
         return tlsClientKey;
     }
 
+    /**
+     * KeystonePasswordIdentityProvider provides identities for users authenticating using keystone password credentials
+     */
     @JsonProperty("tlsClientKey")
     public void setTlsClientKey(SecretNameReference tlsClientKey) {
         this.tlsClientKey = tlsClientKey;
     }
 
+    /**
+     * url is the remote URL to connect to
+     */
     @JsonProperty("url")
     public String getUrl() {
         return url;
     }
 
+    /**
+     * url is the remote URL to connect to
+     */
     @JsonProperty("url")
     public void setUrl(String url) {
         this.url = url;
     }
 
+    @JsonIgnore
+    public KeystoneIdentityProviderBuilder edit() {
+        return new KeystoneIdentityProviderBuilder(this);
+    }
+
+    @JsonIgnore
+    public KeystoneIdentityProviderBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -155,6 +195,10 @@ public class KeystoneIdentityProvider implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -173,7 +173,6 @@ class URLFromIngressImplTest {
         .withNewHttp()
         .addNewPath()
         .withPath("/testpath")
-        .withPathType("Prefix")
         .withNewBackend()
         .withServiceName("svc1")
         .withServicePort(new IntOrString(80))

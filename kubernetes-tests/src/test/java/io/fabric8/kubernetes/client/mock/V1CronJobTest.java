@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,9 +38,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnableKubernetesMockClient
+@EnableKubernetesMockClient(https = false)
 class V1CronJobTest {
-  private KubernetesMockServer server;
+  KubernetesMockServer server;
   private KubernetesClient client;
 
   @Test
@@ -188,10 +188,10 @@ class V1CronJobTest {
             .build())
         .once();
 
-    boolean deleted = client.batch().v1().cronjobs().withName("cronJob1").delete().size() == 1;
+    boolean deleted = client.batch().v1().cronjobs().withName("cronJob1").withGracePeriod(0).delete().size() == 1;
     assertTrue(deleted);
 
-    deleted = client.batch().v1().cronjobs().withName("cronJob2").delete().size() == 1;
+    deleted = client.batch().v1().cronjobs().withName("cronJob2").withGracePeriod(0).delete().size() == 1;
     assertTrue(deleted);
   }
 

@@ -1,6 +1,4 @@
-package io.fabric8.kubernetes.client.dsl;
-
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +13,7 @@ package io.fabric8.kubernetes.client.dsl;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package io.fabric8.kubernetes.client.dsl;
 
 import io.fabric8.kubernetes.api.model.autoscaling.v1.Scale;
 

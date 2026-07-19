@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,6 +26,8 @@ import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServicePort;
 import io.fabric8.kubernetes.api.model.ServiceSpec;
 import io.fabric8.kubernetes.api.model.StatusBuilder;
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.kubernetes.client.utils.IOHelpers;
 import io.fabric8.openshift.api.model.ParameterBuilder;
 import io.fabric8.openshift.api.model.Template;
@@ -48,14 +50,15 @@ import static java.util.Collections.singletonMap;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class TemplateTest {
 
-  OpenShiftMockServer server;
+  KubernetesMockServer server;
   OpenShiftClient client;
 
   @Test
@@ -169,12 +172,12 @@ class TemplateTest {
         .andReturn(200, new TemplateBuilder().build())
         .once();
 
-    boolean deleted = client.templates().withName("tmpl1").delete().size() == 1;
+    boolean deleted = client.templates().withName("tmpl1").withGracePeriod(0).delete().size() == 1;
 
-    deleted = client.templates().withName("tmpl2").delete().size() == 1;
+    deleted = client.templates().withName("tmpl2").withGracePeriod(0).delete().size() == 1;
     assertFalse(deleted);
 
-    deleted = client.templates().inNamespace("ns1").withName("tmpl2").delete().size() == 1;
+    deleted = client.templates().inNamespace("ns1").withName("tmpl2").withGracePeriod(0).delete().size() == 1;
     assertTrue(deleted);
   }
 
@@ -296,16 +299,15 @@ class TemplateTest {
             .hasFieldOrPropertyWithValue("additionalProperties.immutable", "${IMMUTABLE}"));
   }
 
-  protected void assertListIsServiceWithPort8080(KubernetesList list) {
-    assertNotNull(list);
+  protected static void assertListIsServiceWithPort8080(KubernetesList list) {
     assertListIsServiceWithPort8080(list.getItems());
   }
 
-  protected static void assertListIsServiceWithPort8080(List<HasMetadata> items) {
+  protected static void assertListIsServiceWithPort8080(List<?> items) {
     assertNotNull(items);
     assertEquals(1, items.size());
-    HasMetadata item = items.get(0);
-    assertTrue(item instanceof Service);
+    HasMetadata item = assertInstanceOf(HasMetadata.class, items.get(0));
+    assertInstanceOf(Service.class, item);
     Service service = (Service) item;
     ServiceSpec serviceSpec = service.getSpec();
     assertNotNull(serviceSpec);
@@ -327,8 +329,7 @@ class TemplateTest {
     map.put("PORT", "8080");
 
     Template template = client.templates().withParameters(map).withName("tmpl1").get();
-    List<HasMetadata> list = template.getObjects();
-    assertListIsServiceWithPort8080(list);
+    assertListIsServiceWithPort8080(template.getObjects());
   }
 
   @Test

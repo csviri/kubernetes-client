@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,8 @@
  */
 package io.fabric8.openshift.client.server.mock;
 
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.openshift.api.model.monitoring.v1.ThanosRuler;
 import io.fabric8.openshift.api.model.monitoring.v1.ThanosRulerBuilder;
 import io.fabric8.openshift.api.model.monitoring.v1.ThanosRulerList;
@@ -27,10 +29,10 @@ import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class ThanosRulerTest {
   private OpenShiftClient client;
-  private OpenShiftMockServer server;
+  KubernetesMockServer server;
 
   @Test
   void get() {
@@ -75,7 +77,8 @@ class ThanosRulerTest {
         .once();
 
     // When
-    boolean isDeleted = client.monitoring().thanosRulers().inNamespace("ns1").withName("test-delete").delete().size() == 1;
+    boolean isDeleted = client.monitoring().thanosRulers().inNamespace("ns1").withName("test-delete").withGracePeriod(0)
+        .delete().size() == 1;
 
     // Then
     assertThat(isDeleted).isTrue();

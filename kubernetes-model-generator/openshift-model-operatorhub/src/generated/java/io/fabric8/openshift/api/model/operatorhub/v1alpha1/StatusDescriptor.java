@@ -2,9 +2,10 @@
 package io.fabric8.openshift.api.model.operatorhub.v1alpha1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -12,7 +13,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
@@ -22,19 +26,20 @@ import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * StatusDescriptor describes a field in a status block of a CRD so that OLM can consume it
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "description",
     "displayName",
     "path",
@@ -43,7 +48,6 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -57,9 +61,14 @@ import lombok.experimental.Accessors;
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class StatusDescriptor implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class StatusDescriptor implements Editable<StatusDescriptorBuilder>, KubernetesResource
 {
 
     @JsonProperty("description")
@@ -72,25 +81,16 @@ public class StatusDescriptor implements KubernetesResource
     private String value;
     @JsonProperty("x-descriptors")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<String> xDescriptors = new ArrayList<String>();
+    private List<String> xDescriptors = new ArrayList<>();
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public StatusDescriptor() {
     }
 
-    /**
-     * 
-     * @param path
-     * @param displayName
-     * @param xDescriptors
-     * @param description
-     * @param value
-     */
     public StatusDescriptor(String description, String displayName, String path, String value, List<String> xDescriptors) {
         super();
         this.description = description;
@@ -100,57 +100,99 @@ public class StatusDescriptor implements KubernetesResource
         this.xDescriptors = xDescriptors;
     }
 
+    /**
+     * StatusDescriptor describes a field in a status block of a CRD so that OLM can consume it
+     */
     @JsonProperty("description")
     public String getDescription() {
         return description;
     }
 
+    /**
+     * StatusDescriptor describes a field in a status block of a CRD so that OLM can consume it
+     */
     @JsonProperty("description")
     public void setDescription(String description) {
         this.description = description;
     }
 
+    /**
+     * StatusDescriptor describes a field in a status block of a CRD so that OLM can consume it
+     */
     @JsonProperty("displayName")
     public String getDisplayName() {
         return displayName;
     }
 
+    /**
+     * StatusDescriptor describes a field in a status block of a CRD so that OLM can consume it
+     */
     @JsonProperty("displayName")
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
     }
 
+    /**
+     * StatusDescriptor describes a field in a status block of a CRD so that OLM can consume it
+     */
     @JsonProperty("path")
     public String getPath() {
         return path;
     }
 
+    /**
+     * StatusDescriptor describes a field in a status block of a CRD so that OLM can consume it
+     */
     @JsonProperty("path")
     public void setPath(String path) {
         this.path = path;
     }
 
+    /**
+     * StatusDescriptor describes a field in a status block of a CRD so that OLM can consume it
+     */
     @JsonProperty("value")
     public String getValue() {
         return value;
     }
 
+    /**
+     * StatusDescriptor describes a field in a status block of a CRD so that OLM can consume it
+     */
     @JsonProperty("value")
     public void setValue(String value) {
         this.value = value;
     }
 
+    /**
+     * StatusDescriptor describes a field in a status block of a CRD so that OLM can consume it
+     */
     @JsonProperty("x-descriptors")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<String> getXDescriptors() {
         return xDescriptors;
     }
 
+    /**
+     * StatusDescriptor describes a field in a status block of a CRD so that OLM can consume it
+     */
     @JsonProperty("x-descriptors")
     public void setXDescriptors(List<String> xDescriptors) {
         this.xDescriptors = xDescriptors;
     }
 
+    @JsonIgnore
+    public StatusDescriptorBuilder edit() {
+        return new StatusDescriptorBuilder(this);
+    }
+
+    @JsonIgnore
+    public StatusDescriptorBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -158,6 +200,10 @@ public class StatusDescriptor implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

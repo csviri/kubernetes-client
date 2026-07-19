@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -92,7 +92,9 @@ public class GenericKubernetesResourceExample {
           }
         }
       });
-      closeLatch.await(10, TimeUnit.MINUTES);
+      if (!closeLatch.await(10, TimeUnit.MINUTES)) {
+        logger.warn("Watch did not close within 10 minutes");
+      }
       watch.close();
 
       // Cleanup

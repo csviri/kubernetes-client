@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,8 @@
  */
 package io.fabric8.openshift.client.server.mock;
 
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.openshift.api.model.config.v1.Network;
 import io.fabric8.openshift.api.model.config.v1.NetworkBuilder;
 import io.fabric8.openshift.api.model.config.v1.NetworkList;
@@ -26,10 +28,10 @@ import java.net.HttpURLConnection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class NetworkTest {
   private OpenShiftClient client;
-  private OpenShiftMockServer server;
+  KubernetesMockServer server;
 
   @Test
   void get() {
@@ -74,7 +76,7 @@ class NetworkTest {
         .once();
 
     // When
-    boolean isDeleted = client.config().networks().withName("cluster").delete().size() == 1;
+    boolean isDeleted = client.config().networks().withName("cluster").withGracePeriod(0).delete().size() == 1;
 
     // Then
     assertThat(isDeleted).isTrue();
@@ -86,7 +88,7 @@ class NetworkTest {
         .withNewSpec()
         .addNewClusterNetwork()
         .withCidr("10.217.0.0/22")
-        .withHostPrefix(23)
+        .withHostPrefix(23L)
         .endClusterNetwork()
         .withNewExternalIP().withNewPolicy().endPolicy().endExternalIP()
         .withNetworkType("OpenShiftSDN")

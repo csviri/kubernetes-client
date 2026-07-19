@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,8 +30,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @EnableKubernetesMockClient
 class DiscoveredClusterTest {
-  private OpenClusterManagementClient client;
-  private KubernetesMockServer server;
+  OpenClusterManagementClient client;
+  KubernetesMockServer server;
 
   @Test
   void get() {

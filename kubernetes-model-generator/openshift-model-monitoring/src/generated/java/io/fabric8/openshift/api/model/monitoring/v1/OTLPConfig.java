@@ -1,0 +1,250 @@
+
+package io.fabric8.openshift.api.model.monitoring.v1;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import javax.annotation.processing.Generated;
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.IntOrString;
+import io.fabric8.kubernetes.api.model.KubernetesResource;
+import io.fabric8.kubernetes.api.model.LabelSelector;
+import io.fabric8.kubernetes.api.model.LocalObjectReference;
+import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
+import io.fabric8.kubernetes.api.model.PodTemplateSpec;
+import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
+import io.sundr.builder.annotations.Buildable;
+import io.sundr.builder.annotations.BuildableReference;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+import lombok.experimental.Accessors;
+
+/**
+ * OTLPConfig is the configuration for writing to the OTLP endpoint.
+ */
+@JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonPropertyOrder({
+    "convertHistogramsToNHCB",
+    "ignoreResourceAttributes",
+    "keepIdentifyingResourceAttributes",
+    "promoteAllResourceAttributes",
+    "promoteResourceAttributes",
+    "promoteScopeMetadata",
+    "translationStrategy"
+})
+@ToString
+@EqualsAndHashCode
+@Accessors(prefix = {
+    "_",
+    ""
+})
+@Buildable(editableEnabled = false, validationEnabled = false, generateBuilderPackage = false, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder", refs = {
+    @BuildableReference(ObjectMeta.class),
+    @BuildableReference(LabelSelector.class),
+    @BuildableReference(Container.class),
+    @BuildableReference(PodTemplateSpec.class),
+    @BuildableReference(ResourceRequirements.class),
+    @BuildableReference(IntOrString.class),
+    @BuildableReference(io.fabric8.kubernetes.api.model.ObjectReference.class),
+    @BuildableReference(LocalObjectReference.class),
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
+})
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class OTLPConfig implements Editable<OTLPConfigBuilder>, KubernetesResource
+{
+
+    @JsonProperty("convertHistogramsToNHCB")
+    private Boolean convertHistogramsToNHCB;
+    @JsonProperty("ignoreResourceAttributes")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<String> ignoreResourceAttributes = new ArrayList<>();
+    @JsonProperty("keepIdentifyingResourceAttributes")
+    private Boolean keepIdentifyingResourceAttributes;
+    @JsonProperty("promoteAllResourceAttributes")
+    private Boolean promoteAllResourceAttributes;
+    @JsonProperty("promoteResourceAttributes")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<String> promoteResourceAttributes = new ArrayList<>();
+    @JsonProperty("promoteScopeMetadata")
+    private Boolean promoteScopeMetadata;
+    @JsonProperty("translationStrategy")
+    private String translationStrategy;
+    @JsonIgnore
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
+
+    /**
+     * No args constructor for use in serialization
+     */
+    public OTLPConfig() {
+    }
+
+    public OTLPConfig(Boolean convertHistogramsToNHCB, List<String> ignoreResourceAttributes, Boolean keepIdentifyingResourceAttributes, Boolean promoteAllResourceAttributes, List<String> promoteResourceAttributes, Boolean promoteScopeMetadata, String translationStrategy) {
+        super();
+        this.convertHistogramsToNHCB = convertHistogramsToNHCB;
+        this.ignoreResourceAttributes = ignoreResourceAttributes;
+        this.keepIdentifyingResourceAttributes = keepIdentifyingResourceAttributes;
+        this.promoteAllResourceAttributes = promoteAllResourceAttributes;
+        this.promoteResourceAttributes = promoteResourceAttributes;
+        this.promoteScopeMetadata = promoteScopeMetadata;
+        this.translationStrategy = translationStrategy;
+    }
+
+    /**
+     * convertHistogramsToNHCB defines optional translation of OTLP explicit bucket histograms into native histograms with custom buckets. It requires Prometheus &gt;= v3.4.0.
+     */
+    @JsonProperty("convertHistogramsToNHCB")
+    public Boolean getConvertHistogramsToNHCB() {
+        return convertHistogramsToNHCB;
+    }
+
+    /**
+     * convertHistogramsToNHCB defines optional translation of OTLP explicit bucket histograms into native histograms with custom buckets. It requires Prometheus &gt;= v3.4.0.
+     */
+    @JsonProperty("convertHistogramsToNHCB")
+    public void setConvertHistogramsToNHCB(Boolean convertHistogramsToNHCB) {
+        this.convertHistogramsToNHCB = convertHistogramsToNHCB;
+    }
+
+    /**
+     * ignoreResourceAttributes defines the list of OpenTelemetry resource attributes to ignore when `promoteAllResourceAttributes` is true.<br><p> <br><p> It requires `promoteAllResourceAttributes` to be true. It requires Prometheus &gt;= v3.5.0.
+     */
+    @JsonProperty("ignoreResourceAttributes")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public List<String> getIgnoreResourceAttributes() {
+        return ignoreResourceAttributes;
+    }
+
+    /**
+     * ignoreResourceAttributes defines the list of OpenTelemetry resource attributes to ignore when `promoteAllResourceAttributes` is true.<br><p> <br><p> It requires `promoteAllResourceAttributes` to be true. It requires Prometheus &gt;= v3.5.0.
+     */
+    @JsonProperty("ignoreResourceAttributes")
+    public void setIgnoreResourceAttributes(List<String> ignoreResourceAttributes) {
+        this.ignoreResourceAttributes = ignoreResourceAttributes;
+    }
+
+    /**
+     * keepIdentifyingResourceAttributes enables adding `service.name`, `service.namespace` and `service.instance.id` resource attributes to the `target_info` metric, on top of converting them into the `instance` and `job` labels.<br><p> <br><p> It requires Prometheus &gt;= v3.1.0.
+     */
+    @JsonProperty("keepIdentifyingResourceAttributes")
+    public Boolean getKeepIdentifyingResourceAttributes() {
+        return keepIdentifyingResourceAttributes;
+    }
+
+    /**
+     * keepIdentifyingResourceAttributes enables adding `service.name`, `service.namespace` and `service.instance.id` resource attributes to the `target_info` metric, on top of converting them into the `instance` and `job` labels.<br><p> <br><p> It requires Prometheus &gt;= v3.1.0.
+     */
+    @JsonProperty("keepIdentifyingResourceAttributes")
+    public void setKeepIdentifyingResourceAttributes(Boolean keepIdentifyingResourceAttributes) {
+        this.keepIdentifyingResourceAttributes = keepIdentifyingResourceAttributes;
+    }
+
+    /**
+     * promoteAllResourceAttributes promotes all resource attributes to metric labels except the ones defined in `ignoreResourceAttributes`.<br><p> <br><p> Cannot be true when `promoteResourceAttributes` is defined. It requires Prometheus &gt;= v3.5.0.
+     */
+    @JsonProperty("promoteAllResourceAttributes")
+    public Boolean getPromoteAllResourceAttributes() {
+        return promoteAllResourceAttributes;
+    }
+
+    /**
+     * promoteAllResourceAttributes promotes all resource attributes to metric labels except the ones defined in `ignoreResourceAttributes`.<br><p> <br><p> Cannot be true when `promoteResourceAttributes` is defined. It requires Prometheus &gt;= v3.5.0.
+     */
+    @JsonProperty("promoteAllResourceAttributes")
+    public void setPromoteAllResourceAttributes(Boolean promoteAllResourceAttributes) {
+        this.promoteAllResourceAttributes = promoteAllResourceAttributes;
+    }
+
+    /**
+     * promoteResourceAttributes defines the list of OpenTelemetry Attributes that should be promoted to metric labels, defaults to none. Cannot be defined when `promoteAllResourceAttributes` is true.
+     */
+    @JsonProperty("promoteResourceAttributes")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public List<String> getPromoteResourceAttributes() {
+        return promoteResourceAttributes;
+    }
+
+    /**
+     * promoteResourceAttributes defines the list of OpenTelemetry Attributes that should be promoted to metric labels, defaults to none. Cannot be defined when `promoteAllResourceAttributes` is true.
+     */
+    @JsonProperty("promoteResourceAttributes")
+    public void setPromoteResourceAttributes(List<String> promoteResourceAttributes) {
+        this.promoteResourceAttributes = promoteResourceAttributes;
+    }
+
+    /**
+     * promoteScopeMetadata controls whether to promote OpenTelemetry scope metadata (i.e. name, version, schema URL, and attributes) to metric labels. As per the OpenTelemetry specification, the aforementioned scope metadata should be identifying, i.e. made into metric labels. It requires Prometheus &gt;= v3.6.0.
+     */
+    @JsonProperty("promoteScopeMetadata")
+    public Boolean getPromoteScopeMetadata() {
+        return promoteScopeMetadata;
+    }
+
+    /**
+     * promoteScopeMetadata controls whether to promote OpenTelemetry scope metadata (i.e. name, version, schema URL, and attributes) to metric labels. As per the OpenTelemetry specification, the aforementioned scope metadata should be identifying, i.e. made into metric labels. It requires Prometheus &gt;= v3.6.0.
+     */
+    @JsonProperty("promoteScopeMetadata")
+    public void setPromoteScopeMetadata(Boolean promoteScopeMetadata) {
+        this.promoteScopeMetadata = promoteScopeMetadata;
+    }
+
+    /**
+     * translationStrategy defines how the OTLP receiver endpoint translates the incoming metrics.<br><p> <br><p> It requires Prometheus &gt;= v3.0.0.
+     */
+    @JsonProperty("translationStrategy")
+    public String getTranslationStrategy() {
+        return translationStrategy;
+    }
+
+    /**
+     * translationStrategy defines how the OTLP receiver endpoint translates the incoming metrics.<br><p> <br><p> It requires Prometheus &gt;= v3.0.0.
+     */
+    @JsonProperty("translationStrategy")
+    public void setTranslationStrategy(String translationStrategy) {
+        this.translationStrategy = translationStrategy;
+    }
+
+    @JsonIgnore
+    public OTLPConfigBuilder edit() {
+        return new OTLPConfigBuilder(this);
+    }
+
+    @JsonIgnore
+    public OTLPConfigBuilder toBuilder() {
+        return edit();
+    }
+
+    @JsonAnyGetter
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
+        return this.additionalProperties;
+    }
+
+    @JsonAnySetter
+    public void setAdditionalProperty(String name, Object value) {
+        this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
+    }
+
+}

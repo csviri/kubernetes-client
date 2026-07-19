@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,44 +17,24 @@ package io.fabric8.kubernetes.client.server.mock.crud;
 
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
-import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.server.mock.KubernetesCrudDispatcher;
-import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.kubernetes.client.server.mock.crud.crd.Owl;
-import io.fabric8.kubernetes.client.utils.Serialization;
-import io.fabric8.mockwebserver.Context;
-import okhttp3.mockwebserver.MockWebServer;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
-class KubernetesCrudDispatcherFinalizerTest {
-
-  private KubernetesMockServer server;
-  private KubernetesClient client;
+class KubernetesCrudDispatcherFinalizerTest extends KubernetesCrudDispatcherTestBase {
 
   @BeforeEach
   void setUp() {
-    server = new KubernetesMockServer(new Context(Serialization.jsonMapper()),
-        new MockWebServer(), new HashMap<>(), new KubernetesCrudDispatcher(), false);
-    server.start();
-    client = server.createClient();
+    super.setUp();
     client.apiextensions().v1().customResourceDefinitions().resource(Owl.toCrd()).create();
-  }
-
-  @AfterEach
-  void tearDown() {
-    client.close();
-    server.shutdown();
   }
 
   private Owl createOwlWithFinalizer(String owlName) {
@@ -78,6 +58,18 @@ class KubernetesCrudDispatcherFinalizerTest {
     // Then the owl is not marked for deletion:
     assertNotNull(result);
     assertFalse(result.isMarkedForDeletion());
+  }
+
+  @Test
+  @DisplayName("when deleting a resource, deletionTimestamp is set in ISO_INSTANT format")
+  void deleteResourceWithFinalizerSetsDeletionTimestamp() {
+    // Given
+    final Owl owl = createOwlWithFinalizer("owl-with-finalizer");
+    // When
+    client.resources(Owl.class).resource(owl).delete();
+    // Then
+    assertThat(client.resources(Owl.class).resource(owl).get().getMetadata().getDeletionTimestamp())
+        .matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z");
   }
 
   @Test

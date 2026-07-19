@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,14 +19,15 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonProperty.Access;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.Namespaced;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.client.utils.Utils;
 import io.fabric8.kubernetes.model.Scope;
+import io.fabric8.kubernetes.model.annotation.Categories;
 import io.fabric8.kubernetes.model.annotation.Group;
 import io.fabric8.kubernetes.model.annotation.ShortNames;
 import io.fabric8.kubernetes.model.annotation.Version;
@@ -73,7 +74,7 @@ import static io.fabric8.kubernetes.client.utils.Utils.isNullOrEmpty;
     @BuildableReference(io.fabric8.kubernetes.api.model.ObjectMeta.class),
 })
 public abstract class CustomResource<S, T> implements HasMetadata {
-  private static final Logger LOG = LoggerFactory.getLogger(CustomResource.class);
+  private static final Logger logger = LoggerFactory.getLogger(CustomResource.class);
 
   private ObjectMeta metadata = new ObjectMeta();
 
@@ -85,14 +86,16 @@ public abstract class CustomResource<S, T> implements HasMetadata {
 
   private final String singular;
   private final String crdName;
-  @JsonProperty(access = Access.READ_ONLY)
+  @JsonProperty("kind")
   private final String kind;
-  @JsonProperty(access = Access.READ_ONLY)
+  @JsonProperty("apiVersion")
   private final String apiVersion;
   private final String scope;
   private final String plural;
   private final boolean served;
   private final boolean storage;
+  private final boolean deprecated;
+  private final String deprecationWarning;
 
   public CustomResource() {
     final String version = HasMetadata.super.getApiVersion();
@@ -109,23 +112,37 @@ public abstract class CustomResource<S, T> implements HasMetadata {
     this.crdName = getCRDName(clazz);
     this.served = getServed(clazz);
     this.storage = getStorage(clazz);
+    this.deprecated = getDeprecated(clazz);
+    this.deprecationWarning = getDeprecationWarning(clazz);
     this.spec = initSpec();
     this.status = initStatus();
   }
 
-  public static boolean getServed(Class<? extends CustomResource> clazz) {
+  public static boolean getServed(Class<?> clazz) {
     final Version annotation = clazz.getAnnotation(Version.class);
     return annotation == null || annotation.served();
   }
 
-  public static boolean getStorage(Class<? extends CustomResource> clazz) {
+  public static boolean getStorage(Class<?> clazz) {
     final Version annotation = clazz.getAnnotation(Version.class);
     return annotation == null || annotation.storage();
   }
 
+  public static boolean getDeprecated(Class<?> clazz) {
+    final Version annotation = clazz.getAnnotation(Version.class);
+    return annotation == null || annotation.deprecated();
+  }
+
+  public static String getDeprecationWarning(Class<?> clazz) {
+    final Version annotation = clazz.getAnnotation(Version.class);
+    return annotation != null && Utils.isNotNullOrEmpty(annotation.deprecationWarning())
+        ? annotation.deprecationWarning()
+        : null;
+  }
+
   /**
    * Override to provide your own Spec instance
-   * 
+   *
    * @return a new Spec instance or {@code null} if the responsibility of instantiating the Spec is left to users of this
    *         CustomResource
    */
@@ -135,7 +152,7 @@ public abstract class CustomResource<S, T> implements HasMetadata {
 
   /**
    * Override to provide your own Status instance
-   * 
+   *
    * @return a new Status instance or {@code null} if the responsibility of instantiating the Status is left to users of this
    *         CustomResource
    */
@@ -151,6 +168,8 @@ public abstract class CustomResource<S, T> implements HasMetadata {
         ", metadata=" + metadata +
         ", spec=" + spec +
         ", status=" + status +
+        ", deprecated=" + deprecated +
+        ", deprecationWarning=" + deprecationWarning +
         '}';
   }
 
@@ -162,7 +181,7 @@ public abstract class CustomResource<S, T> implements HasMetadata {
   @Override
   public void setApiVersion(String version) {
     // already set in constructor
-    LOG.debug(
+    logger.debug(
         "Calling CustomResource#setApiVersion doesn't do anything because the API version is computed and shouldn't be changed");
   }
 
@@ -173,7 +192,7 @@ public abstract class CustomResource<S, T> implements HasMetadata {
 
   public void setKind(String kind) {
     // already set in constructor
-    LOG.debug("Calling CustomResource#setKind doesn't do anything because the Kind is computed and shouldn't be changed");
+    logger.debug("Calling CustomResource#setKind doesn't do anything because the Kind is computed and shouldn't be changed");
   }
 
   @Override
@@ -186,26 +205,10 @@ public abstract class CustomResource<S, T> implements HasMetadata {
     this.metadata = metadata;
   }
 
-  /**
-   * @deprecated use {@link HasMetadata#getPlural(Class)} instead
-   */
-  @Deprecated
-  public static String getPlural(Class<?> clazz) {
-    return HasMetadata.getPlural(clazz);
-  }
-
   @Override
   @JsonIgnore
   public String getPlural() {
     return plural;
-  }
-
-  /**
-   * @deprecated use {@link HasMetadata#getSingular(Class)} instead
-   */
-  @Deprecated
-  public static String getSingular(Class<?> clazz) {
-    return HasMetadata.getSingular(clazz);
   }
 
   @Override
@@ -236,9 +239,21 @@ public abstract class CustomResource<S, T> implements HasMetadata {
    * @param clazz the CustomResource class which short names we want to retrieve
    * @return the short names associated with this CustomResource or an empty array if none was provided
    */
-  public static String[] getShortNames(Class<? extends CustomResource> clazz) {
+  public static String[] getShortNames(Class<?> clazz) {
     return Optional.ofNullable(clazz.getAnnotation(ShortNames.class))
         .map(ShortNames::value)
+        .orElse(new String[] {});
+  }
+
+  /**
+   * Retrieves the categories associated with this CustomResource or an empty array if none was provided
+   *
+   * @param clazz the CustomResource class for which the categories are to be retrieved
+   * @return the categories associated with this CustomResource or an empty array if none was provided
+   */
+  public static String[] getCategories(Class<?> clazz) {
+    return Optional.ofNullable(clazz.getAnnotation(Categories.class))
+        .map(Categories::value)
         .orElse(new String[] {});
   }
 
@@ -272,6 +287,16 @@ public abstract class CustomResource<S, T> implements HasMetadata {
     return storage;
   }
 
+  @JsonIgnore
+  public boolean isDeprecated() {
+    return deprecated;
+  }
+
+  @JsonIgnore
+  public String getDeprecationWarning() {
+    return deprecationWarning;
+  }
+
   public S getSpec() {
     return spec;
   }
@@ -300,6 +325,10 @@ public abstract class CustomResource<S, T> implements HasMetadata {
     if (served != that.served)
       return false;
     if (storage != that.storage)
+      return false;
+    if (deprecated != that.deprecated)
+      return false;
+    if (!Objects.equals(deprecationWarning, that.deprecationWarning))
       return false;
     if (!metadata.equals(that.metadata))
       return false;
@@ -333,6 +362,8 @@ public abstract class CustomResource<S, T> implements HasMetadata {
     result = 31 * result + plural.hashCode();
     result = 31 * result + (served ? 1 : 0);
     result = 31 * result + (storage ? 1 : 0);
+    result = 31 * result + (deprecated ? 1 : 0);
+    result = 31 * result + (deprecationWarning != null ? deprecationWarning.hashCode() : 0);
     return result;
   }
 }

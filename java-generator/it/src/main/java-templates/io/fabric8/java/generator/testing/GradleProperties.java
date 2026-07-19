@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,7 @@ package io.fabric8.java.generator.testing;
 
 public final class GradleProperties {
   public static String binariesVersion() {
-    return "${gradle-binaries.version}";
+    return "${gradle-api.version}";
   }
 
   private GradleProperties() {

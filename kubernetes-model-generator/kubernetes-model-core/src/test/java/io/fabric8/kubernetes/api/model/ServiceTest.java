@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,35 +17,36 @@ package io.fabric8.kubernetes.api.model;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.model.util.Helper;
+import io.fabric8.zjsonpatch.JsonDiff;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static net.javacrumbs.jsonunit.core.Option.IGNORING_ARRAY_ORDER;
-import static net.javacrumbs.jsonunit.core.Option.IGNORING_EXTRA_FIELDS;
-import static net.javacrumbs.jsonunit.core.Option.TREATING_NULL_AS_ABSENT;
-import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-public class ServiceTest {
-  private final ObjectMapper mapper = new ObjectMapper();
+class ServiceTest {
 
-  @Test
-  public void serviceTest() throws Exception {
-    // given
-    final String originalJson = Helper.loadJson("/valid-service.json");
+  private ObjectMapper mapper;
 
-    // when
-    final Service service = mapper.readValue(originalJson, Service.class);
-    final String serializedJson = mapper.writeValueAsString(service);
-
-    // then
-    assertThatJson(serializedJson).when(IGNORING_ARRAY_ORDER, TREATING_NULL_AS_ABSENT, IGNORING_EXTRA_FIELDS)
-        .isEqualTo(originalJson);
+  @BeforeEach
+  void setUp() {
+    mapper = new ObjectMapper();
   }
 
   @Test
-  public void serviceBuilderTest() {
+  void serviceTest() throws Exception {
+    // Given
+    final String originalJson = Helper.loadJson("/valid-service.json");
+    final Service service = mapper.readValue(originalJson, Service.class);
+    // When
+    final var diff = JsonDiff.asJson(mapper.readTree(originalJson), mapper.readTree(mapper.writeValueAsString(service)));
+    // Then
+    assertThat(diff).isEmpty();
+  }
 
+  @Test
+  void serviceBuilderTest() {
     Service service = new io.fabric8.kubernetes.api.model.ServiceBuilder()
         .withNewMetadata()
         .withName("fabric8-maven-sample-zero-config")

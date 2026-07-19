@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,9 +17,9 @@ package io.fabric8.tekton.api.examples;
 
 import io.fabric8.tekton.client.DefaultTektonClient;
 import io.fabric8.tekton.client.TektonClient;
-import io.fabric8.tekton.pipeline.v1beta1.Task;
-import io.fabric8.tekton.pipeline.v1beta1.TaskBuilder;
-import io.fabric8.tekton.pipeline.v1beta1.TaskList;
+import io.fabric8.tekton.v1beta1.Task;
+import io.fabric8.tekton.v1beta1.TaskBuilder;
+import io.fabric8.tekton.v1beta1.TaskList;
 
 public class TaskCreate {
   public static void main(String[] args) {

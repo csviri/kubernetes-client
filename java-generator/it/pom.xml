@@ -22,14 +22,30 @@
   <parent>
     <artifactId>java-generator-parent</artifactId>
     <groupId>io.fabric8</groupId>
-    <version>6.8-SNAPSHOT</version>
+    <version>999-SNAPSHOT</version>
   </parent>
 
   <artifactId>java-generator-integration-tests</artifactId>
   <packaging>jar</packaging>
   <name>Fabric8 :: Java generator :: Integration Tests</name>
 
+  <properties>
+    <maven.deploy.skip>true</maven.deploy.skip>
+  </properties>
+
   <dependencies>
+    <!-- Force installation before running the ITs -->
+    <dependency>
+      <groupId>io.fabric8.java-generator</groupId>
+      <artifactId>io.fabric8.java-generator.gradle.plugin</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.fabric8</groupId>
+      <artifactId>java-generator-maven-plugin</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <!-- // -->
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
@@ -41,7 +57,7 @@
     <dependency>
       <groupId>io.github.java-diff-utils</groupId>
       <artifactId>java-diff-utils</artifactId>
-      <version>4.12</version>
+      <version>4.17</version>
     </dependency>
     <dependency>
       <groupId>io.sundr</groupId>
@@ -52,10 +68,6 @@
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
       <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.fabric8</groupId>
-      <artifactId>camel-k-client</artifactId>
     </dependency>
     <!-- test -->
     <dependency>
@@ -73,40 +85,20 @@
     <!-- Gradle plugin test -->
     <dependency>
       <groupId>org.gradle</groupId>
-      <artifactId>gradle-base-services-groovy</artifactId>
+      <artifactId>gradle-all</artifactId>
+      <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.gradle</groupId>
-      <artifactId>gradle-messaging</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.gradle</groupId>
-      <artifactId>gradle-native</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.gradle</groupId>
-      <artifactId>gradle-platform-jvm</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.gradle</groupId>
-      <artifactId>gradle-process-services</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.gradle</groupId>
-      <artifactId>gradle-tooling-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.gradle</groupId>
-      <artifactId>gradle-test-kit</artifactId>
-    </dependency>
-    <!-- Gradle execution will need these on the classpath -->
-    <dependency>
-      <groupId>commons-io</groupId>
-      <artifactId>commons-io</artifactId>
-    </dependency>
+    <!-- Gradle needs these on the classpath -->
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
+      <version>${guava.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 
@@ -157,6 +149,8 @@
           <systemPropertyVariables>
             <itDir>${project.basedir}</itDir>
             <kubernetesClientVersion>${project.version}</kubernetesClientVersion>
+            <lombokVersion>${lombok.version}</lombokVersion>
+            <sundrioVersion>${sundrio.version}</sundrioVersion>
           </systemPropertyVariables>
         </configuration>
       </plugin>
@@ -164,7 +158,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>templating-maven-plugin</artifactId>
-        <version>1.0.0</version>
+        <version>3.1.0</version>
         <executions>
           <execution>
             <id>filtering-java-templates</id>

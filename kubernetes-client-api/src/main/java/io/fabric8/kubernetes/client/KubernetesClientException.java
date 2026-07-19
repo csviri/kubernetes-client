@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -61,26 +61,6 @@ public class KubernetesClientException extends RuntimeException {
     this.code = code;
     this.status = status;
     this.requestMetadata = requestMetadata == null ? RequestMetadata.EMPTY : requestMetadata;
-  }
-
-  /**
-   * @deprecated use {@link #KubernetesClientException(String, Throwable, int, Status, HttpRequest)} instead
-   */
-  @Deprecated
-  public KubernetesClientException(String message, int code, Status status, String group, String version, String resourcePlural,
-      String namespace) {
-    this(message, null, code, status,
-        RequestMetadata.builder().group(group).version(version).plural(resourcePlural).namespace(namespace).build());
-  }
-
-  /**
-   * @deprecated use {@link #KubernetesClientException(String, Throwable, int, Status, HttpRequest)} instead
-   */
-  @Deprecated
-  public KubernetesClientException(String message, Throwable t, String group, String version, String resourcePlural,
-      String namespace) {
-    this(message, t, -1, null,
-        RequestMetadata.builder().group(group).version(version).plural(resourcePlural).namespace(namespace).build());
   }
 
   public Status getStatus() {
@@ -159,19 +139,6 @@ public class KubernetesClientException extends RuntimeException {
         .namespace(spec.getNamespace()).name(spec.getName()).build());
   }
 
-  /**
-   * @deprecated Use {@link #launderThrowable(OperationInfo, Throwable)} instead
-   */
-  @Deprecated
-  public static RuntimeException launderThrowable(OperationInfo spec, Status status, Throwable cause) {
-    StringBuilder sb = new StringBuilder();
-    sb.append(describeOperation(spec)).append(" failed.");
-    if (status != null && Utils.isNotNullOrEmpty(status.getMessage())) {
-      sb.append("Reason: ").append(status.getMessage());
-    }
-    return launderThrowable(sb.toString(), cause);
-  }
-
   private static String describeOperation(OperationInfo operation) {
     StringBuilder sb = new StringBuilder();
     sb.append("Operation");
@@ -199,7 +166,7 @@ public class KubernetesClientException extends RuntimeException {
     final String name;
 
     static RequestMetadata from(HttpRequest request) {
-      return from(request.uri());
+      return request == null ? EMPTY : from(request.uri());
     }
 
     static RequestMetadata from(URI request) {

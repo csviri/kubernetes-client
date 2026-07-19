@@ -39,6 +39,8 @@ Do all your development or fixing work here.
 
 After all your development/fixing work is done, do not forget to add `Unit Test` and `Regression Test` around that. It will be nice if you can add an example of the new feature you have added.
 
+For new mock-mode tests, prefer `@EnableKubernetesMockClient(https = false)` unless TLS itself is under test — see the "Mock Server Testing" section of [AGENTS.md](AGENTS.md) for the rationale and exceptions.
+
 #### Check your work after running all Unit and Regression Tests
 
 You should run all the unit tests by hitting the following command
@@ -68,7 +70,7 @@ mvn -Pitests -pl kubernetes-itests verify  -Dtest="io.fabric8.openshift.**"
 ```
 
 #### Other Requirements
- * If adding a new feature or fixing some bug, please update the [CHANGELOG.md](https://github.com/fabric8io/kubernetes-client/blob/master/CHANGELOG.md),
+ * If adding a new feature or fixing some bug, please update the [CHANGELOG.md](https://github.com/fabric8io/kubernetes-client/blob/main/CHANGELOG.md),
  * Make sure you add the license headers at top of every new source file you add while implementing the feature. You can do so by hitting `mvn -N license:format` command.
 
 #### Commit your work

@@ -1,8 +1,9 @@
 
 package io.fabric8.openshift.api.model.operatorhub.v1alpha1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,7 +11,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
@@ -20,19 +24,17 @@ import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "createdAt",
     "port",
     "protocol",
@@ -41,7 +43,6 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -55,40 +56,36 @@ import lombok.experimental.Accessors;
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class RegistryServiceStatus implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class RegistryServiceStatus implements Editable<RegistryServiceStatusBuilder>, KubernetesResource
 {
 
     @JsonProperty("createdAt")
     private String createdAt;
     @JsonProperty("port")
-    private java.lang.String port;
+    private String port;
     @JsonProperty("protocol")
-    private java.lang.String protocol;
+    private String protocol;
     @JsonProperty("serviceName")
-    private java.lang.String serviceName;
+    private String serviceName;
     @JsonProperty("serviceNamespace")
-    private java.lang.String serviceNamespace;
+    private String serviceNamespace;
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public RegistryServiceStatus() {
     }
 
-    /**
-     * 
-     * @param createdAt
-     * @param protocol
-     * @param port
-     * @param serviceNamespace
-     * @param serviceName
-     */
-    public RegistryServiceStatus(String createdAt, java.lang.String port, java.lang.String protocol, java.lang.String serviceName, java.lang.String serviceNamespace) {
+    public RegistryServiceStatus(String createdAt, String port, String protocol, String serviceName, String serviceNamespace) {
         super();
         this.createdAt = createdAt;
         this.port = port;
@@ -108,53 +105,68 @@ public class RegistryServiceStatus implements KubernetesResource
     }
 
     @JsonProperty("port")
-    public java.lang.String getPort() {
+    public String getPort() {
         return port;
     }
 
     @JsonProperty("port")
-    public void setPort(java.lang.String port) {
+    public void setPort(String port) {
         this.port = port;
     }
 
     @JsonProperty("protocol")
-    public java.lang.String getProtocol() {
+    public String getProtocol() {
         return protocol;
     }
 
     @JsonProperty("protocol")
-    public void setProtocol(java.lang.String protocol) {
+    public void setProtocol(String protocol) {
         this.protocol = protocol;
     }
 
     @JsonProperty("serviceName")
-    public java.lang.String getServiceName() {
+    public String getServiceName() {
         return serviceName;
     }
 
     @JsonProperty("serviceName")
-    public void setServiceName(java.lang.String serviceName) {
+    public void setServiceName(String serviceName) {
         this.serviceName = serviceName;
     }
 
     @JsonProperty("serviceNamespace")
-    public java.lang.String getServiceNamespace() {
+    public String getServiceNamespace() {
         return serviceNamespace;
     }
 
     @JsonProperty("serviceNamespace")
-    public void setServiceNamespace(java.lang.String serviceNamespace) {
+    public void setServiceNamespace(String serviceNamespace) {
         this.serviceNamespace = serviceNamespace;
     }
 
+    @JsonIgnore
+    public RegistryServiceStatusBuilder edit() {
+        return new RegistryServiceStatusBuilder(this);
+    }
+
+    @JsonIgnore
+    public RegistryServiceStatusBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
-    public Map<java.lang.String, Object> getAdditionalProperties() {
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 
     @JsonAnySetter
-    public void setAdditionalProperty(java.lang.String name, Object value) {
+    public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

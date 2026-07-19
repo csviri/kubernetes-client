@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.mock;
 
 import io.fabric8.kubernetes.api.model.DeleteOptions;
@@ -39,7 +38,8 @@ import io.fabric8.kubernetes.client.readiness.Readiness;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.kubernetes.client.utils.Serialization;
-import okhttp3.mockwebserver.RecordedRequest;
+import io.fabric8.kubernetes.client.utils.Utils;
+import io.fabric8.mockwebserver.http.RecordedRequest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -47,6 +47,7 @@ import org.junit.jupiter.api.Test;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static java.net.HttpURLConnection.HTTP_GONE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -59,7 +60,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnableKubernetesMockClient
+@EnableKubernetesMockClient(https = false)
 class ResourceTest {
 
   KubernetesMockServer server;
@@ -243,12 +244,12 @@ class ResourceTest {
     server.expect().withPath("/api/v1/namespaces/test/pods/pod1").andReturn(200, pod1).once();
     server.expect().withPath("/api/v1/namespaces/ns1/pods/pod2").andReturn(200, pod2).once();
 
-    Boolean deleted = client.resource(pod1).delete().size() == 1;
+    Boolean deleted = client.resource(pod1).withGracePeriod(0).delete().size() == 1;
     assertTrue(deleted);
-    deleted = client.resource(pod2).delete().size() == 1;
+    deleted = client.resource(pod2).withGracePeriod(0).delete().size() == 1;
     assertTrue(deleted);
 
-    deleted = client.resource(pod3).delete().size() == 1;
+    deleted = client.resource(pod3).withGracePeriod(0).delete().size() == 1;
     assertFalse(deleted);
   }
 
@@ -266,7 +267,7 @@ class ResourceTest {
 
     server.expect()
         .get()
-        .withPath("/api/v1/namespaces/test/pods?fieldSelector=metadata.name%3Dpod1&allowWatchBookmarks=true&watch=true")
+        .withPath("/api/v1/namespaces/test/pods?allowWatchBookmarks=true&fieldSelector=metadata.name%3Dpod1&watch=true")
         .andUpgradeToWebSocket()
         .open()
         .waitFor(1000)
@@ -284,7 +285,7 @@ class ResourceTest {
 
       @Override
       public void onClose(WatcherException cause) {
-
+        // NO OP
       }
     });
     assertTrue(latch.await(5000, MILLISECONDS));
@@ -292,7 +293,7 @@ class ResourceTest {
   }
 
   @Test
-  void testWaitUntilReady() throws InterruptedException {
+  void testWaitUntilReady() {
     Pod pod1 = new PodBuilder().withNewMetadata()
         .withName("pod1")
         .withResourceVersion("1")
@@ -308,7 +309,7 @@ class ResourceTest {
     server.expect()
         .get()
         .withPath(
-            "/api/v1/namespaces/test/pods?fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&allowWatchBookmarks=true&watch=true")
+            "/api/v1/namespaces/test/pods?allowWatchBookmarks=true&fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&watch=true")
         .andUpgradeToWebSocket()
         .open()
         .waitFor(500)
@@ -322,7 +323,7 @@ class ResourceTest {
 
   /**
    * List the pod for the initial request from an informer
-   * 
+   *
    * @param pod
    */
   private void list(Pod pod) {
@@ -361,7 +362,7 @@ class ResourceTest {
     server.expect()
         .get()
         .withPath(
-            "/api/v1/namespaces/test/pods?fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&allowWatchBookmarks=true&watch=true")
+            "/api/v1/namespaces/test/pods?allowWatchBookmarks=true&fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&watch=true")
         .andUpgradeToWebSocket()
         .open()
         .waitFor(100)
@@ -421,7 +422,7 @@ class ResourceTest {
     server.expect()
         .get()
         .withPath(
-            "/api/v1/namespaces/test/pods?fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&allowWatchBookmarks=true&watch=true")
+            "/api/v1/namespaces/test/pods?allowWatchBookmarks=true&fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&watch=true")
         .andUpgradeToWebSocket()
         .open()
         .waitFor(1000)
@@ -448,6 +449,42 @@ class ResourceTest {
   }
 
   @Test
+  void testWaitUntilConditionClosedClient() throws InterruptedException {
+    Pod pod1 = new PodBuilder().withNewMetadata()
+        .withName("pod1")
+        .withResourceVersion("1")
+        .withNamespace("test")
+        .and()
+        .build();
+
+    Pod noReady = createReadyFrom(pod1, "False", "1");
+    list(noReady);
+
+    server.expect()
+        .get()
+        .withPath(
+            "/api/v1/namespaces/test/pods?allowWatchBookmarks=true&fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&watch=true")
+        .andUpgradeToWebSocket()
+        .open()
+        .waitFor(4000)
+        .andEmit(new WatchEvent(noReady, "DELETED"))
+        .done()
+        .always();
+
+    Utils.schedule(Runnable::run, client::close, 2, TimeUnit.SECONDS);
+
+    PodResource podResource = client.pods().withName("pod1");
+    KubernetesClientException exception = assertThrows(KubernetesClientException.class, () -> podResource.waitUntilCondition(
+        r -> r.getStatus()
+            .getConditions()
+            .stream()
+            .anyMatch(c -> "Dummy".equals(c.getType()) && "True".equals(c.getStatus())),
+        10, SECONDS));
+    assertEquals("Informer was stopped", exception.getMessage());
+
+  }
+
+  @Test
   void testErrorEventDuringWaitReturnFromAPIIfMatch() throws InterruptedException {
     Pod pod1 = new PodBuilder().withNewMetadata()
         .withName("pod1")
@@ -469,7 +506,7 @@ class ResourceTest {
     server.expect()
         .get()
         .withPath(
-            "/api/v1/namespaces/test/pods?fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&allowWatchBookmarks=true&watch=true")
+            "/api/v1/namespaces/test/pods?allowWatchBookmarks=true&fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&watch=true")
         .andUpgradeToWebSocket()
         .open()
         .waitFor(500)
@@ -480,7 +517,7 @@ class ResourceTest {
     server.expect()
         .get()
         .withPath(
-            "/api/v1/namespaces/test/pods?fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&allowWatchBookmarks=true&watch=true")
+            "/api/v1/namespaces/test/pods?allowWatchBookmarks=true&fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&watch=true")
         .andUpgradeToWebSocket()
         .open()
         .waitFor(500)
@@ -514,7 +551,7 @@ class ResourceTest {
     server.expect()
         .get()
         .withPath(
-            "/api/v1/namespaces/test/pods?fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&allowWatchBookmarks=true&watch=true")
+            "/api/v1/namespaces/test/pods?allowWatchBookmarks=true&fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&watch=true")
         .andUpgradeToWebSocket()
         .open()
         .waitFor(500)
@@ -525,7 +562,7 @@ class ResourceTest {
     server.expect()
         .get()
         .withPath(
-            "/api/v1/namespaces/test/pods?fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&allowWatchBookmarks=true&watch=true")
+            "/api/v1/namespaces/test/pods?allowWatchBookmarks=true&fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&watch=true")
         .andUpgradeToWebSocket()
         .open()
         .waitFor(500)
@@ -578,7 +615,7 @@ class ResourceTest {
     server.expect()
         .get()
         .withPath(
-            "/api/v1/namespaces/test/pods?fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&allowWatchBookmarks=true&watch=true")
+            "/api/v1/namespaces/test/pods?allowWatchBookmarks=true&fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&watch=true")
         .andUpgradeToWebSocket()
         .open()
         .waitFor(500)
@@ -611,7 +648,7 @@ class ResourceTest {
     server.expect()
         .get()
         .withPath(
-            "/api/v1/namespaces/test/pods?fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&allowWatchBookmarks=true&watch=true")
+            "/api/v1/namespaces/test/pods?allowWatchBookmarks=true&fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&watch=true")
         .andUpgradeToWebSocket()
         .open()
         .waitFor(1000)
@@ -641,7 +678,7 @@ class ResourceTest {
     server.expect()
         .get()
         .withPath(
-            "/api/v1/namespaces/test/pods?fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&allowWatchBookmarks=true&watch=true")
+            "/api/v1/namespaces/test/pods?allowWatchBookmarks=true&fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&watch=true")
         .andUpgradeToWebSocket()
         .open()
         .waitFor(1000)
@@ -692,12 +729,10 @@ class ResourceTest {
     server.expect()
         .get()
         .withPath(
-            "/api/v1/namespaces/test/pods?fieldSelector=metadata.name%3Dpod&resourceVersion=1&timeoutSeconds=600&allowWatchBookmarks=true&watch=true")
+            "/api/v1/namespaces/test/pods?allowWatchBookmarks=true&fieldSelector=metadata.name%3Dpod&resourceVersion=1&timeoutSeconds=600&watch=true")
         .andUpgradeToWebSocket()
         .open()
-        .immediately()
-        .andEmit(new WatchEvent(conditionNotMetPod, "MODIFIED"))
-        .waitFor(10)
+        .waitFor(500)
         .andEmit(new WatchEvent(conditionMetPod, "MODIFIED"))
         .done()
         .once();

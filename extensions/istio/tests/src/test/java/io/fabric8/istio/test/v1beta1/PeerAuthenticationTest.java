@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,16 +15,16 @@
  */
 package io.fabric8.istio.test.v1beta1;
 
+import io.fabric8.istio.api.api.security.v1beta1.PeerAuthenticationMutualTLSBuilder;
+import io.fabric8.istio.api.api.security.v1beta1.PeerAuthenticationMutualTLSMode;
+import io.fabric8.istio.api.api.type.v1beta1.WorkloadSelectorBuilder;
 import io.fabric8.istio.api.security.v1beta1.PeerAuthentication;
 import io.fabric8.istio.api.security.v1beta1.PeerAuthenticationBuilder;
-import io.fabric8.istio.api.security.v1beta1.PeerAuthenticationMutualTLS;
-import io.fabric8.istio.api.security.v1beta1.PeerAuthenticationMutualTLSMode;
-import io.fabric8.istio.api.type.v1beta1.WorkloadSelectorBuilder;
 import io.fabric8.istio.client.IstioClient;
 import io.fabric8.kubernetes.api.model.DeletionPropagation;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
-import okhttp3.mockwebserver.RecordedRequest;
+import io.fabric8.mockwebserver.http.RecordedRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -62,7 +62,7 @@ class PeerAuthenticationTest {
         .endMetadata()
         .withNewSpec()
         .withSelector(new WorkloadSelectorBuilder().addToMatchLabels("app", "reviews").build())
-        .withMtls(new PeerAuthenticationMutualTLS(PeerAuthenticationMutualTLSMode.STRICT))
+        .withMtls(new PeerAuthenticationMutualTLSBuilder().withMode(PeerAuthenticationMutualTLSMode.STRICT).build())
         .endSpec()
         .build();
 

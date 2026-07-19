@@ -2,10 +2,10 @@
 package io.fabric8.kubernetes.api.model;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -13,18 +13,15 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.sundr.builder.annotations.Buildable;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "as",
     "as-groups",
     "as-uid",
@@ -43,77 +40,58 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
 })
-@Buildable(editableEnabled = false, validationEnabled = false, generateBuilderPackage = true, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
-public class AuthInfo implements KubernetesResource
+@Buildable(editableEnabled = false, validationEnabled = false, generateBuilderPackage = false, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class AuthInfo implements Editable<AuthInfoBuilder>, KubernetesResource
 {
 
     @JsonProperty("as")
-    private java.lang.String as;
+    private String as;
     @JsonProperty("as-groups")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<java.lang.String> asGroups = new ArrayList<java.lang.String>();
+    private List<String> asGroups = new ArrayList<>();
     @JsonProperty("as-uid")
-    private java.lang.String asUid;
+    private String asUid;
     @JsonProperty("as-user-extra")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private Map<String, ArrayList<String>> asUserExtra = new LinkedHashMap<String, ArrayList<String>>();
+    private Map<String, List<String>> asUserExtra = new LinkedHashMap<>();
     @JsonProperty("auth-provider")
     private AuthProviderConfig authProvider;
     @JsonProperty("client-certificate")
-    private java.lang.String clientCertificate;
+    private String clientCertificate;
     @JsonProperty("client-certificate-data")
-    private java.lang.String clientCertificateData;
+    private String clientCertificateData;
     @JsonProperty("client-key")
-    private java.lang.String clientKey;
+    private String clientKey;
     @JsonProperty("client-key-data")
-    private java.lang.String clientKeyData;
+    private String clientKeyData;
     @JsonProperty("exec")
     private ExecConfig exec;
     @JsonProperty("extensions")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<NamedExtension> extensions = new ArrayList<NamedExtension>();
+    private List<NamedExtension> extensions = new ArrayList<>();
     @JsonProperty("password")
-    private java.lang.String password;
+    private String password;
     @JsonProperty("token")
-    private java.lang.String token;
+    private String token;
     @JsonProperty("tokenFile")
-    private java.lang.String tokenFile;
+    private String tokenFile;
     @JsonProperty("username")
-    private java.lang.String username;
+    private String username;
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public AuthInfo() {
     }
 
-    /**
-     * 
-     * @param clientCertificate
-     * @param asGroups
-     * @param token
-     * @param authProvider
-     * @param as
-     * @param asUid
-     * @param extensions
-     * @param password
-     * @param clientKeyData
-     * @param clientKey
-     * @param asUserExtra
-     * @param clientCertificateData
-     * @param tokenFile
-     * @param exec
-     * @param username
-     */
-    public AuthInfo(java.lang.String as, List<java.lang.String> asGroups, java.lang.String asUid, Map<String, ArrayList<String>> asUserExtra, AuthProviderConfig authProvider, java.lang.String clientCertificate, java.lang.String clientCertificateData, java.lang.String clientKey, java.lang.String clientKeyData, ExecConfig exec, List<NamedExtension> extensions, java.lang.String password, java.lang.String token, java.lang.String tokenFile, java.lang.String username) {
+    public AuthInfo(String as, List<String> asGroups, String asUid, Map<String, List<String>> asUserExtra, AuthProviderConfig authProvider, String clientCertificate, String clientCertificateData, String clientKey, String clientKeyData, ExecConfig exec, List<NamedExtension> extensions, String password, String token, String tokenFile, String username) {
         super();
         this.as = as;
         this.asGroups = asGroups;
@@ -133,42 +111,44 @@ public class AuthInfo implements KubernetesResource
     }
 
     @JsonProperty("as")
-    public java.lang.String getAs() {
+    public String getAs() {
         return as;
     }
 
     @JsonProperty("as")
-    public void setAs(java.lang.String as) {
+    public void setAs(String as) {
         this.as = as;
     }
 
     @JsonProperty("as-groups")
-    public List<java.lang.String> getAsGroups() {
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public List<String> getAsGroups() {
         return asGroups;
     }
 
     @JsonProperty("as-groups")
-    public void setAsGroups(List<java.lang.String> asGroups) {
+    public void setAsGroups(List<String> asGroups) {
         this.asGroups = asGroups;
     }
 
     @JsonProperty("as-uid")
-    public java.lang.String getAsUid() {
+    public String getAsUid() {
         return asUid;
     }
 
     @JsonProperty("as-uid")
-    public void setAsUid(java.lang.String asUid) {
+    public void setAsUid(String asUid) {
         this.asUid = asUid;
     }
 
     @JsonProperty("as-user-extra")
-    public Map<String, ArrayList<String>> getAsUserExtra() {
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public Map<String, List<String>> getAsUserExtra() {
         return asUserExtra;
     }
 
     @JsonProperty("as-user-extra")
-    public void setAsUserExtra(Map<String, ArrayList<String>> asUserExtra) {
+    public void setAsUserExtra(Map<String, List<String>> asUserExtra) {
         this.asUserExtra = asUserExtra;
     }
 
@@ -183,42 +163,42 @@ public class AuthInfo implements KubernetesResource
     }
 
     @JsonProperty("client-certificate")
-    public java.lang.String getClientCertificate() {
+    public String getClientCertificate() {
         return clientCertificate;
     }
 
     @JsonProperty("client-certificate")
-    public void setClientCertificate(java.lang.String clientCertificate) {
+    public void setClientCertificate(String clientCertificate) {
         this.clientCertificate = clientCertificate;
     }
 
     @JsonProperty("client-certificate-data")
-    public java.lang.String getClientCertificateData() {
+    public String getClientCertificateData() {
         return clientCertificateData;
     }
 
     @JsonProperty("client-certificate-data")
-    public void setClientCertificateData(java.lang.String clientCertificateData) {
+    public void setClientCertificateData(String clientCertificateData) {
         this.clientCertificateData = clientCertificateData;
     }
 
     @JsonProperty("client-key")
-    public java.lang.String getClientKey() {
+    public String getClientKey() {
         return clientKey;
     }
 
     @JsonProperty("client-key")
-    public void setClientKey(java.lang.String clientKey) {
+    public void setClientKey(String clientKey) {
         this.clientKey = clientKey;
     }
 
     @JsonProperty("client-key-data")
-    public java.lang.String getClientKeyData() {
+    public String getClientKeyData() {
         return clientKeyData;
     }
 
     @JsonProperty("client-key-data")
-    public void setClientKeyData(java.lang.String clientKeyData) {
+    public void setClientKeyData(String clientKeyData) {
         this.clientKeyData = clientKeyData;
     }
 
@@ -233,6 +213,7 @@ public class AuthInfo implements KubernetesResource
     }
 
     @JsonProperty("extensions")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<NamedExtension> getExtensions() {
         return extensions;
     }
@@ -243,53 +224,68 @@ public class AuthInfo implements KubernetesResource
     }
 
     @JsonProperty("password")
-    public java.lang.String getPassword() {
+    public String getPassword() {
         return password;
     }
 
     @JsonProperty("password")
-    public void setPassword(java.lang.String password) {
+    public void setPassword(String password) {
         this.password = password;
     }
 
     @JsonProperty("token")
-    public java.lang.String getToken() {
+    public String getToken() {
         return token;
     }
 
     @JsonProperty("token")
-    public void setToken(java.lang.String token) {
+    public void setToken(String token) {
         this.token = token;
     }
 
     @JsonProperty("tokenFile")
-    public java.lang.String getTokenFile() {
+    public String getTokenFile() {
         return tokenFile;
     }
 
     @JsonProperty("tokenFile")
-    public void setTokenFile(java.lang.String tokenFile) {
+    public void setTokenFile(String tokenFile) {
         this.tokenFile = tokenFile;
     }
 
     @JsonProperty("username")
-    public java.lang.String getUsername() {
+    public String getUsername() {
         return username;
     }
 
     @JsonProperty("username")
-    public void setUsername(java.lang.String username) {
+    public void setUsername(String username) {
         this.username = username;
     }
 
+    @JsonIgnore
+    public AuthInfoBuilder edit() {
+        return new AuthInfoBuilder(this);
+    }
+
+    @JsonIgnore
+    public AuthInfoBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
-    public Map<java.lang.String, Object> getAdditionalProperties() {
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 
     @JsonAnySetter
-    public void setAdditionalProperty(java.lang.String name, Object value) {
+    public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

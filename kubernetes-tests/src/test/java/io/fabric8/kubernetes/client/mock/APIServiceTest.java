@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,9 +31,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnableKubernetesMockClient
+@EnableKubernetesMockClient(https = false)
 class APIServiceTest {
-  private KubernetesMockServer server;
+  KubernetesMockServer server;
   private KubernetesClient client;
 
   @Test
@@ -97,7 +97,7 @@ class APIServiceTest {
         .once();
 
     // When
-    boolean isDeleted = client.apiServices().withName("v1alpha1.demo.fabric8.io").delete().size() == 1;
+    boolean isDeleted = client.apiServices().withName("v1alpha1.demo.fabric8.io").withGracePeriod(0).delete().size() == 1;
 
     // Then
     assertTrue(isDeleted);

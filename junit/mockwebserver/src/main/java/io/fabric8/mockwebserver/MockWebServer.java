@@ -1,0 +1,404 @@
+/*
+ * Copyright (C) 2015 Red Hat, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.fabric8.mockwebserver;
+
+import io.fabric8.mockwebserver.http.Dispatcher;
+import io.fabric8.mockwebserver.http.HttpUrl;
+import io.fabric8.mockwebserver.http.MockResponse;
+import io.fabric8.mockwebserver.http.QueueDispatcher;
+import io.fabric8.mockwebserver.http.RecordedHttpConnection;
+import io.fabric8.mockwebserver.http.RecordedRequest;
+import io.fabric8.mockwebserver.vertx.HttpServerRequestHandler;
+import io.fabric8.mockwebserver.vertx.Protocol;
+import io.netty.handler.ssl.ClientAuth;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.HttpServerOptions;
+import io.vertx.core.net.NetServerOptions;
+import io.vertx.core.net.PemKeyCertOptions;
+import io.vertx.core.net.PemTrustOptions;
+import io.vertx.core.net.SelfSignedCertificate;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x509.Extension;
+import org.bouncycastle.asn1.x509.GeneralName;
+import org.bouncycastle.asn1.x509.GeneralNames;
+import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
+import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
+import org.bouncycastle.operator.ContentSigner;
+import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
+
+import java.io.Closeable;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.math.BigInteger;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.nio.file.Files;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.cert.X509Certificate;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
+
+import static io.vertx.core.net.SSLOptions.DEFAULT_ENABLED_SECURE_TRANSPORT_PROTOCOLS;
+
+public class MockWebServer implements Closeable {
+
+  private static final String[] SUPPORTED_WEBSOCKET_SUB_PROTOCOLS = new String[] {
+      "v1.channel.k8s.io", "v2.channel.k8s.io", "v3.channel.k8s.io", "v4.channel.k8s.io"
+  };
+
+  private static final Logger logger = Logger.getLogger(MockWebServer.class.getName());
+
+  private final Vertx vertx;
+  private final BlockingQueue<RecordedRequest> requestQueue;
+  private final AtomicInteger requestCount;
+  private final List<MockWebServerListener> listeners;
+  @SuppressWarnings("java:S3077") // volatile reference-swap; Dispatcher implementations are thread-safe
+  private volatile Dispatcher dispatcher;
+  private ClientAuth clientAuth;
+  private final List<String> enabledSecuredTransportProtocols;
+  private boolean ssl;
+  private SelfSignedCertificate selfSignedCertificate;
+  private HttpServer httpServer;
+  private int port;
+  private InetAddress inetAddress;
+  private String hostName;
+  private List<Protocol> protocols;
+  private boolean http2ClearTextEnabled;
+  private boolean started;
+  private boolean shutdown;
+
+  public MockWebServer() {
+    vertx = Vertx.vertx();
+    requestQueue = new LinkedBlockingQueue<>();
+    requestCount = new AtomicInteger();
+    listeners = new ArrayList<>();
+    dispatcher = new QueueDispatcher();
+    clientAuth = ClientAuth.NONE;
+    enabledSecuredTransportProtocols = new ArrayList<>();
+    enabledSecuredTransportProtocols.addAll(DEFAULT_ENABLED_SECURE_TRANSPORT_PROTOCOLS);
+    protocols = Arrays.asList(Protocol.HTTP_2, Protocol.HTTP_1_1);
+    http2ClearTextEnabled = true;
+  }
+
+  private void before() {
+    if (started) {
+      return;
+    }
+    start();
+  }
+
+  public void start() {
+    start(NetServerOptions.DEFAULT_PORT);
+  }
+
+  public void start(int port) {
+    start(InetAddress.getLoopbackAddress(), port);
+  }
+
+  public synchronized void start(InetAddress inetAddress, int port) {
+    if (started) {
+      throw new IllegalStateException("start() already called");
+    }
+    this.started = true;
+    this.inetAddress = inetAddress;
+    this.hostName = inetAddress.getHostName().equals("127.0.0.1") ? "localhost" : inetAddress.getHostName();
+    final HttpServerOptions options = new HttpServerOptions()
+        .setHost(inetAddress.getHostAddress())
+        .setPort(port)
+        .setAlpnVersions(protocols.stream().map(Protocol::getHttpVersion).collect(Collectors.toList()))
+        .setWebSocketSubProtocols(Arrays.asList(SUPPORTED_WEBSOCKET_SUB_PROTOCOLS))
+        .setHandle100ContinueAutomatically(true);
+    if (ssl) {
+      options
+          .setSsl(true)
+          .setEnabledSecureTransportProtocols(new HashSet<>(enabledSecuredTransportProtocols));
+      selfSignedCertificate = generateSelfSignedCertificate();
+      options
+          .setTrustOptions(selfSignedCertificate.trustOptions())
+          .setKeyCertOptions(selfSignedCertificate.keyCertOptions());
+    } else {
+      options.setHttp2ClearTextEnabled(http2ClearTextEnabled);
+    }
+    httpServer = vertx.createHttpServer(options);
+    httpServer.connectionHandler(event -> {
+      final RecordedHttpConnection connection = new RecordedHttpConnection(
+          event.remoteAddress(), event.localAddress(), ssl);
+      listeners.forEach(listener -> listener.onConnection(connection));
+      event.closeHandler(res -> listeners.forEach(listener -> listener.onConnectionClosed(connection)));
+    });
+    httpServer.requestHandler(new HttpServerRequestHandler(vertx) {
+      @Override
+      protected MockResponse onHttpRequest(RecordedRequest request) {
+        requestCount.incrementAndGet();
+        requestQueue.add(request);
+        final MockResponse response = dispatcher.dispatch(request);
+        info("received request: %s and responded: %s", request.toString(), response.toString());
+        return response;
+      }
+    });
+    await(httpServer.listen(), "Unable to start MockWebServer");
+    this.port = httpServer.actualPort();
+    info("starting to accept connections on %s", getHostName());
+  }
+
+  public synchronized void shutdown() {
+    if (!started || shutdown) {
+      return;
+    }
+    if (httpServer == null) {
+      throw new IllegalStateException("shutdown() before start()");
+    }
+    shutdown = true;
+    // Two-phase: shutdown() unblocks any blocked dispatches (e.g. QueueDispatcher.take()) so
+    // httpServer.close() can drain in-flight requests; releaseResources() then tears down per-
+    // connection state (e.g. WebSocketSession executors) that an in-flight upgrade may still
+    // have been about to touch via onOpen — avoiding a RejectedExecutionException race.
+    dispatcher.shutdown();
+    await(httpServer.close(), "Unable to close MockWebServer");
+    dispatcher.releaseResources();
+    info("done accepting connections");
+    await(vertx.close(), "Unable to close Vertx");
+  }
+
+  @Override
+  public void close() throws IOException {
+    shutdown();
+  }
+
+  public int getPort() {
+    before();
+    return port;
+  }
+
+  public String getHostName() {
+    before();
+    return hostName;
+  }
+
+  public Proxy toProxyAddress() {
+    before();
+    final InetSocketAddress address = new InetSocketAddress(getHostName(), getPort());
+    return new Proxy(Proxy.Type.HTTP, address);
+  }
+
+  public SelfSignedCertificate getSelfSignedCertificate() {
+    return selfSignedCertificate;
+  }
+
+  public HttpUrl url(String path) {
+    if (path.startsWith("/")) {
+      path = path.substring(1);
+    }
+    final String schema = ssl ? "https" : "http";
+    return HttpUrl.parse(schema + "://" + getHostName() + ":" + getPort() + "/" + path);
+  }
+
+  public RecordedRequest takeRequest() throws InterruptedException {
+    return requestQueue.take();
+  }
+
+  public RecordedRequest takeRequest(long timeout, TimeUnit unit) throws InterruptedException {
+    return requestQueue.poll(timeout, unit);
+  }
+
+  public int getRequestCount() {
+    return requestCount.get();
+  }
+
+  public void useHttps() {
+    this.ssl = true;
+  }
+
+  public void enqueue(MockResponse response) {
+    if (dispatcher instanceof QueueDispatcher) {
+      ((QueueDispatcher) dispatcher).enqueueResponse(response);
+    } else {
+      throw new IllegalStateException("Dispatcher is not a QueueDispatcher");
+    }
+  }
+
+  public void addListener(MockWebServerListener listener) {
+    listeners.add(listener);
+  }
+
+  public void setDispatcher(Dispatcher dispatcher) {
+    this.dispatcher = dispatcher;
+  }
+
+  public void setProtocols(List<Protocol> protocols) {
+    this.protocols = protocols;
+  }
+
+  /**
+   * Enables or disables HTTP/2 over cleartext (h2c). Enabled by default, matching Vert.x's
+   * own default. Set to {@code false} for tests that use HTTP clients (such as the JDK
+   * HttpClient) which probe for {@code Upgrade: h2c} — accepting the upgrade can lead to
+   * non-deterministic HTTP/2 framing behaviour on large responses.
+   */
+  public void setHttp2ClearTextEnabled(boolean http2ClearTextEnabled) {
+    this.http2ClearTextEnabled = http2ClearTextEnabled;
+  }
+
+  /**
+   * Returns the MockWebServer's recorded-traffic state to initial:
+   * <ul>
+   * <li>Clearing the request count.</li>
+   * <li>Clearing the request queue.</li>
+   * </ul>
+   *
+   * <p>
+   * This is intentionally non-destructive w.r.t. the running HTTP server, the configured
+   * {@link Dispatcher}, the listener list, the SSL/TLS state, the negotiated port, and the
+   * selected protocols. It is safe to call on a started server mid-life; callers that need
+   * a different dispatcher or expectation set must install those themselves
+   * ({@link #setDispatcher(Dispatcher)}).
+   */
+  public final void reset() {
+    requestCount.set(0);
+    requestQueue.clear();
+  }
+
+  private SelfSignedCertificate generateSelfSignedCertificate() {
+    try {
+      KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+      keyGen.initialize(2048);
+      KeyPair keyPair = keyGen.generateKeyPair();
+
+      X500Name name = new X500Name("CN=localhost");
+      BigInteger serialNumber = BigInteger.valueOf(System.currentTimeMillis());
+      Date validFrom = Date.from(Instant.now());
+      Date validUntil = Date.from(Instant.now().plus(365, ChronoUnit.DAYS));
+
+      JcaX509v3CertificateBuilder builder = new JcaX509v3CertificateBuilder(
+          name, serialNumber, validFrom, validUntil, name, keyPair.getPublic());
+      builder.addExtension(Extension.subjectAlternativeName, false,
+          new GeneralNames(new GeneralName[] {
+              new GeneralName(GeneralName.dNSName, "localhost"),
+              new GeneralName(GeneralName.iPAddress, "127.0.0.1")
+          }));
+
+      ContentSigner signer = new JcaContentSignerBuilder("SHA256WithRSA").build(keyPair.getPrivate());
+      X509CertificateHolder certHolder = builder.build(signer);
+      X509Certificate cert = new JcaX509CertificateConverter().getCertificate(certHolder);
+
+      File certTempFile = File.createTempFile("mockwebserver-cert-", ".pem");
+      File keyTempFile = File.createTempFile("mockwebserver-key-", ".pem");
+      certTempFile.deleteOnExit();
+      keyTempFile.deleteOnExit();
+
+      try (JcaPEMWriter certWriter = new JcaPEMWriter(new FileWriter(certTempFile));
+          JcaPEMWriter keyWriter = new JcaPEMWriter(new FileWriter(keyTempFile))) {
+        certWriter.writeObject(cert);
+        keyWriter.writeObject(keyPair.getPrivate());
+      }
+
+      return new SelfSignedCertificate() {
+        @Override
+        public String certificatePath() {
+          return certTempFile.getAbsolutePath();
+        }
+
+        @Override
+        public String privateKeyPath() {
+          return keyTempFile.getAbsolutePath();
+        }
+
+        @Override
+        public PemKeyCertOptions keyCertOptions() {
+          return new PemKeyCertOptions()
+              .setKeyPath(keyTempFile.getAbsolutePath())
+              .setCertPath(certTempFile.getAbsolutePath());
+        }
+
+        @Override
+        public PemTrustOptions trustOptions() {
+          return new PemTrustOptions().addCertPath(certTempFile.getAbsolutePath());
+        }
+
+        @Override
+        public void delete() {
+          try {
+            Files.deleteIfExists(certTempFile.toPath());
+          } catch (IOException e) {
+            logger.log(Level.WARNING, "Failed to delete temp cert file: " + certTempFile, e);
+          }
+          try {
+            Files.deleteIfExists(keyTempFile.toPath());
+          } catch (IOException e) {
+            logger.log(Level.WARNING, "Failed to delete temp key file: " + keyTempFile, e);
+          }
+        }
+      };
+    } catch (Exception e) {
+      throw new IllegalStateException("Failed to generate self-signed certificate with SANs", e);
+    }
+  }
+
+  private static <T> T await(Future<T> vertxFuture, String errorMessage) {
+    final CompletableFuture<T> future = new CompletableFuture<>();
+    vertxFuture.onComplete(r -> {
+      if (r.succeeded()) {
+        future.complete(r.result());
+      } else {
+        future.completeExceptionally(r.cause());
+      }
+    });
+    try {
+      return future.get(10, TimeUnit.SECONDS);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException(e);
+    } catch (ExecutionException | TimeoutException e) {
+      throw new IllegalStateException(errorMessage, e);
+    }
+  }
+
+  private void info(String log, String... parameters) {
+    if (logger.isLoggable(Level.INFO)) {
+      final String formatMessage = "%s " + log;
+      final String[] allParams = Arrays.copyOf(new String[] { toString() }, parameters.length + 1);
+      System.arraycopy(parameters, 0, allParams, 1, parameters.length);
+      logger.info(String.format(formatMessage, allParams));
+    }
+  }
+
+  @Override
+  public String toString() {
+    return "MockWebServer[" + getPort() + "]";
+  }
+}

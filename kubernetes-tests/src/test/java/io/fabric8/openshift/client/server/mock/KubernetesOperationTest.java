@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,22 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.openshift.client.server.mock;
 
 import io.fabric8.kubernetes.api.model.APIGroupListBuilder;
 import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.ReplicationControllerBuilder;
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.openshift.api.model.BuildConfigBuilder;
 import io.fabric8.openshift.client.OpenShiftClient;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class KubernetesOperationTest {
 
-  OpenShiftMockServer server;
+  KubernetesMockServer server;
   OpenShiftClient client;
 
   @Test
@@ -37,10 +38,10 @@ class KubernetesOperationTest {
         .andReturn(200, new ReplicationControllerBuilder().build()).once();
     server.expect().withPath("/api/v1/namespaces/test/pods/pod1").andReturn(200, new PodBuilder().build()).once();
 
-    boolean deleted = client.replicationControllers().withName("rc1").cascading(false).delete().size() == 1;
+    boolean deleted = client.replicationControllers().withName("rc1").cascading(false).withGracePeriod(0).delete().size() == 1;
     assertTrue(deleted);
 
-    deleted = client.pods().withName("pod1").cascading(false).delete().size() == 1;
+    deleted = client.pods().withName("pod1").cascading(false).withGracePeriod(0).delete().size() == 1;
     assertTrue(deleted);
   }
 
@@ -63,18 +64,18 @@ class KubernetesOperationTest {
         .andReturn(200, new BuildConfigBuilder().build()).once();
     server.expect().withPath("/api/v1/namespaces/test/pods/pod1").andReturn(200, new PodBuilder().build()).once();
 
-    boolean deleted = client.replicationControllers().withName("rc1").cascading(false).delete().size() == 1;
+    boolean deleted = client.replicationControllers().withName("rc1").cascading(false).withGracePeriod(0).delete().size() == 1;
     assertTrue(deleted);
 
-    deleted = client.pods().withName("pod1").cascading(false).delete().size() == 1;
+    deleted = client.pods().withName("pod1").cascading(false).withGracePeriod(0).delete().size() == 1;
     assertTrue(deleted);
 
     OpenShiftClient oclient = client.adapt(OpenShiftClient.class);
 
-    deleted = oclient.buildConfigs().withName("bc1").cascading(false).delete().size() == 1;
+    deleted = oclient.buildConfigs().withName("bc1").cascading(false).withGracePeriod(0).delete().size() == 1;
     assertTrue(deleted);
 
-    deleted = oclient.pods().withName("pod1").cascading(false).delete().size() == 1;
+    deleted = oclient.pods().withName("pod1").cascading(false).withGracePeriod(0).delete().size() == 1;
     assertTrue(deleted);
   }
 

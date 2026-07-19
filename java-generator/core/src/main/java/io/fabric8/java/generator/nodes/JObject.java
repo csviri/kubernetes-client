@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,7 +22,6 @@ import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.PackageDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
-import com.github.javaparser.ast.body.EnumDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.VariableDeclarator;
@@ -39,14 +38,17 @@ import io.fabric8.kubernetes.client.utils.Utils;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static io.fabric8.java.generator.nodes.JPrimitiveNameAndType.DATETIME_NAME;
+import static io.fabric8.java.generator.nodes.JPrimitiveNameAndType.INT_OR_STRING;
+
 public class JObject extends AbstractJSONSchema2Pojo implements JObjectExtraAnnotations {
 
   public static final String DEPRECATED_FIELD_MARKER = "deprecated";
-  private final String type;
-  private final String className;
-  private final String pkg;
-  private final Map<String, AbstractJSONSchema2Pojo> fields;
-  private final Set<String> required;
+  protected final String type;
+  protected final String className;
+  protected final String pkg;
+  protected final Map<String, AbstractJSONSchema2Pojo> fields;
+  protected final Set<String> required;
   private final Set<String> deprecated = new HashSet<>();
 
   private final boolean preserveUnknownFields;
@@ -130,16 +132,16 @@ public class JObject extends AbstractJSONSchema2Pojo implements JObjectExtraAnno
 
   @Override
   public String getType() {
-    return this.type;
+    return config.getExistingJavaTypes().getOrDefault(this.type, this.type);
   }
 
   private String getSortedFieldsAsParam(Set<String> list) {
-    List<String> sortedFields = list.stream().map(AbstractJSONSchema2Pojo::escapeQuotes).sorted().collect(Collectors.toList());
+    List<String> sortedFields = list.stream().map(StringEscapeUtils::escapeJava).sorted().collect(Collectors.toList());
 
     StringBuilder sb = new StringBuilder();
     sb.append("{");
     while (!sortedFields.isEmpty()) {
-      sb.append("\"" + sortedFields.remove(0) + "\"");
+      sb.append("\"").append(sortedFields.remove(0)).append("\"");
       if (!sortedFields.isEmpty()) {
         sb.append(",");
       }
@@ -150,6 +152,9 @@ public class JObject extends AbstractJSONSchema2Pojo implements JObjectExtraAnno
 
   @Override
   public GeneratorResult generateJava() {
+    if (config.getExistingJavaTypes().containsKey(this.type)) {
+      return new GeneratorResult(Collections.emptyList());
+    }
     CompilationUnit cu = new CompilationUnit();
     if (!this.pkg.isEmpty()) {
       cu.setPackageDeclaration(new PackageDeclaration(new Name(this.pkg)));
@@ -182,6 +187,14 @@ public class JObject extends AbstractJSONSchema2Pojo implements JObjectExtraAnno
 
     clz.addImplementedType(new ClassOrInterfaceType(null, "io.fabric8.kubernetes.api.model.KubernetesResource"));
 
+    List<GeneratorResult.ClassResult> buffer = generateJavaFields(clz);
+
+    buffer.add(new GeneratorResult.ClassResult(this.className, cu));
+
+    return new GeneratorResult(buffer);
+  }
+
+  protected List<GeneratorResult.ClassResult> generateJavaFields(ClassOrInterfaceDeclaration clz) {
     List<GeneratorResult.ClassResult> buffer = new ArrayList<>(this.fields.size() + 1);
 
     List<String> sortedKeys = this.fields.keySet().stream().sorted().collect(Collectors.toList());
@@ -195,16 +208,12 @@ public class JObject extends AbstractJSONSchema2Pojo implements JObjectExtraAnno
       // For now the inner types are only for enums
       boolean isEnum = !gr.getInnerClasses().isEmpty();
       if (isEnum) {
-        for (GeneratorResult.ClassResult enumCR : gr.getInnerClasses()) {
-          Optional<EnumDeclaration> ed = enumCR.getEnumByName(enumCR.getName());
-          if (ed.isPresent()) {
-            clz.addMember(ed.get());
-          }
-        }
+        gr.getInnerClasses()
+            .forEach(enumCR -> enumCR.getEnumByName(enumCR.getName()).ifPresent(clz::addMember));
       }
       buffer.addAll(gr.getTopLevelClasses());
 
-      String originalFieldName = AbstractJSONSchema2Pojo.escapeQuotes(k);
+      String originalFieldName = StringEscapeUtils.escapeJava(k);
       String fieldName = AbstractJSONSchema2Pojo.sanitizeString(k);
       String fieldType = prop.getType();
 
@@ -214,6 +223,19 @@ public class JObject extends AbstractJSONSchema2Pojo implements JObjectExtraAnno
             new SingleMemberAnnotationExpr(
                 new Name("com.fasterxml.jackson.annotation.JsonProperty"),
                 new StringLiteralExpr(originalFieldName)));
+
+        MethodDeclaration fieldGetter = objField.createGetter();
+        MethodDeclaration fieldSetter = objField.createSetter();
+
+        if (prop.getClassType().equals(DATETIME_NAME)) {
+          final String jsonFormat = "com.fasterxml.jackson.annotation.JsonFormat";
+          fieldGetter.addAnnotation(new SingleMemberAnnotationExpr(
+              new Name(jsonFormat),
+              new NameExpr("shape = " + jsonFormat + ".Shape.STRING, pattern = \"" + config.getSerDatetimeFormat() + "\"")));
+          fieldSetter.addAnnotation(new SingleMemberAnnotationExpr(
+              new Name(jsonFormat),
+              new NameExpr("shape = " + jsonFormat + ".Shape.STRING, pattern = \"" + config.getDeserDatetimeFormat() + "\"")));
+        }
 
         if (isRequired) {
           objField.addAnnotation("io.fabric8.generator.annotation.Required");
@@ -237,11 +259,8 @@ public class JObject extends AbstractJSONSchema2Pojo implements JObjectExtraAnno
                   new StringLiteralExpr(StringEscapeUtils.escapeJava(prop.getPattern()))));
         }
 
-        objField.createGetter();
-        objField.createSetter();
-
         if (Utils.isNotNullOrEmpty(prop.getDescription())) {
-          objField.setJavadocComment(prop.getDescription().replace("*/", "&#042;&#047;"));
+          objField.setJavadocComment(sanitizeJavadoc(prop.getDescription()));
 
           objField.addAnnotation(
               new SingleMemberAnnotationExpr(
@@ -281,7 +300,9 @@ public class JObject extends AbstractJSONSchema2Pojo implements JObjectExtraAnno
                     "io.fabric8.kubernetes.client.utils.Serialization.unmarshal("
                         + "\"" + StringEscapeUtils.escapeJava(Serialization.asJson(prop.getDefaultValue())) + "\""
                         + ", "
-                        + prop.getClassType() + ".class"
+                        + "new com.fasterxml.jackson.core.type.TypeReference<"
+                        + prop.getType()
+                        + ">() {}"
                         + ")"));
           }
         }
@@ -296,7 +317,7 @@ public class JObject extends AbstractJSONSchema2Pojo implements JObjectExtraAnno
       }
     }
 
-    if (this.preserveUnknownFields) {
+    if (this.preserveUnknownFields || config.isAlwaysPreserveUnknown()) {
       ClassOrInterfaceType mapType = new ClassOrInterfaceType()
           .setName(Keywords.JAVA_UTIL_MAP)
           .setTypeArguments(
@@ -326,10 +347,7 @@ public class JObject extends AbstractJSONSchema2Pojo implements JObjectExtraAnno
       additionalSetter
           .setBody(new BlockStmt().addStatement(new NameExpr("this." + Keywords.ADDITIONAL_PROPERTIES + ".put(key, value)")));
     }
-
-    buffer.add(new GeneratorResult.ClassResult(this.className, cu));
-
-    return new GeneratorResult(buffer);
+    return buffer;
   }
 
   /**
@@ -345,8 +363,18 @@ public class JObject extends AbstractJSONSchema2Pojo implements JObjectExtraAnno
         return new LongLiteralExpr(value + "L");
       } else if (prop.getClassType().equals("Float") && prop.getDefaultValue().isFloatingPointNumber()) {
         return new DoubleLiteralExpr(value + "f");
+      } else if (prop.getClassType().equals("Double") && prop.getDefaultValue().isNumber()) {
+        return new DoubleLiteralExpr(value + "d");
       } else if (prop.getClassType().equals("Boolean") && prop.getDefaultValue().isBoolean()) {
         return new BooleanLiteralExpr(prop.getDefaultValue().booleanValue());
+      } else if (prop.getClassType().equals(DATETIME_NAME) && prop.getDefaultValue().isTextual()) {
+        return new NameExpr(DATETIME_NAME + ".parse(" + prop.getDefaultValue()
+            + ", java.time.format.DateTimeFormatter.ofPattern(\"" + config.getDeserDatetimeFormat() + "\"))");
+      } else if (prop.getClassType().equals(INT_OR_STRING.getName())) {
+        return (prop.getDefaultValue().isInt())
+            ? new NameExpr("new " + INT_OR_STRING.getName() + "(" + prop.getDefaultValue().intValue() + ")")
+            : new NameExpr("new " + INT_OR_STRING.getName() + "(\""
+                + StringEscapeUtils.escapeJava(prop.getDefaultValue().asText()) + "\")");
       } else {
         return new NameExpr(value);
       }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.examples;
 
 import io.fabric8.kubernetes.api.model.Pod;
@@ -65,6 +64,9 @@ public class PortForwardExample {
       Thread.sleep(60 * 1000L);
       logger.info("Closing forwarded port");
       portForward.close();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      logger.error("Exception occurred: {}", e.getMessage(), e);
     } catch (Exception e) {
       logger.error("Exception occurred: {}", e.getMessage(), e);
     }

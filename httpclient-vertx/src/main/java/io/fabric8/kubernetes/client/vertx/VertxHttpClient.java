@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,18 +35,31 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.fabric8.kubernetes.client.vertx.VertxHttpRequest.toHeadersMap;
 
 public class VertxHttpClient<F extends io.fabric8.kubernetes.client.http.HttpClient.Factory>
     extends StandardHttpClient<VertxHttpClient<F>, F, VertxHttpClientBuilder<F>> {
+
   private final Vertx vertx;
   private final HttpClient client;
+  private final boolean closeVertx;
 
-  VertxHttpClient(VertxHttpClientBuilder<F> vertxHttpClientBuilder, HttpClient client) {
-    super(vertxHttpClientBuilder);
+  /**
+   * Create a new VertxHttpClient instance.
+   *
+   * @param vertxHttpClientBuilder the builder that created this client.
+   * @param closed a flag to indicate if the client has been closed.
+   * @param client the Vert.x HttpClient instance (will be closed alongside the client).
+   * @param closeVertx whether the Vert.x instance should be closed when the client is closed.
+   */
+  VertxHttpClient(VertxHttpClientBuilder<F> vertxHttpClientBuilder, AtomicBoolean closed, HttpClient client,
+      boolean closeVertx) {
+    super(vertxHttpClientBuilder, closed);
     this.vertx = vertxHttpClientBuilder.vertx;
     this.client = client;
+    this.closeVertx = closeVertx;
   }
 
   HttpClient getClient() {
@@ -68,9 +81,9 @@ public class VertxHttpClient<F extends io.fabric8.kubernetes.client.http.HttpCli
       options.setTimeout(request.getTimeout().toMillis());
     }
 
-    request.headers().entrySet().stream()
+    request.headers().entrySet()
         .forEach(e -> e.getValue().stream().forEach(v -> options.addHeader(e.getKey(), v)));
-    options.setAbsoluteURI(request.uri().toString());
+    options.setAbsoluteURI(WebSocket.toWebSocketUri(request.uri()).toString());
 
     CompletableFuture<WebSocketResponse> response = new CompletableFuture<>();
 
@@ -119,8 +132,14 @@ public class VertxHttpClient<F extends io.fabric8.kubernetes.client.http.HttpCli
   }
 
   @Override
-  public void close() {
-    client.close();
+  public void doClose() {
+    try {
+      client.close();
+    } finally {
+      if (closeVertx) {
+        vertx.close();
+      }
+    }
   }
 
 }

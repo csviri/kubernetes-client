@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,8 +15,9 @@
  */
 package io.fabric8.openshift.client.server.mock;
 
-import io.fabric8.kubernetes.api.model.Duration;
 import io.fabric8.kubernetes.api.model.IntOrString;
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.openshift.api.model.machine.v1beta1.MachineHealthCheck;
 import io.fabric8.openshift.api.model.machine.v1beta1.MachineHealthCheckBuilder;
 import io.fabric8.openshift.api.model.machine.v1beta1.MachineHealthCheckList;
@@ -29,10 +30,10 @@ import java.text.ParseException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class MachineHealthCheckTest {
   private OpenShiftClient client;
-  private OpenShiftMockServer server;
+  KubernetesMockServer server;
 
   @Test
   void get() throws ParseException {
@@ -78,7 +79,8 @@ class MachineHealthCheckTest {
         .once();
 
     // When
-    boolean isDeleted = client.machine().machineHealthChecks().inNamespace("ns1").withName("cluster").delete().size() == 1;
+    boolean isDeleted = client.machine().machineHealthChecks().inNamespace("ns1").withName("cluster").withGracePeriod(0)
+        .delete().size() == 1;
 
     // Then
     assertThat(isDeleted).isTrue();
@@ -92,9 +94,9 @@ class MachineHealthCheckTest {
         .addToMatchLabels("machine.openshift.io/interruptible-instance", "")
         .endSelector()
         .withMaxUnhealthy(new IntOrString("100%"))
-        .withNodeStartupTimeout(Duration.parse("0s"))
+        .withNodeStartupTimeout("0s")
         .addNewUnhealthyCondition()
-        .withTimeout(Duration.parse("0s"))
+        .withTimeout("0s")
         .withStatus("True")
         .withType("Terminating")
         .endUnhealthyCondition()

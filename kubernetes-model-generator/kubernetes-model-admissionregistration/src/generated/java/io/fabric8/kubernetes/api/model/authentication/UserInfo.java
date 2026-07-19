@@ -2,10 +2,10 @@
 package io.fabric8.kubernetes.api.model.authentication;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -13,7 +13,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
@@ -23,19 +26,17 @@ import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "extra",
     "groups",
     "uid",
@@ -43,7 +44,6 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -57,39 +57,36 @@ import lombok.experimental.Accessors;
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class UserInfo implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class UserInfo implements Editable<UserInfoBuilder>, KubernetesResource
 {
 
     @JsonProperty("extra")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private Map<String, ArrayList<String>> extra = new LinkedHashMap<String, ArrayList<String>>();
+    private Map<String, List<String>> extra = new LinkedHashMap<>();
     @JsonProperty("groups")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<java.lang.String> groups = new ArrayList<java.lang.String>();
+    private List<String> groups = new ArrayList<>();
     @JsonProperty("uid")
-    private java.lang.String uid;
+    private String uid;
     @JsonProperty("username")
-    private java.lang.String username;
+    private String username;
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public UserInfo() {
     }
 
-    /**
-     * 
-     * @param uid
-     * @param extra
-     * @param groups
-     * @param username
-     */
-    public UserInfo(Map<String, ArrayList<String>> extra, List<java.lang.String> groups, java.lang.String uid, java.lang.String username) {
+    public UserInfo(Map<String, List<String>> extra, List<String> groups, String uid, String username) {
         super();
         this.extra = extra;
         this.groups = groups;
@@ -98,53 +95,70 @@ public class UserInfo implements KubernetesResource
     }
 
     @JsonProperty("extra")
-    public Map<String, ArrayList<String>> getExtra() {
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public Map<String, List<String>> getExtra() {
         return extra;
     }
 
     @JsonProperty("extra")
-    public void setExtra(Map<String, ArrayList<String>> extra) {
+    public void setExtra(Map<String, List<String>> extra) {
         this.extra = extra;
     }
 
     @JsonProperty("groups")
-    public List<java.lang.String> getGroups() {
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public List<String> getGroups() {
         return groups;
     }
 
     @JsonProperty("groups")
-    public void setGroups(List<java.lang.String> groups) {
+    public void setGroups(List<String> groups) {
         this.groups = groups;
     }
 
     @JsonProperty("uid")
-    public java.lang.String getUid() {
+    public String getUid() {
         return uid;
     }
 
     @JsonProperty("uid")
-    public void setUid(java.lang.String uid) {
+    public void setUid(String uid) {
         this.uid = uid;
     }
 
     @JsonProperty("username")
-    public java.lang.String getUsername() {
+    public String getUsername() {
         return username;
     }
 
     @JsonProperty("username")
-    public void setUsername(java.lang.String username) {
+    public void setUsername(String username) {
         this.username = username;
     }
 
+    @JsonIgnore
+    public UserInfoBuilder edit() {
+        return new UserInfoBuilder(this);
+    }
+
+    @JsonIgnore
+    public UserInfoBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
-    public Map<java.lang.String, Object> getAdditionalProperties() {
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 
     @JsonAnySetter
-    public void setAdditionalProperty(java.lang.String name, Object value) {
+    public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

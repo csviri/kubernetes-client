@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,10 +17,10 @@ package io.fabric8.openclustermanagement.test.operator;
 
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
-import io.fabric8.openclustermanagement.api.model.multiclusterhub.operator.v1.MultiClusterHub;
-import io.fabric8.openclustermanagement.api.model.multiclusterhub.operator.v1.MultiClusterHubBuilder;
-import io.fabric8.openclustermanagement.api.model.multiclusterhub.operator.v1.MultiClusterHubList;
-import io.fabric8.openclustermanagement.api.model.multiclusterhub.operator.v1.MultiClusterHubListBuilder;
+import io.fabric8.openclustermanagement.api.model.operator.v1.MultiClusterHub;
+import io.fabric8.openclustermanagement.api.model.operator.v1.MultiClusterHubBuilder;
+import io.fabric8.openclustermanagement.api.model.operator.v1.MultiClusterHubList;
+import io.fabric8.openclustermanagement.api.model.operator.v1.MultiClusterHubListBuilder;
 import io.fabric8.openclustermanagement.client.OpenClusterManagementClient;
 import org.junit.jupiter.api.Test;
 
@@ -30,8 +30,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @EnableKubernetesMockClient
 class MultiClusterHubTest {
-  private OpenClusterManagementClient client;
-  private KubernetesMockServer server;
+  OpenClusterManagementClient client;
+  KubernetesMockServer server;
 
   @Test
   void get() {

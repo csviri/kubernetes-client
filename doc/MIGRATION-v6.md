@@ -21,6 +21,12 @@
 - [Stream Changes](#stream-changes)
 - [OpenShift Config Model Changes](#openshift-config-model-changes)
 
+> [!NOTE]
+> If you encounter any problems with the following "Migration from 5.x to 6.x" instructions, please let us know by creating an issue in our [GitHub repository](https://github.com/fabric8io/kubernetes-client/issues).
+>
+> We value your feedback and will work to address your issue promptly.
+> Your contribution is essential to improving our documentation, making our migration process smoother for everyone!
+
 ## API/Impl split
 
 This release introduces `kubernetes-client-api` and `openshift-client-api` modules.  You may use them as **compile** dependencies in your application with the respective `kubernetes-client` and `openshift-client` as **runtime** dependencies.  This will keep your compile classpath cleaner of classes and libraries that are not intentionally exposed by the Fabric8 Kubernetes Client.
@@ -57,7 +63,7 @@ To use it, exclude the `kubernetes-httpclient-okhttp` dependency and add the `ku
 ### Package Changes
 
 - Readiness/OpenShiftReadiness moved from client.internal.readiness to client.readiness
-- client.utils classes including Base64, CreateOrReplaceHelper, DeleteOrCreateHelper, OptionalDendencyWrapper, etc. are not in the -api jar, they are still in the -client jar under utils.internal.
+- client.utils classes including Base64, CreateOrReplaceHelper, DeleteOrCreateHelper, OptionalDependencyWrapper, etc. are not in the -api jar, they are still in the -client jar under utils.internal.
 - Some other effectively internal classes in dsl.base and other packages were moved to corresponding internal packages - it is unlikely this will affect you unless you developed a custom extension.  Extension development can now be done exclusively against the api, please see the previous section.
 
 ## Default Maps

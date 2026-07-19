@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.utils;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -27,7 +26,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.KeyDeserializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.SerializationConfig;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.cfg.HandlerInstantiator;
 import com.fasterxml.jackson.databind.cfg.MapperConfig;
 import com.fasterxml.jackson.databind.introspect.Annotated;
@@ -39,6 +40,7 @@ import io.fabric8.kubernetes.api.model.KubernetesResourceList;
 import io.fabric8.kubernetes.api.model.runtime.RawExtension;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.internal.KubernetesDeserializer;
+import io.fabric8.kubernetes.model.jackson.GoCompatibilityModule;
 import io.fabric8.kubernetes.model.jackson.UnmatchedFieldTypeModule;
 import org.snakeyaml.engine.v2.api.Dump;
 import org.snakeyaml.engine.v2.api.DumpSettings;
@@ -68,6 +70,7 @@ public class KubernetesSerialization {
   private final UnmatchedFieldTypeModule unmatchedFieldTypeModule = new UnmatchedFieldTypeModule();
   private KubernetesDeserializer kubernetesDeserializer;
   private final boolean searchClassloaders;
+  private final YamlDumpSettings yamlDumpSettings;
 
   /**
    * Creates a new instance with a fresh ObjectMapper
@@ -80,17 +83,33 @@ public class KubernetesSerialization {
    * Creates a new instance with the given ObjectMapper, which will be configured for use for
    * kubernetes resource serialization / deserialization.
    *
-   * @param searchClassloaders if {@link KubernetesResource} should be automatically discovered via {@link ServiceLoader}
+   * @param mapper the ObjectMapper to use.
+   * @param searchClassloaders if {@link KubernetesResource} should be automatically discovered via {@link ServiceLoader}.
    */
   public KubernetesSerialization(ObjectMapper mapper, boolean searchClassloaders) {
+    this(mapper, searchClassloaders, new YamlDumpSettingsBuilder().build());
+  }
+
+  /**
+   * Creates a new instance with the given ObjectMapper, which will be configured for use for
+   * kubernetes resource serialization / deserialization.
+   *
+   * @param mapper the ObjectMapper to use.
+   * @param searchClassloaders if {@link KubernetesResource} should be automatically discovered via {@link ServiceLoader}.
+   * @param yamlDumpSettings configuration for YAML serialization.
+   */
+  public KubernetesSerialization(ObjectMapper mapper, boolean searchClassloaders, YamlDumpSettings yamlDumpSettings) {
     this.mapper = mapper;
     this.searchClassloaders = searchClassloaders;
+    this.yamlDumpSettings = yamlDumpSettings;
     configureMapper(mapper);
   }
 
   protected void configureMapper(ObjectMapper mapper) {
-    mapper.registerModules(new JavaTimeModule(), unmatchedFieldTypeModule);
+    mapper.registerModules(new JavaTimeModule(), new GoCompatibilityModule(), unmatchedFieldTypeModule);
     mapper.disable(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE);
+    mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    mapper.disable(SerializationFeature.WRITE_DURATIONS_AS_TIMESTAMPS);
     // omit null fields, but keep null map values
     mapper.setDefaultPropertyInclusion(JsonInclude.Value.construct(Include.NON_NULL, Include.ALWAYS));
     HandlerInstantiator instanciator = mapper.getDeserializationConfig().getHandlerInstantiator();
@@ -204,7 +223,7 @@ public class KubernetesSerialization {
           }
         }
         org.snakeyaml.engine.v2.nodes.Node nodeKey = representData(key);
-        quote = true;
+        quote = !yamlDumpSettings.isMinQuotes();
         return new NodeTuple(nodeKey, representData(entry.getValue()));
       }
 
@@ -331,6 +350,22 @@ public class KubernetesSerialization {
   }
 
   /**
+   * Unmarshals a {@link String}
+   *
+   * @param str The {@link String}.
+   * @param type The target type reference, supporting generic types.
+   * @param <T> template argument denoting type
+   * @return returns de-serialized object
+   */
+  public <T> T unmarshal(String str, TypeReference<T> type) {
+    try (InputStream is = new ByteArrayInputStream(str.getBytes(StandardCharsets.UTF_8))) {
+      return unmarshal(is, type);
+    } catch (IOException e) {
+      throw KubernetesClientException.launderThrowable(e);
+    }
+  }
+
+  /**
    * Unmarshals an {@link InputStream}.
    *
    * @param is The {@link InputStream}.
@@ -351,7 +386,7 @@ public class KubernetesSerialization {
    * Create a copy of the resource via serialization.
    *
    * @return a deep clone of the resource
-   * @throws IllegalArgumentException if the cloning cannot be performed
+   * @throws IllegalStateException if the cloning cannot be performed
    */
   public <T> T clone(T resource) {
     // if full serialization seems too expensive, there is also
@@ -368,8 +403,8 @@ public class KubernetesSerialization {
     return mapper.convertValue(value, type);
   }
 
-  public Type constructParametricType(Class<?> parameterizedClass, Class<?> parameterType) {
-    return mapper.getTypeFactory().constructParametricType(parameterizedClass, parameterType);
+  public Type constructParametricType(Class<?> parameterizedClass, Class<?>... parameterClasses) {
+    return mapper.getTypeFactory().constructParametricType(parameterizedClass, parameterClasses);
   }
 
   public Class<? extends KubernetesResource> getRegisteredKubernetesResource(String apiVersion, String kind) {
@@ -408,6 +443,15 @@ public class KubernetesSerialization {
       return input; // valid json
     } catch (JsonProcessingException e) {
       return asJson(unmarshal(input, JsonNode.class));
+    }
+  }
+
+  public void mergePatch(Object updatable, String patch) {
+    ObjectReader reader = mapper.readerForUpdating(updatable);
+    try {
+      reader.readValue(patch);
+    } catch (JsonProcessingException e) {
+      throw KubernetesClientException.launderThrowable(e);
     }
   }
 

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,50 +13,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.vertx;
 
 import io.fabric8.kubernetes.client.Config;
 import io.vertx.core.Vertx;
-import io.vertx.core.VertxOptions;
-import io.vertx.core.file.FileSystemOptions;
 import io.vertx.ext.web.client.WebClientOptions;
-
-import static io.vertx.core.spi.resolver.ResolverProvider.DISABLE_DNS_RESOLVER_PROP_NAME;
 
 public class VertxHttpClientFactory implements io.fabric8.kubernetes.client.http.HttpClient.Factory {
 
-  private final Vertx vertx;
+  final Vertx sharedVertx;
+  private volatile TlsWarmup tlsWarmup = TlsWarmup.CONTEXT;
+
+  @Override
+  public int priority() {
+    return -1;
+  }
 
   public VertxHttpClientFactory() {
-    this.vertx = createVertxInstance();
+    this(null);
+  }
+
+  /**
+   * Create a new instance of the factory that will reuse the provided {@link Vertx} instance.
+   * <p>
+   * It's the user's responsibility to manage the lifecycle of the provided Vert.x instance.
+   * Operations such as close, and so on are left on hands of the user.
+   *
+   * @param sharedVertx the Vertx instance to use.
+   */
+  public VertxHttpClientFactory(Vertx sharedVertx) {
+    this.sharedVertx = sharedVertx;
   }
 
   @Override
   public VertxHttpClientBuilder<VertxHttpClientFactory> newBuilder() {
-    return new VertxHttpClientBuilder<>(this, vertx);
-  }
-
-  private static synchronized Vertx createVertxInstance() {
-    // We must disable the async DNS resolver as it can cause issues when resolving the Vault instance.
-    // This is done using the DISABLE_DNS_RESOLVER_PROP_NAME system property.
-    // The DNS resolver used by vert.x is configured during the (synchronous) initialization.
-    // So, we just need to disable the async resolver around the Vert.x instance creation.
-    final String originalValue = System.getProperty(DISABLE_DNS_RESOLVER_PROP_NAME);
-    Vertx vertx;
-    try {
-      System.setProperty(DISABLE_DNS_RESOLVER_PROP_NAME, "true");
-      vertx = Vertx.vertx(new VertxOptions()
-          .setFileSystemOptions(new FileSystemOptions().setFileCachingEnabled(false).setClassPathResolvingEnabled(false)));
-    } finally {
-      // Restore the original value
-      if (originalValue == null) {
-        System.clearProperty(DISABLE_DNS_RESOLVER_PROP_NAME);
-      } else {
-        System.setProperty(DISABLE_DNS_RESOLVER_PROP_NAME, originalValue);
-      }
-    }
-    return vertx;
+    return new VertxHttpClientBuilder<>(this, sharedVertx);
   }
 
   /**
@@ -64,5 +55,24 @@ public class VertxHttpClientFactory implements io.fabric8.kubernetes.client.http
    */
   protected void additionalConfig(WebClientOptions options) {
     // no default implementation
+  }
+
+  /**
+   * Returns the configured {@link TlsWarmup} mode (never {@code null}).
+   *
+   * @return the TLS warm-up mode applied when building TLS-enabled clients
+   */
+  public TlsWarmup getTlsWarmup() {
+    return tlsWarmup;
+  }
+
+  /**
+   * Configures how the TLS stack is warmed up off the Vert.x event loop when a TLS-enabled client
+   * is built. See {@link TlsWarmup} for the trade-offs of each mode.
+   *
+   * @param tlsWarmup the warm-up mode; {@code null} resets it to the default {@link TlsWarmup#CONTEXT}
+   */
+  public void setTlsWarmup(TlsWarmup tlsWarmup) {
+    this.tlsWarmup = tlsWarmup == null ? TlsWarmup.CONTEXT : tlsWarmup;
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,8 +23,8 @@ import io.fabric8.kubernetes.client.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.HttpURLConnection;
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
@@ -41,15 +41,15 @@ import java.util.function.LongSupplier;
 
 public class LeaderElector {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(LeaderElector.class);
+  private static final Logger logger = LoggerFactory.getLogger(LeaderElector.class);
 
   protected static final Double JITTER_FACTOR = 1.2;
 
-  private KubernetesClient kubernetesClient;
-  private LeaderElectionConfig leaderElectionConfig;
+  private final KubernetesClient kubernetesClient;
+  private final LeaderElectionConfig leaderElectionConfig;
   private final AtomicReference<LeaderElectionRecord> observedRecord = new AtomicReference<>();
-  private final AtomicReference<LocalDateTime> observedTime = new AtomicReference<>();
   private final Executor executor;
+  private boolean started;
   private boolean stopped;
 
   public LeaderElector(KubernetesClient kubernetesClient, LeaderElectionConfig leaderElectionConfig, Executor executor) {
@@ -59,7 +59,7 @@ public class LeaderElector {
   }
 
   /**
-   * Starts the leader election loop
+   * Starts the leader election loop. May only be run once.
    * <p>
    * {@link #start()} is preferred as it does not hold a thread.
    */
@@ -71,18 +71,24 @@ public class LeaderElector {
       acquire.cancel(true);
       Thread.currentThread().interrupt();
     } catch (ExecutionException e) {
-      LOGGER.error("Exception during leader election", e);
+      logger.error("Exception during leader election", e);
     }
   }
 
   /**
    * Start a leader elector. The future may be cancelled to stop
-   * the leader elector.
+   * the leader elector. May only be run once.
    *
    * @return the future
    */
   public CompletableFuture<?> start() {
-    LOGGER.debug("Leader election started");
+    synchronized (this) {
+      if (started || stopped) {
+        throw new IllegalStateException("LeaderElector may only be used once, please create another instance");
+      }
+      started = true;
+    }
+    logger.debug("Leader election started");
     CompletableFuture<Void> result = new CompletableFuture<>();
 
     CompletableFuture<?> acquireFuture = acquire();
@@ -101,7 +107,7 @@ public class LeaderElector {
         });
       } else {
         if (!(t instanceof CancellationException)) {
-          LOGGER.error("Exception during leader election", t);
+          logger.error("Exception during leader election", t);
         }
         // there's a possibility that we'll obtain the lock, but get cancelled
         // before completing the future
@@ -121,66 +127,78 @@ public class LeaderElector {
       return; // not leading
     }
     if (leaderElectionConfig.isReleaseOnCancel()) {
-      release();
-    } else {
-      leaderElectionConfig.getLeaderCallbacks().onStopLeading();
+      try {
+        if (release()) {
+          return;
+        }
+      } catch (KubernetesClientException e) {
+        final String lockDescription = leaderElectionConfig.getLock().describe();
+        if (e.getCode() != HttpURLConnection.HTTP_CONFLICT) {
+          logger.error("Exception occurred while releasing lock '{}' on cancel", lockDescription, e);
+        } else {
+          logger.debug("Leadership was likely already lost '{}'", lockDescription, e);
+        }
+      }
     }
+    leaderElectionConfig.getLeaderCallbacks().onStopLeading();
   }
 
   /**
    * Release the leadership if currently held. If not cancelled, the elector will
    * continue to try and re-acquire the lock.
+   *
+   * @return true if the lock was successfully released. false if there is no lock, or this is not the leader
    */
-  public synchronized void release() {
+  public synchronized boolean release() {
     LeaderElectionRecord current = leaderElectionConfig.getLock().get(kubernetesClient);
     if (current == null || !isLeader(current)) {
-      return; // lost leadership already
+      return false; // lost leadership already
     }
-    try {
-      ZonedDateTime now = now();
-      final LeaderElectionRecord newLeaderElectionRecord = new LeaderElectionRecord(
-          "",
-          Duration.ofSeconds(1),
-          now,
-          now,
-          current.getLeaderTransitions());
+    ZonedDateTime now = now();
+    final LeaderElectionRecord newLeaderElectionRecord = new LeaderElectionRecord(
+        null,
+        Duration.ofSeconds(1),
+        now,
+        now,
+        current.getLeaderTransitions());
 
-      leaderElectionConfig.getLock().update(kubernetesClient, newLeaderElectionRecord);
-      updateObserved(newLeaderElectionRecord);
-    } catch (KubernetesClientException e) {
-      final String lockDescription = leaderElectionConfig.getLock().describe();
-      LOGGER.error("Exception occurred while releasing lock '{}'", lockDescription, e);
-    }
+    leaderElectionConfig.getLock().update(kubernetesClient, newLeaderElectionRecord);
+    updateObserved(newLeaderElectionRecord);
+    return true;
   }
 
   private CompletableFuture<Void> acquire() {
     final String lockDescription = leaderElectionConfig.getLock().describe();
-    if (LOGGER.isDebugEnabled()) {
-      LOGGER.debug("Attempting to acquire leader lease '{}'...", lockDescription);
+    if (logger.isDebugEnabled()) {
+      logger.debug("Attempting to acquire leader lease '{}'...", lockDescription);
     }
     return loop(completion -> {
       try {
         if (tryAcquireOrRenew()) {
           completion.complete(null);
-          if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("Acquired lease '{}'", lockDescription);
+          if (logger.isDebugEnabled()) {
+            logger.debug("Acquired lease '{}'", lockDescription);
           }
-        } else if (LOGGER.isDebugEnabled()) {
-          LOGGER.debug("Failed to acquire lease '{}' retrying...", lockDescription);
+        } else if (logger.isDebugEnabled()) {
+          logger.debug("Failed to acquire lease '{}' retrying...", lockDescription);
         }
       } catch (KubernetesClientException exception) {
-        LOGGER.error("Exception occurred while acquiring lock '{} retrying...'", lockDescription, exception);
+        if (exception.getCode() == HttpURLConnection.HTTP_CONFLICT) {
+          logger.debug("Conflict while acquiring lock '{} retrying...'", lockDescription, exception);
+        } else {
+          logger.warn("Exception occurred while acquiring lock '{} retrying...'", lockDescription, exception);
+        }
       }
     }, () -> jitter(leaderElectionConfig.getRetryPeriod(), JITTER_FACTOR).toMillis(), executor);
   }
 
   private CompletableFuture<Void> renewWithTimeout() {
     final String lockDescription = leaderElectionConfig.getLock().describe();
-    LOGGER.debug("Attempting to renew leader lease '{}'...", lockDescription);
+    logger.debug("Attempting to renew leader lease '{}'...", lockDescription);
     AtomicLong renewBy = new AtomicLong(System.currentTimeMillis() + leaderElectionConfig.getRenewDeadline().toMillis());
     return loop(completion -> {
       if (System.currentTimeMillis() > renewBy.get()) {
-        LOGGER.debug("Renew deadline reached after {} seconds while renewing lock {}",
+        logger.debug("Renew deadline reached after {} seconds while renewing lock {}",
             leaderElectionConfig.getRenewDeadline().get(ChronoUnit.SECONDS), lockDescription);
         completion.complete(null);
         return;
@@ -193,7 +211,9 @@ public class LeaderElector {
           completion.complete(null);
         }
       } catch (KubernetesClientException exception) {
-        LOGGER.debug("Exception occurred while renewing lock: {}", exception.getMessage(), exception);
+        // this is always a warning as conflict is not expected for renewal, however it is possible
+        // should some other actor make an unrelated change to the lock
+        logger.warn("Exception occurred while acquiring lock '{} retrying...'", lockDescription, exception);
       }
     }, () -> leaderElectionConfig.getRetryPeriod().toMillis(), executor);
   }
@@ -212,11 +232,13 @@ public class LeaderElector {
       updateObserved(newLeaderElectionRecord);
       return true;
     }
-    updateObserved(oldLeaderElectionRecord);
     final boolean isLeader = isLeader(oldLeaderElectionRecord);
-    if (!isLeader && !canBecomeLeader(oldLeaderElectionRecord)) {
-      LOGGER.debug("Lock is held by {} and has not yet expired", oldLeaderElectionRecord.getHolderIdentity());
-      return false;
+    if (!isLeader) {
+      updateObserved(oldLeaderElectionRecord);
+      if (!canBecomeLeader(oldLeaderElectionRecord)) {
+        logger.debug("Lock is held by {} and has not yet expired", oldLeaderElectionRecord.getHolderIdentity());
+        return false;
+      }
     }
     final LeaderElectionRecord newLeaderElectionRecord = new LeaderElectionRecord(
         lock.identity(),
@@ -232,18 +254,17 @@ public class LeaderElector {
   private void updateObserved(LeaderElectionRecord leaderElectionRecord) {
     final LeaderElectionRecord current = observedRecord.getAndSet(leaderElectionRecord);
     if (!Objects.equals(leaderElectionRecord, current)) {
-      observedTime.set(LocalDateTime.now());
       final String currentLeader = current == null ? null : current.getHolderIdentity();
       final String newLeader = leaderElectionRecord.getHolderIdentity();
       if (!Objects.equals(newLeader, currentLeader)) {
-        LOGGER.debug("Leader changed from {} to {}", currentLeader, newLeader);
+        logger.debug("Leader changed from {} to {}", currentLeader, newLeader);
         // this will notify even if the newLeader is null or empty, which is the same behavior as the go client
         // but does not seem entirely correct
         leaderElectionConfig.getLeaderCallbacks().onNewLeader(newLeader);
         if (Objects.equals(currentLeader, leaderElectionConfig.getLock().identity())) {
           leaderElectionConfig.getLeaderCallbacks().onStopLeading();
         } else if (Objects.equals(newLeader, leaderElectionConfig.getLock().identity())) {
-          LOGGER.debug("Successfully Acquired leader lease '{}'", leaderElectionConfig.getLock().describe());
+          logger.debug("Successfully Acquired leader lease '{}'", leaderElectionConfig.getLock().describe());
           leaderElectionConfig.getLeaderCallbacks().onStartLeading();
         }
       }
@@ -256,7 +277,7 @@ public class LeaderElector {
 
   protected final boolean canBecomeLeader(LeaderElectionRecord leaderElectionRecord) {
     return Utils.isNullOrEmpty(leaderElectionRecord.getHolderIdentity())
-        || !leaderElectionRecord.getRenewTime().plus(leaderElectionConfig.getLeaseDuration()).isAfter(now());
+        || now().isAfter(leaderElectionRecord.getRenewTime().plus(leaderElectionRecord.getLeaseDuration()));
   }
 
   /**
@@ -289,6 +310,6 @@ public class LeaderElector {
    */
   protected static Duration jitter(Duration duration, double maxFactor) {
     maxFactor = maxFactor > 0 ? maxFactor : 1.0;
-    return duration.plusMillis(Double.valueOf(duration.toMillis() * Math.random() * maxFactor).longValue());
+    return duration.plusMillis((long) (duration.toMillis() * Math.random() * maxFactor));
   }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,8 @@
 package io.fabric8.openshift.client.server.mock;
 
 import io.fabric8.kubernetes.api.model.HasMetadata;
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.openshift.api.model.monitoring.v1.PrometheusRule;
 import io.fabric8.openshift.api.model.monitoring.v1.PrometheusRuleBuilder;
 import io.fabric8.openshift.api.model.monitoring.v1.PrometheusRuleList;
@@ -30,10 +32,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class PrometheusRuleTest {
 
-  OpenShiftMockServer server;
+  KubernetesMockServer server;
   OpenShiftClient client;
 
   @Test
@@ -106,7 +108,8 @@ class PrometheusRuleTest {
         .once();
 
     // When
-    boolean deleted = client.monitoring().prometheusRules().inNamespace("ns1").withName("foo").delete().size() == 1;
+    boolean deleted = client.monitoring().prometheusRules().inNamespace("ns1").withName("foo").withGracePeriod(0).delete()
+        .size() == 1;
 
     // Then
     assertTrue(deleted);

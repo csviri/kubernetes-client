@@ -21,11 +21,15 @@
   <parent>
     <groupId>io.fabric8</groupId>
     <artifactId>istio-extension-pom</artifactId>
-    <version>6.8-SNAPSHOT</version>
+    <version>999-SNAPSHOT</version>
   </parent>
 
   <artifactId>istio-examples</artifactId>
   <name>Fabric8 :: Istio :: Examples</name>
+
+  <properties>
+    <maven.deploy.skip>true</maven.deploy.skip>
+  </properties>
 
   <dependencies>
     <dependency>

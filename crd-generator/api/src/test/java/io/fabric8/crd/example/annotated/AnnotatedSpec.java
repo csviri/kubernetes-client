@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,15 +15,22 @@
  */
 package io.fabric8.crd.example.annotated;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import io.fabric8.generator.annotation.Default;
 import io.fabric8.generator.annotation.Max;
 import io.fabric8.generator.annotation.Min;
 import io.fabric8.generator.annotation.Nullable;
 import io.fabric8.generator.annotation.Pattern;
 import io.fabric8.generator.annotation.Required;
+import io.fabric8.generator.annotation.ValidationRule;
+import lombok.Data;
 
+import java.time.ZonedDateTime;
+
+@Data
 public class AnnotatedSpec {
   @JsonProperty("from-field")
   @JsonPropertyDescription("from-field-description")
@@ -35,6 +42,9 @@ public class AnnotatedSpec {
   private int max;
   private String singleDigit;
   private String nullable;
+  private String defaultValue;
+  @Default("my-value2")
+  private String defaultValue2;
   @Required
   private boolean emptySetter;
   @Required
@@ -42,11 +52,24 @@ public class AnnotatedSpec {
   private AnnotatedEnum anEnum;
   @javax.validation.constraints.Min(0) // a non-string value attribute
   private int sizedField;
+  private String bool;
+  private String num;
+  private String numInt;
+  private String numFloat;
+  private ZonedDateTime issuedAt;
 
   @JsonIgnore
   private int ignoredFoo;
 
   private boolean ignoredBar;
+
+  @ValidationRule(value = "self.startwith('prefix-')", message = "kubernetesValidationRule must start with prefix 'prefix-'")
+  private String kubernetesValidationRule;
+
+  @ValidationRule("first.rule")
+  @ValidationRule("second.rule")
+  @ValidationRule(value = "third.rule", reason = "FieldValueForbidden")
+  private String kubernetesValidationRules;
 
   @JsonProperty("from-getter")
   @JsonPropertyDescription("from-getter-description")
@@ -84,6 +107,11 @@ public class AnnotatedSpec {
     return null;
   }
 
+  @Default("my-value")
+  public String getDefaultValue() {
+    return "foo";
+  }
+
   @JsonProperty
   public void setEmptySetter(boolean emptySetter) {
     this.emptySetter = emptySetter;
@@ -92,6 +120,31 @@ public class AnnotatedSpec {
   @JsonProperty
   public void setEmptySetter2(boolean emptySetter2) {
     this.emptySetter2 = emptySetter2;
+  }
+
+  @JsonFormat(shape = JsonFormat.Shape.BOOLEAN)
+  public String getBool() {
+    return bool;
+  }
+
+  @JsonFormat(shape = JsonFormat.Shape.NUMBER)
+  public String getNum() {
+    return num;
+  }
+
+  @JsonFormat(shape = JsonFormat.Shape.NUMBER_FLOAT)
+  public String getNumFloat() {
+    return numFloat;
+  }
+
+  @JsonFormat(shape = JsonFormat.Shape.NUMBER_INT)
+  public String getNumInt() {
+    return numInt;
+  }
+
+  @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ssXXX")
+  public java.time.ZonedDateTime getIssuedAt() {
+    return issuedAt;
   }
 
   public enum AnnotatedEnum {
@@ -110,5 +163,21 @@ public class AnnotatedSpec {
     public String getAbbreviation() {
       return abbreviation;
     }
+
+    public static AnnotatedEnum SIM = es;
+
+    public AnotherEnum one = AnotherEnum.ONE;
+
+    public AnotherEnum getOne() {
+      return one;
+    }
+
+    public void setOne(AnotherEnum one) {
+      this.one = one;
+    }
+  }
+
+  public enum AnotherEnum {
+    ONE
   }
 }

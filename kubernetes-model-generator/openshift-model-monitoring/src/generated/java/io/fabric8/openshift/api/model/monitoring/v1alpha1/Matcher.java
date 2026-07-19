@@ -1,8 +1,9 @@
 
 package io.fabric8.openshift.api.model.monitoring.v1alpha1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,7 +11,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
@@ -20,26 +24,27 @@ import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * Matcher defines how to match on alert's labels.
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
+    "matchType",
     "name",
     "regex",
     "value"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -53,11 +58,18 @@ import lombok.experimental.Accessors;
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class Matcher implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class Matcher implements Editable<MatcherBuilder>, KubernetesResource
 {
 
+    @JsonProperty("matchType")
+    private String matchType;
     @JsonProperty("name")
     private String name;
     @JsonProperty("regex")
@@ -65,59 +77,98 @@ public class Matcher implements KubernetesResource
     @JsonProperty("value")
     private String value;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public Matcher() {
     }
 
-    /**
-     * 
-     * @param regex
-     * @param name
-     * @param value
-     */
-    public Matcher(String name, Boolean regex, String value) {
+    public Matcher(String matchType, String name, Boolean regex, String value) {
         super();
+        this.matchType = matchType;
         this.name = name;
         this.regex = regex;
         this.value = value;
     }
 
+    /**
+     * matchType defines the match operation available with AlertManager &gt;= v0.22.0. Takes precedence over Regex (deprecated) if non-empty. Valid values: "=" (equality), "!=" (inequality), "=~" (regex match), "!~" (regex non-match).
+     */
+    @JsonProperty("matchType")
+    public String getMatchType() {
+        return matchType;
+    }
+
+    /**
+     * matchType defines the match operation available with AlertManager &gt;= v0.22.0. Takes precedence over Regex (deprecated) if non-empty. Valid values: "=" (equality), "!=" (inequality), "=~" (regex match), "!~" (regex non-match).
+     */
+    @JsonProperty("matchType")
+    public void setMatchType(String matchType) {
+        this.matchType = matchType;
+    }
+
+    /**
+     * name defines the label to match. This specifies which alert label should be evaluated.
+     */
     @JsonProperty("name")
     public String getName() {
         return name;
     }
 
+    /**
+     * name defines the label to match. This specifies which alert label should be evaluated.
+     */
     @JsonProperty("name")
     public void setName(String name) {
         this.name = name;
     }
 
+    /**
+     * regex defines whether to match on equality (false) or regular-expression (true). Deprecated: for AlertManager &gt;= v0.22.0, `matchType` should be used instead.
+     */
     @JsonProperty("regex")
     public Boolean getRegex() {
         return regex;
     }
 
+    /**
+     * regex defines whether to match on equality (false) or regular-expression (true). Deprecated: for AlertManager &gt;= v0.22.0, `matchType` should be used instead.
+     */
     @JsonProperty("regex")
     public void setRegex(Boolean regex) {
         this.regex = regex;
     }
 
+    /**
+     * value defines the label value to match. This is the expected value for the specified label.
+     */
     @JsonProperty("value")
     public String getValue() {
         return value;
     }
 
+    /**
+     * value defines the label value to match. This is the expected value for the specified label.
+     */
     @JsonProperty("value")
     public void setValue(String value) {
         this.value = value;
     }
 
+    @JsonIgnore
+    public MatcherBuilder edit() {
+        return new MatcherBuilder(this);
+    }
+
+    @JsonIgnore
+    public MatcherBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -125,6 +176,10 @@ public class Matcher implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

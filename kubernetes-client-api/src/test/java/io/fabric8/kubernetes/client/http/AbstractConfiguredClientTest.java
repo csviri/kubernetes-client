@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.http;
 
 import io.fabric8.kubernetes.client.Config;
@@ -23,8 +22,10 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
 public abstract class AbstractConfiguredClientTest {
 
@@ -60,4 +61,12 @@ public abstract class AbstractConfiguredClientTest {
     }
   }
 
+  @Test
+  public void multipleClosure() {
+    final HttpClient client = clientWithDefaultConfiguration();
+    client.close();
+    assertThat(client.isClosed()).isTrue();
+    IntStream.range(0, 10).forEach(i -> client.close());
+    assertThatNoException().isThrownBy(client::close);
+  }
 }

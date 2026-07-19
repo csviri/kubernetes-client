@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,8 @@
 package io.fabric8.kubernetes.api.model.gatewayapi.v1beta1;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.fabric8.kubernetes.api.model.gatewayapi.v1.HTTPRouteRuleBuilder;
+import io.fabric8.kubernetes.api.model.gatewayapi.v1.ParentReferenceBuilder;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;

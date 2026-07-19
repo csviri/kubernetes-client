@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,8 @@ import io.fabric8.kubernetes.api.model.APIResource;
 import io.fabric8.kubernetes.api.model.APIResourceBuilder;
 import io.fabric8.kubernetes.api.model.APIResourceList;
 import io.fabric8.kubernetes.api.model.APIResourceListBuilder;
+import io.fabric8.kubernetes.api.model.NamedContext;
+import io.fabric8.kubernetes.api.model.NamedContextBuilder;
 import io.fabric8.kubernetes.api.model.RootPathsBuilder;
 import io.fabric8.kubernetes.client.Client;
 import io.fabric8.kubernetes.client.Config;
@@ -35,13 +37,11 @@ import io.fabric8.kubernetes.client.utils.ApiVersionUtil;
 import io.fabric8.kubernetes.client.utils.Serialization;
 import io.fabric8.mockwebserver.Context;
 import io.fabric8.mockwebserver.DefaultMockServer;
+import io.fabric8.mockwebserver.MockWebServer;
 import io.fabric8.mockwebserver.ServerRequest;
 import io.fabric8.mockwebserver.ServerResponse;
+import io.fabric8.mockwebserver.http.Dispatcher;
 import io.fabric8.mockwebserver.internal.MockDispatcher;
-import io.fabric8.servicecatalog.client.DefaultServiceCatalogClient;
-import io.fabric8.servicecatalog.client.NamespacedServiceCatalogClient;
-import okhttp3.mockwebserver.Dispatcher;
-import okhttp3.mockwebserver.MockWebServer;
 
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
@@ -52,6 +52,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 public class KubernetesMockServer extends DefaultMockServer implements Resetable, CustomResourceAware {
@@ -120,14 +121,39 @@ public class KubernetesMockServer extends DefaultMockServer implements Resetable
   }
 
   public NamespacedKubernetesClient createClient() {
-    return createClient(null);
+    return createClient(new KubernetesClientBuilderCustomizer());
   }
 
   public NamespacedKubernetesClient createClient(HttpClient.Factory factory) {
-    KubernetesClient client = new KubernetesClientBuilder().withConfig(getMockConfiguration()).withHttpClientFactory(factory)
-        .build();
-    client.adapt(BaseClient.class)
-        .setMatchingGroupPredicate(s -> unsupportedPatterns.stream().noneMatch(p -> p.matcher(s).find()));
+    return createClient(b -> b.withHttpClientFactory(factory));
+  }
+
+  /**
+   * Creates a client using the customized {@link KubernetesClientBuilder} provided in the {@link Consumer} parameter.
+   * <p>
+   * The function is invoked using an initial {@link Config} instance that is initialized with the mock server's
+   * URL and the {@link TlsVersion} to use.
+   * <p>
+   * The following snippet shows how you can use this method in your tests:
+   * <pre>
+   *   &#64;BeforeEach
+   *   void setUp() {
+   *     server = new KubernetesMockServer();
+   *     server.start();
+   *     client = server.createClient(b -&gt; {&#47;* customize builder *&#47;}));
+   *   }
+   * }</pre>
+   *
+   * @param kubernetesClientBuilderCustomizer Consumer function to enable further customization of the provided
+   *        KubernetesClientBuilder.
+   * @return a NamespacedKubernetesClient instance from the provided configuration.
+   */
+  public NamespacedKubernetesClient createClient(Consumer<KubernetesClientBuilder> kubernetesClientBuilderCustomizer) {
+    final KubernetesClientBuilder kubernetesClientBuilder = new KubernetesClientBuilder().withConfig(initConfig());
+    kubernetesClientBuilderCustomizer.accept(kubernetesClientBuilder);
+
+    final BaseClient client = kubernetesClientBuilder.build().adapt(BaseClient.class);
+    client.setMatchingGroupPredicate(s -> unsupportedPatterns.stream().noneMatch(p -> p.matcher(s).find()));
     return client.adapt(NamespacedKubernetesClient.class);
   }
 
@@ -178,23 +204,31 @@ public class KubernetesMockServer extends DefaultMockServer implements Resetable
     responses.clear();
   }
 
-  protected Config getMockConfiguration() {
+  protected Config initConfig() {
+    final NamedContext mockServerContext = new NamedContextBuilder()
+        .withName("fabric8-mock-server-context")
+        .withNewContext()
+        .withNamespace("test")
+        .withCluster(String.format("localhost:%d", getPort()))
+        .withUser("fabric8-mock-server-user")
+        .endContext()
+        .build();
     return new ConfigBuilder(Config.empty())
         .withMasterUrl(url("/"))
         .withTrustCerts(true)
         .withTlsVersions(TlsVersion.TLS_1_2)
         .withNamespace("test")
         .withHttp2Disable(true)
+        .addToContexts(mockServerContext)
+        .withCurrentContext(mockServerContext)
+        .withUsername("fabric8-mock-server-user")
+        .withOauthToken("secret")
         .build();
-  }
-
-  public NamespacedServiceCatalogClient createServiceCatalog() {
-    Config config = this.getMockConfiguration();
-    return new DefaultServiceCatalogClient(config);
   }
 
   @Override
   public void reset() {
+    super.reset();
     clearExpectations();
     onStart();
     unsupportedPatterns.clear();

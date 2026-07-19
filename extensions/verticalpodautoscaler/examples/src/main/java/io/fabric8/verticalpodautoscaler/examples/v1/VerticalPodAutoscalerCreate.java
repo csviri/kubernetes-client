@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,9 +15,9 @@
  */
 package io.fabric8.verticalpodautoscaler.examples.v1;
 
-import io.fabric8.verticalpodautoscaler.api.model.v1.VerticalPodAutoscaler;
-import io.fabric8.verticalpodautoscaler.api.model.v1.VerticalPodAutoscalerBuilder;
-import io.fabric8.verticalpodautoscaler.api.model.v1.VerticalPodAutoscalerList;
+import io.fabric8.autoscaling.api.model.v1.VerticalPodAutoscaler;
+import io.fabric8.autoscaling.api.model.v1.VerticalPodAutoscalerBuilder;
+import io.fabric8.autoscaling.api.model.v1.VerticalPodAutoscalerList;
 import io.fabric8.verticalpodautoscaler.client.DefaultVerticalPodAutoscalerClient;
 import io.fabric8.verticalpodautoscaler.client.NamespacedVerticalPodAutoscalerClient;
 

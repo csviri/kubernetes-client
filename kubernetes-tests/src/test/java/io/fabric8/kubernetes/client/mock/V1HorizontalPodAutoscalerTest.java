@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.mock;
 
 import io.fabric8.kubernetes.api.model.HasMetadata;
@@ -37,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnableKubernetesMockClient
+@EnableKubernetesMockClient(https = false)
 public class V1HorizontalPodAutoscalerTest {
 
   KubernetesMockServer server;
@@ -146,14 +145,15 @@ public class V1HorizontalPodAutoscalerTest {
         .andReturn(200, new HorizontalPodAutoscalerBuilder().build()).once();
 
     Boolean deleted = client.autoscaling().v1().horizontalPodAutoscalers().inNamespace("test")
-        .withName("horizontalpodautoscaler1").delete().size() == 1;
+        .withName("horizontalpodautoscaler1").withGracePeriod(0).delete().size() == 1;
     assertTrue(deleted);
 
-    deleted = client.autoscaling().v1().horizontalPodAutoscalers().withName("horizontalpodautoscaler2").delete().size() == 1;
+    deleted = client.autoscaling().v1().horizontalPodAutoscalers().withName("horizontalpodautoscaler2").withGracePeriod(0)
+        .delete().size() == 1;
     assertFalse(deleted);
 
     deleted = client.autoscaling().v1().horizontalPodAutoscalers().inNamespace("ns1").withName("horizontalpodautoscaler2")
-        .delete().size() == 1;
+        .withGracePeriod(0).delete().size() == 1;
     assertTrue(deleted);
   }
 

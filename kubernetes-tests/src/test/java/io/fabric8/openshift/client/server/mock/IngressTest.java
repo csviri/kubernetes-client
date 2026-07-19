@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,8 @@
 package io.fabric8.openshift.client.server.mock;
 
 import io.fabric8.kubernetes.api.model.HasMetadata;
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.openshift.api.model.config.v1.Ingress;
 import io.fabric8.openshift.api.model.config.v1.IngressBuilder;
 import io.fabric8.openshift.api.model.config.v1.IngressList;
@@ -28,10 +30,10 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class IngressTest {
   private OpenShiftClient client;
-  private OpenShiftMockServer server;
+  KubernetesMockServer server;
 
   @Test
   void load() {
@@ -86,7 +88,7 @@ class IngressTest {
         .once();
 
     // When
-    boolean isDeleted = client.config().ingresses().withName("cluster").delete().size() == 1;
+    boolean isDeleted = client.config().ingresses().withName("cluster").withGracePeriod(0).delete().size() == 1;
 
     // Then
     assertThat(isDeleted).isTrue();

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,8 @@ package io.fabric8.kubernetes.client.dsl;
 
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.policy.v1.Eviction;
+
+import java.util.Map;
 
 public interface PodResource extends Resource<Pod>,
     Loggable,
@@ -48,5 +50,13 @@ public interface PodResource extends Resource<Pod>,
    * @return ephemeral containers resource operations
    */
   EphemeralContainersResource ephemeralContainers();
+
+  /**
+   * Set the Pod status readiness gate fields to match the given map.
+   *
+   * @param readiness
+   * @return a new pod instance with the updated readiness gates
+   */
+  Pod patchReadinessGateStatus(Map<String, Boolean> readiness);
 
 }

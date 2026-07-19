@@ -2,9 +2,10 @@
 package io.fabric8.openshift.api.model;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -12,36 +13,38 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
-import io.fabric8.kubernetes.api.model.LocalObjectReference;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * ImageStreamStatus contains information about the state of this image stream.
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "dockerImageRepository",
     "publicDockerImageRepository",
     "tags"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -54,10 +57,15 @@ import lombok.experimental.Accessors;
     @BuildableReference(ResourceRequirements.class),
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
-    @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
+    @BuildableReference(io.fabric8.kubernetes.api.model.LocalObjectReference.class),
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class ImageStreamStatus implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class ImageStreamStatus implements Editable<ImageStreamStatusBuilder>, KubernetesResource
 {
 
     @JsonProperty("dockerImageRepository")
@@ -66,23 +74,16 @@ public class ImageStreamStatus implements KubernetesResource
     private String publicDockerImageRepository;
     @JsonProperty("tags")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<NamedTagEventList> tags = new ArrayList<NamedTagEventList>();
+    private List<NamedTagEventList> tags = new ArrayList<>();
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public ImageStreamStatus() {
     }
 
-    /**
-     * 
-     * @param dockerImageRepository
-     * @param publicDockerImageRepository
-     * @param tags
-     */
     public ImageStreamStatus(String dockerImageRepository, String publicDockerImageRepository, List<NamedTagEventList> tags) {
         super();
         this.dockerImageRepository = dockerImageRepository;
@@ -90,37 +91,67 @@ public class ImageStreamStatus implements KubernetesResource
         this.tags = tags;
     }
 
+    /**
+     * dockerImageRepository represents the effective location this stream may be accessed at. May be empty until the server determines where the repository is located
+     */
     @JsonProperty("dockerImageRepository")
     public String getDockerImageRepository() {
         return dockerImageRepository;
     }
 
+    /**
+     * dockerImageRepository represents the effective location this stream may be accessed at. May be empty until the server determines where the repository is located
+     */
     @JsonProperty("dockerImageRepository")
     public void setDockerImageRepository(String dockerImageRepository) {
         this.dockerImageRepository = dockerImageRepository;
     }
 
+    /**
+     * publicDockerImageRepository represents the public location from where the image can be pulled outside the cluster. This field may be empty if the administrator has not exposed the integrated registry externally.
+     */
     @JsonProperty("publicDockerImageRepository")
     public String getPublicDockerImageRepository() {
         return publicDockerImageRepository;
     }
 
+    /**
+     * publicDockerImageRepository represents the public location from where the image can be pulled outside the cluster. This field may be empty if the administrator has not exposed the integrated registry externally.
+     */
     @JsonProperty("publicDockerImageRepository")
     public void setPublicDockerImageRepository(String publicDockerImageRepository) {
         this.publicDockerImageRepository = publicDockerImageRepository;
     }
 
+    /**
+     * tags are a historical record of images associated with each tag. The first entry in the TagEvent array is the currently tagged image.
+     */
     @JsonProperty("tags")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<NamedTagEventList> getTags() {
         return tags;
     }
 
+    /**
+     * tags are a historical record of images associated with each tag. The first entry in the TagEvent array is the currently tagged image.
+     */
     @JsonProperty("tags")
     public void setTags(List<NamedTagEventList> tags) {
         this.tags = tags;
     }
 
+    @JsonIgnore
+    public ImageStreamStatusBuilder edit() {
+        return new ImageStreamStatusBuilder(this);
+    }
+
+    @JsonIgnore
+    public ImageStreamStatusBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -128,6 +159,10 @@ public class ImageStreamStatus implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

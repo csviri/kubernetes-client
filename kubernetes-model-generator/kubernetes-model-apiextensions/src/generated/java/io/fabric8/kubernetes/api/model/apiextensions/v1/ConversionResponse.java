@@ -2,9 +2,10 @@
 package io.fabric8.kubernetes.api.model.apiextensions.v1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -12,8 +13,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
-import io.fabric8.kubernetes.api.model.GenericKubernetesResource;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
 import io.fabric8.kubernetes.api.model.LabelSelector;
@@ -24,27 +27,23 @@ import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.Status;
-import io.fabric8.kubernetes.api.model.runtime.RawExtension;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "convertedObjects",
     "result",
     "uid"
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -59,35 +58,33 @@ import lombok.experimental.Accessors;
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
     @BuildableReference(PersistentVolumeClaim.class),
-    @BuildableReference(GenericKubernetesResource.class),
-    @BuildableReference(RawExtension.class)
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
-public class ConversionResponse implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class ConversionResponse implements Editable<ConversionResponseBuilder>, KubernetesResource
 {
 
     @JsonProperty("convertedObjects")
-    private List<KubernetesResource> convertedObjects = new ArrayList<KubernetesResource>();
+    @JsonDeserialize(using = io.fabric8.kubernetes.internal.KubernetesDeserializerForList.class)
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<Object> convertedObjects = new ArrayList<>();
     @JsonProperty("result")
     private Status result;
     @JsonProperty("uid")
     private String uid;
     @JsonIgnore
-    private Map<String, Object> additionalProperties = new HashMap<String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public ConversionResponse() {
     }
 
-    /**
-     * 
-     * @param result
-     * @param uid
-     * @param convertedObjects
-     */
-    public ConversionResponse(List<KubernetesResource> convertedObjects, Status result, String uid) {
+    public ConversionResponse(List<Object> convertedObjects, Status result, String uid) {
         super();
         this.convertedObjects = convertedObjects;
         this.result = result;
@@ -95,12 +92,14 @@ public class ConversionResponse implements KubernetesResource
     }
 
     @JsonProperty("convertedObjects")
-    public List<KubernetesResource> getConvertedObjects() {
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public List<Object> getConvertedObjects() {
         return convertedObjects;
     }
 
     @JsonProperty("convertedObjects")
-    public void setConvertedObjects(List<KubernetesResource> convertedObjects) {
+    @JsonDeserialize(using = io.fabric8.kubernetes.internal.KubernetesDeserializerForList.class)
+    public void setConvertedObjects(List<Object> convertedObjects) {
         this.convertedObjects = convertedObjects;
     }
 
@@ -124,7 +123,18 @@ public class ConversionResponse implements KubernetesResource
         this.uid = uid;
     }
 
+    @JsonIgnore
+    public ConversionResponseBuilder edit() {
+        return new ConversionResponseBuilder(this);
+    }
+
+    @JsonIgnore
+    public ConversionResponseBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
+    @JsonIgnore
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
@@ -132,6 +142,10 @@ public class ConversionResponse implements KubernetesResource
     @JsonAnySetter
     public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

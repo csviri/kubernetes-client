@@ -1,8 +1,9 @@
 
 package io.fabric8.chaosmesh.v1alpha1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -27,16 +29,16 @@ import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * AttrOverrideSpec represents an override of attribution
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
     "kind",
-    "metadata",
     "atime",
     "blocks",
     "ctime",
@@ -51,7 +53,6 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -71,7 +72,8 @@ import lombok.experimental.Accessors;
     @BuildableReference(Volume.class),
     @BuildableReference(VolumeMount.class)
 })
-public class AttrOverrideSpec implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class AttrOverrideSpec implements Editable<AttrOverrideSpecBuilder>, KubernetesResource
 {
 
     @JsonProperty("atime")
@@ -99,30 +101,14 @@ public class AttrOverrideSpec implements KubernetesResource
     @JsonProperty("uid")
     private Long uid;
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public AttrOverrideSpec() {
     }
 
-    /**
-     * 
-     * @param uid
-     * @param atime
-     * @param gid
-     * @param perm
-     * @param size
-     * @param blocks
-     * @param kind
-     * @param rdev
-     * @param nlink
-     * @param ctime
-     * @param ino
-     * @param mtime
-     */
     public AttrOverrideSpec(Timespec atime, Long blocks, Timespec ctime, Long gid, Long ino, String kind, Timespec mtime, Long nlink, Integer perm, Long rdev, Long size, Long uid) {
         super();
         this.atime = atime;
@@ -139,134 +125,221 @@ public class AttrOverrideSpec implements KubernetesResource
         this.uid = uid;
     }
 
+    /**
+     * AttrOverrideSpec represents an override of attribution
+     */
     @JsonProperty("atime")
     public Timespec getAtime() {
         return atime;
     }
 
+    /**
+     * AttrOverrideSpec represents an override of attribution
+     */
     @JsonProperty("atime")
     public void setAtime(Timespec atime) {
         this.atime = atime;
     }
 
+    /**
+     * AttrOverrideSpec represents an override of attribution
+     */
     @JsonProperty("blocks")
     public Long getBlocks() {
         return blocks;
     }
 
+    /**
+     * AttrOverrideSpec represents an override of attribution
+     */
     @JsonProperty("blocks")
     public void setBlocks(Long blocks) {
         this.blocks = blocks;
     }
 
+    /**
+     * AttrOverrideSpec represents an override of attribution
+     */
     @JsonProperty("ctime")
     public Timespec getCtime() {
         return ctime;
     }
 
+    /**
+     * AttrOverrideSpec represents an override of attribution
+     */
     @JsonProperty("ctime")
     public void setCtime(Timespec ctime) {
         this.ctime = ctime;
     }
 
+    /**
+     * AttrOverrideSpec represents an override of attribution
+     */
     @JsonProperty("gid")
     public Long getGid() {
         return gid;
     }
 
+    /**
+     * AttrOverrideSpec represents an override of attribution
+     */
     @JsonProperty("gid")
     public void setGid(Long gid) {
         this.gid = gid;
     }
 
+    /**
+     * AttrOverrideSpec represents an override of attribution
+     */
     @JsonProperty("ino")
     public Long getIno() {
         return ino;
     }
 
+    /**
+     * AttrOverrideSpec represents an override of attribution
+     */
     @JsonProperty("ino")
     public void setIno(Long ino) {
         this.ino = ino;
     }
 
+    /**
+     * AttrOverrideSpec represents an override of attribution
+     */
     @JsonProperty("kind")
     public String getKind() {
         return kind;
     }
 
+    /**
+     * AttrOverrideSpec represents an override of attribution
+     */
     @JsonProperty("kind")
     public void setKind(String kind) {
         this.kind = kind;
     }
 
+    /**
+     * AttrOverrideSpec represents an override of attribution
+     */
     @JsonProperty("mtime")
     public Timespec getMtime() {
         return mtime;
     }
 
+    /**
+     * AttrOverrideSpec represents an override of attribution
+     */
     @JsonProperty("mtime")
     public void setMtime(Timespec mtime) {
         this.mtime = mtime;
     }
 
+    /**
+     * AttrOverrideSpec represents an override of attribution
+     */
     @JsonProperty("nlink")
     public Long getNlink() {
         return nlink;
     }
 
+    /**
+     * AttrOverrideSpec represents an override of attribution
+     */
     @JsonProperty("nlink")
     public void setNlink(Long nlink) {
         this.nlink = nlink;
     }
 
+    /**
+     * AttrOverrideSpec represents an override of attribution
+     */
     @JsonProperty("perm")
     public Integer getPerm() {
         return perm;
     }
 
+    /**
+     * AttrOverrideSpec represents an override of attribution
+     */
     @JsonProperty("perm")
     public void setPerm(Integer perm) {
         this.perm = perm;
     }
 
+    /**
+     * AttrOverrideSpec represents an override of attribution
+     */
     @JsonProperty("rdev")
     public Long getRdev() {
         return rdev;
     }
 
+    /**
+     * AttrOverrideSpec represents an override of attribution
+     */
     @JsonProperty("rdev")
     public void setRdev(Long rdev) {
         this.rdev = rdev;
     }
 
+    /**
+     * AttrOverrideSpec represents an override of attribution
+     */
     @JsonProperty("size")
     public Long getSize() {
         return size;
     }
 
+    /**
+     * AttrOverrideSpec represents an override of attribution
+     */
     @JsonProperty("size")
     public void setSize(Long size) {
         this.size = size;
     }
 
+    /**
+     * AttrOverrideSpec represents an override of attribution
+     */
     @JsonProperty("uid")
     public Long getUid() {
         return uid;
     }
 
+    /**
+     * AttrOverrideSpec represents an override of attribution
+     */
     @JsonProperty("uid")
     public void setUid(Long uid) {
         this.uid = uid;
     }
 
+    @JsonIgnore
+    public AttrOverrideSpecBuilder edit() {
+        return new AttrOverrideSpecBuilder(this);
+    }
+
+    @JsonIgnore
+    public AttrOverrideSpecBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
-    public Map<java.lang.String, Object> getAdditionalProperties() {
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 
     @JsonAnySetter
-    public void setAdditionalProperty(java.lang.String name, Object value) {
+    public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,10 +25,7 @@ import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.util.Collections;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -89,27 +86,53 @@ public abstract class AbstractHttpClientNewWebSocketBuilderTest {
   void buildAsyncReceivesMultipleMessages() throws Exception {
     server.expect().withPath("/websocket-multiple-message")
         .andUpgradeToWebSocket()
-        .open()
-        .waitFor(10L)
-        .andEmit("First")
-        .waitFor(10L)
-        .andEmit("Second")
+        .open("First", "Second")
         .done()
         .always();
-    final CountDownLatch latch = new CountDownLatch(2);
-    final Set<String> messages = ConcurrentHashMap.newKeySet();
-    final WebSocket ws = httpClient.newWebSocketBuilder()
+    final CompletableFuture<String> firstReceived = new CompletableFuture<>();
+    final CompletableFuture<String> secondReceived = new CompletableFuture<>();
+    httpClient.newWebSocketBuilder()
         .uri(URI.create(server.url("/websocket-multiple-message")))
         .buildAsync(new WebSocket.Listener() {
           @Override
           public void onMessage(WebSocket webSocket, String text) {
-            messages.add(text);
+            if (!firstReceived.complete(text)) {
+              secondReceived.complete(text);
+            }
             webSocket.request();
-            latch.countDown();
           }
         }).get(10L, TimeUnit.SECONDS);
-    assertThat(latch.await(60, TimeUnit.SECONDS)).isTrue();
-    assertThat(messages).containsExactlyInAnyOrder("First", "Second");
+    assertThat(firstReceived).succeedsWithin(10, TimeUnit.SECONDS).isEqualTo("First");
+    assertThat(secondReceived).succeedsWithin(10, TimeUnit.SECONDS).isEqualTo("Second");
+  }
+
+  @Test
+  void buildAsyncConnectsAndCloses() throws Exception {
+    server.expect().withPath("/websocket-on-close")
+        .andUpgradeToWebSocket()
+        .open()
+        .expectSentWebSocketMessage("NEVER RECEIVED; JUST TO KEEP THE CONNECTION OPEN")
+        .andEmit("OK")
+        .once()
+        .done()
+        .always();
+    final CompletableFuture<String> closeMessage = new CompletableFuture<>();
+    httpClient.newWebSocketBuilder()
+        .uri(URI.create(server.url("/websocket-on-close")))
+        .buildAsync(new WebSocket.Listener() {
+          public void onOpen(WebSocket webSocket) {
+            webSocket.sendClose(1000, "Closing from client");
+          }
+
+          @Override
+          public void onClose(WebSocket webSocket, int code, String reason) {
+            closeMessage.complete(reason);
+          }
+        }).get(10L, TimeUnit.SECONDS);
+    assertThat(closeMessage)
+        .succeedsWithin(10, TimeUnit.SECONDS)
+        .asString()
+        .isEqualTo("Closing from client");
   }
 
   @Test
@@ -128,6 +151,7 @@ public abstract class AbstractHttpClientNewWebSocketBuilderTest {
     server.expect().withPath("/websocket-headers-test")
         .andUpgradeToWebSocket()
         .open()
+        .waitFor(50L).andEmit("OK")
         .done()
         .always();
     httpClient.newWebSocketBuilder()
@@ -191,4 +215,5 @@ public abstract class AbstractHttpClientNewWebSocketBuilderTest {
         .extracting(HttpResponse::code)
         .isEqualTo(200);
   }
+
 }

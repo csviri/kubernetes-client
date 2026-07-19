@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,7 +22,6 @@ import io.fabric8.kubernetes.client.dsl.MixedOperation;
 import io.fabric8.kubernetes.client.dsl.Resource;
 import io.fabric8.kubernetes.client.impl.BaseClient;
 import io.fabric8.kubernetes.client.mock.crd.EntandoBundleRelease;
-import io.fabric8.kubernetes.client.mock.crd.EntandoBundleReleaseList;
 import io.fabric8.kubernetes.client.mock.crd.EntandoBundleReleaseSpec;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import org.junit.jupiter.api.Test;
@@ -30,7 +29,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@EnableKubernetesMockClient(crud = true)
+@EnableKubernetesMockClient(crud = true, https = false)
 class CustomResourceCrudWithCRDContextTest {
 
   KubernetesClient client;
@@ -40,8 +39,8 @@ class CustomResourceCrudWithCRDContextTest {
     // Given
     client.getKubernetesSerialization().registerKubernetesResource("demo.fabric8.io/v1alpha1",
         "EntandoBundleRelease", EntandoBundleRelease.class);
-    MixedOperation<EntandoBundleRelease, EntandoBundleReleaseList, Resource<EntandoBundleRelease>> ebrClient = client
-        .resources(EntandoBundleRelease.class, EntandoBundleReleaseList.class);
+    MixedOperation<EntandoBundleRelease, KubernetesResourceList<EntandoBundleRelease>, Resource<EntandoBundleRelease>> ebrClient = client
+        .resources(EntandoBundleRelease.class);
 
     // When
     ebrClient.inNamespace("ns1").create(getMockedEntandoBundleRelease());

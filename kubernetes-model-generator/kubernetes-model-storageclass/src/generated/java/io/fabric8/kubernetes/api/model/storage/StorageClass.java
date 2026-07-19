@@ -2,10 +2,10 @@
 package io.fabric8.kubernetes.api.model.storage;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -13,27 +13,33 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.LabelSelector;
 import io.fabric8.kubernetes.api.model.LocalObjectReference;
+import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.TopologySelectorTerm;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.fabric8.kubernetes.model.annotation.Group;
 import io.fabric8.kubernetes.model.annotation.Version;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
-import io.sundr.transform.annotations.TemplateTransformation;
-import io.sundr.transform.annotations.TemplateTransformations;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * StorageClass describes the parameters for a class of storage for which PersistentVolumes can be dynamically provisioned.<br><p> <br><p> StorageClasses are non-namespaced; the name of the storage class according to etcd is in ObjectMeta.Name.
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
@@ -50,13 +56,12 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
 })
 @Buildable(editableEnabled = false, validationEnabled = false, generateBuilderPackage = false, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder", refs = {
-    @BuildableReference(io.fabric8.kubernetes.api.model.ObjectMeta.class),
+    @BuildableReference(ObjectMeta.class),
     @BuildableReference(LabelSelector.class),
     @BuildableReference(Container.class),
     @BuildableReference(PodTemplateSpec.class),
@@ -64,73 +69,51 @@ import lombok.experimental.Accessors;
     @BuildableReference(IntOrString.class),
     @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
-})
-@TemplateTransformations({
-    @TemplateTransformation(value = "/manifest.vm", outputPath = "META-INF/services/io.fabric8.kubernetes.api.model.KubernetesResource", gather = true)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
 @Version("v1")
 @Group("storage.k8s.io")
-public class StorageClass implements HasMetadata
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class StorageClass implements Editable<StorageClassBuilder>, HasMetadata
 {
 
     @JsonProperty("allowVolumeExpansion")
     private Boolean allowVolumeExpansion;
     @JsonProperty("allowedTopologies")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<TopologySelectorTerm> allowedTopologies = new ArrayList<TopologySelectorTerm>();
-    /**
-     * 
-     * (Required)
-     * 
-     */
+    private List<TopologySelectorTerm> allowedTopologies = new ArrayList<>();
     @JsonProperty("apiVersion")
-    private java.lang.String apiVersion = "storage.k8s.io/v1";
-    /**
-     * 
-     * (Required)
-     * 
-     */
+    private String apiVersion = "storage.k8s.io/v1";
     @JsonProperty("kind")
-    private java.lang.String kind = "StorageClass";
+    private String kind = "StorageClass";
     @JsonProperty("metadata")
-    private io.fabric8.kubernetes.api.model.ObjectMeta metadata;
+    private ObjectMeta metadata;
     @JsonProperty("mountOptions")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<java.lang.String> mountOptions = new ArrayList<java.lang.String>();
+    private List<String> mountOptions = new ArrayList<>();
     @JsonProperty("parameters")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private Map<String, String> parameters = new LinkedHashMap<String, String>();
+    private Map<String, String> parameters = new LinkedHashMap<>();
     @JsonProperty("provisioner")
-    private java.lang.String provisioner;
+    private String provisioner;
     @JsonProperty("reclaimPolicy")
-    private java.lang.String reclaimPolicy;
+    private String reclaimPolicy;
     @JsonProperty("volumeBindingMode")
-    private java.lang.String volumeBindingMode;
+    private String volumeBindingMode;
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public StorageClass() {
     }
 
-    /**
-     * 
-     * @param volumeBindingMode
-     * @param metadata
-     * @param provisioner
-     * @param apiVersion
-     * @param allowVolumeExpansion
-     * @param reclaimPolicy
-     * @param kind
-     * @param mountOptions
-     * @param parameters
-     * @param allowedTopologies
-     */
-    public StorageClass(Boolean allowVolumeExpansion, List<TopologySelectorTerm> allowedTopologies, java.lang.String apiVersion, java.lang.String kind, io.fabric8.kubernetes.api.model.ObjectMeta metadata, List<java.lang.String> mountOptions, Map<String, String> parameters, java.lang.String provisioner, java.lang.String reclaimPolicy, java.lang.String volumeBindingMode) {
+    public StorageClass(Boolean allowVolumeExpansion, List<TopologySelectorTerm> allowedTopologies, String apiVersion, String kind, ObjectMeta metadata, List<String> mountOptions, Map<String, String> parameters, String provisioner, String reclaimPolicy, String volumeBindingMode) {
         super();
         this.allowVolumeExpansion = allowVolumeExpansion;
         this.allowedTopologies = allowedTopologies;
@@ -144,134 +127,192 @@ public class StorageClass implements HasMetadata
         this.volumeBindingMode = volumeBindingMode;
     }
 
+    /**
+     * allowVolumeExpansion shows whether the storage class allow volume expand.
+     */
     @JsonProperty("allowVolumeExpansion")
     public Boolean getAllowVolumeExpansion() {
         return allowVolumeExpansion;
     }
 
+    /**
+     * allowVolumeExpansion shows whether the storage class allow volume expand.
+     */
     @JsonProperty("allowVolumeExpansion")
     public void setAllowVolumeExpansion(Boolean allowVolumeExpansion) {
         this.allowVolumeExpansion = allowVolumeExpansion;
     }
 
+    /**
+     * allowedTopologies restrict the node topologies where volumes can be dynamically provisioned. Each volume plugin defines its own supported topology specifications. An empty TopologySelectorTerm list means there is no topology restriction. This field is only honored by servers that enable the VolumeScheduling feature.
+     */
     @JsonProperty("allowedTopologies")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<TopologySelectorTerm> getAllowedTopologies() {
         return allowedTopologies;
     }
 
+    /**
+     * allowedTopologies restrict the node topologies where volumes can be dynamically provisioned. Each volume plugin defines its own supported topology specifications. An empty TopologySelectorTerm list means there is no topology restriction. This field is only honored by servers that enable the VolumeScheduling feature.
+     */
     @JsonProperty("allowedTopologies")
     public void setAllowedTopologies(List<TopologySelectorTerm> allowedTopologies) {
         this.allowedTopologies = allowedTopologies;
     }
 
     /**
-     * 
-     * (Required)
-     * 
+     * APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
      */
     @JsonProperty("apiVersion")
-    public java.lang.String getApiVersion() {
+    public String getApiVersion() {
         return apiVersion;
     }
 
     /**
-     * 
-     * (Required)
-     * 
+     * APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
      */
     @JsonProperty("apiVersion")
-    public void setApiVersion(java.lang.String apiVersion) {
+    public void setApiVersion(String apiVersion) {
         this.apiVersion = apiVersion;
     }
 
     /**
-     * 
-     * (Required)
-     * 
+     * Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
      */
     @JsonProperty("kind")
-    public java.lang.String getKind() {
+    public String getKind() {
         return kind;
     }
 
     /**
-     * 
-     * (Required)
-     * 
+     * Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
      */
     @JsonProperty("kind")
-    public void setKind(java.lang.String kind) {
+    public void setKind(String kind) {
         this.kind = kind;
     }
 
+    /**
+     * StorageClass describes the parameters for a class of storage for which PersistentVolumes can be dynamically provisioned.<br><p> <br><p> StorageClasses are non-namespaced; the name of the storage class according to etcd is in ObjectMeta.Name.
+     */
     @JsonProperty("metadata")
-    public io.fabric8.kubernetes.api.model.ObjectMeta getMetadata() {
+    public ObjectMeta getMetadata() {
         return metadata;
     }
 
+    /**
+     * StorageClass describes the parameters for a class of storage for which PersistentVolumes can be dynamically provisioned.<br><p> <br><p> StorageClasses are non-namespaced; the name of the storage class according to etcd is in ObjectMeta.Name.
+     */
     @JsonProperty("metadata")
-    public void setMetadata(io.fabric8.kubernetes.api.model.ObjectMeta metadata) {
+    public void setMetadata(ObjectMeta metadata) {
         this.metadata = metadata;
     }
 
+    /**
+     * mountOptions controls the mountOptions for dynamically provisioned PersistentVolumes of this storage class. e.g. ["ro", "soft"]. Not validated - mount of the PVs will simply fail if one is invalid.
+     */
     @JsonProperty("mountOptions")
-    public List<java.lang.String> getMountOptions() {
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    public List<String> getMountOptions() {
         return mountOptions;
     }
 
+    /**
+     * mountOptions controls the mountOptions for dynamically provisioned PersistentVolumes of this storage class. e.g. ["ro", "soft"]. Not validated - mount of the PVs will simply fail if one is invalid.
+     */
     @JsonProperty("mountOptions")
-    public void setMountOptions(List<java.lang.String> mountOptions) {
+    public void setMountOptions(List<String> mountOptions) {
         this.mountOptions = mountOptions;
     }
 
+    /**
+     * parameters holds the parameters for the provisioner that should create volumes of this storage class.
+     */
     @JsonProperty("parameters")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public Map<String, String> getParameters() {
         return parameters;
     }
 
+    /**
+     * parameters holds the parameters for the provisioner that should create volumes of this storage class.
+     */
     @JsonProperty("parameters")
     public void setParameters(Map<String, String> parameters) {
         this.parameters = parameters;
     }
 
+    /**
+     * provisioner indicates the type of the provisioner.
+     */
     @JsonProperty("provisioner")
-    public java.lang.String getProvisioner() {
+    public String getProvisioner() {
         return provisioner;
     }
 
+    /**
+     * provisioner indicates the type of the provisioner.
+     */
     @JsonProperty("provisioner")
-    public void setProvisioner(java.lang.String provisioner) {
+    public void setProvisioner(String provisioner) {
         this.provisioner = provisioner;
     }
 
+    /**
+     * reclaimPolicy controls the reclaimPolicy for dynamically provisioned PersistentVolumes of this storage class. Defaults to Delete.
+     */
     @JsonProperty("reclaimPolicy")
-    public java.lang.String getReclaimPolicy() {
+    public String getReclaimPolicy() {
         return reclaimPolicy;
     }
 
+    /**
+     * reclaimPolicy controls the reclaimPolicy for dynamically provisioned PersistentVolumes of this storage class. Defaults to Delete.
+     */
     @JsonProperty("reclaimPolicy")
-    public void setReclaimPolicy(java.lang.String reclaimPolicy) {
+    public void setReclaimPolicy(String reclaimPolicy) {
         this.reclaimPolicy = reclaimPolicy;
     }
 
+    /**
+     * volumeBindingMode indicates how PersistentVolumeClaims should be provisioned and bound.  When unset, VolumeBindingImmediate is used. This field is only honored by servers that enable the VolumeScheduling feature.
+     */
     @JsonProperty("volumeBindingMode")
-    public java.lang.String getVolumeBindingMode() {
+    public String getVolumeBindingMode() {
         return volumeBindingMode;
     }
 
+    /**
+     * volumeBindingMode indicates how PersistentVolumeClaims should be provisioned and bound.  When unset, VolumeBindingImmediate is used. This field is only honored by servers that enable the VolumeScheduling feature.
+     */
     @JsonProperty("volumeBindingMode")
-    public void setVolumeBindingMode(java.lang.String volumeBindingMode) {
+    public void setVolumeBindingMode(String volumeBindingMode) {
         this.volumeBindingMode = volumeBindingMode;
     }
 
+    @JsonIgnore
+    public StorageClassBuilder edit() {
+        return new StorageClassBuilder(this);
+    }
+
+    @JsonIgnore
+    public StorageClassBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
-    public Map<java.lang.String, Object> getAdditionalProperties() {
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 
     @JsonAnySetter
-    public void setAdditionalProperty(java.lang.String name, Object value) {
+    public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

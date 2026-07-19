@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,7 +27,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@EnableKubernetesMockClient
+@EnableKubernetesMockClient(https = false)
 class OpenShiftLoadTest {
 
   KubernetesMockServer server;
@@ -55,7 +55,7 @@ class OpenShiftLoadTest {
   void testResourceGetFromLoadWhenSingleDocumentsWithoutDelimiter() {
 
     // when
-    List<HasMetadata> result = client.templates()
+    List<Object> result = client.templates()
         .load(getClass().getResourceAsStream("/template-with-params.yml"))
         .item()
         .getObjects();
@@ -63,7 +63,7 @@ class OpenShiftLoadTest {
     // then
     assertNotNull(result);
     assertEquals(1, result.size());
-    HasMetadata deploymentResource = result.get(0);
+    HasMetadata deploymentResource = (HasMetadata) result.get(0);
     assertEquals("v1", deploymentResource.getApiVersion());
     assertEquals("Pod", deploymentResource.getKind());
     assertEquals("example-pod", deploymentResource.getMetadata().getName());

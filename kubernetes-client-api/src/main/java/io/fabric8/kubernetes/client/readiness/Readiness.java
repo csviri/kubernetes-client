@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -84,7 +84,7 @@ public class Readiness {
     }
   }
 
-  protected boolean isReadinessApplicable(HasMetadata item) {
+  public boolean isReadinessApplicable(HasMetadata item) {
     return (item instanceof Deployment ||
         item instanceof io.fabric8.kubernetes.api.model.extensions.Deployment ||
         item instanceof ReplicaSet ||

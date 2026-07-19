@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,7 @@ package io.fabric8.kubernetes.api.model;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -30,7 +31,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 class QuantityTest {
-  private final ObjectMapper mapper = new ObjectMapper();
+
+  private ObjectMapper mapper;
+
+  @BeforeEach
+  void setUp() {
+    mapper = new ObjectMapper();
+  }
 
   @Test
   @DisplayName("Test Serialization and Deserialization")
@@ -142,7 +149,6 @@ class QuantityTest {
     assertThat(new Quantity("2P")).isNotEqualTo("2P");
 
     Quantity quantity = new Quantity("100.035k");
-    assertThat(quantity).isEqualTo(quantity);
     assertThat(quantity.hashCode()).isEqualTo(100035);
   }
 
@@ -209,5 +215,25 @@ class QuantityTest {
   void testFromAmountInBytes(String amount) {
     Quantity quantity = new Quantity(amount);
     assertThat(quantity).isEqualTo(Quantity.fromNumericalAmount(quantity.getNumericalAmount(), quantity.getFormat()));
+  }
+
+  @Test
+  void testAdd() {
+    Quantity quantity = new Quantity("7Mi");
+    assertThat(quantity.add(new Quantity("6Mi"))).isEqualTo(new Quantity("13Mi"));
+  }
+
+  @Test
+  void testSubtract() {
+    Quantity quantity = new Quantity("0Mi");
+    assertThat(quantity.subtract(new Quantity("1Ki"))).isEqualTo(new Quantity("-1Ki"));
+  }
+
+  @Test
+  void testMultiply() {
+    Quantity quantity = new Quantity("4Gi");
+    assertThat(quantity.multiply(0)).isEqualTo(new Quantity("0"));
+    assertThat(quantity.multiply(3)).isEqualTo(new Quantity("12Gi"));
+    assertThat(quantity.multiply(-3)).isEqualTo(new Quantity("-12Gi"));
   }
 }

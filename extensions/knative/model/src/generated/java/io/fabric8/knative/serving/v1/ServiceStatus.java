@@ -2,10 +2,10 @@
 package io.fabric8.knative.serving.v1;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -13,8 +13,9 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import io.fabric8.knative.internal.pkg.apis.Condition;
-import io.fabric8.knative.internal.pkg.apis.duck.v1.Addressable;
+import io.fabric8.knative.duck.v1.Addressable;
+import io.fabric8.knative.pkg.apis.Condition;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -32,16 +33,15 @@ import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * ServiceStatus represents the Status stanza of the Service resource.
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-    "apiVersion",
-    "kind",
-    "metadata",
     "address",
     "annotations",
     "conditions",
@@ -53,7 +53,6 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
@@ -73,50 +72,39 @@ import lombok.experimental.Accessors;
     @BuildableReference(Volume.class),
     @BuildableReference(VolumeMount.class)
 })
-public class ServiceStatus implements KubernetesResource
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class ServiceStatus implements Editable<ServiceStatusBuilder>, KubernetesResource
 {
 
     @JsonProperty("address")
     private Addressable address;
     @JsonProperty("annotations")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private Map<String, String> annotations = new LinkedHashMap<String, String>();
+    private Map<String, String> annotations = new LinkedHashMap<>();
     @JsonProperty("conditions")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<Condition> conditions = new ArrayList<Condition>();
+    private List<Condition> conditions = new ArrayList<>();
     @JsonProperty("latestCreatedRevisionName")
-    private java.lang.String latestCreatedRevisionName;
+    private String latestCreatedRevisionName;
     @JsonProperty("latestReadyRevisionName")
-    private java.lang.String latestReadyRevisionName;
+    private String latestReadyRevisionName;
     @JsonProperty("observedGeneration")
     private Long observedGeneration;
     @JsonProperty("traffic")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private List<TrafficTarget> traffic = new ArrayList<TrafficTarget>();
+    private List<TrafficTarget> traffic = new ArrayList<>();
     @JsonProperty("url")
-    private java.lang.String url;
+    private String url;
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public ServiceStatus() {
     }
 
-    /**
-     * 
-     * @param address
-     * @param latestCreatedRevisionName
-     * @param annotations
-     * @param conditions
-     * @param latestReadyRevisionName
-     * @param observedGeneration
-     * @param url
-     * @param traffic
-     */
-    public ServiceStatus(Addressable address, Map<String, String> annotations, List<Condition> conditions, java.lang.String latestCreatedRevisionName, java.lang.String latestReadyRevisionName, Long observedGeneration, List<TrafficTarget> traffic, java.lang.String url) {
+    public ServiceStatus(Addressable address, Map<String, String> annotations, List<Condition> conditions, String latestCreatedRevisionName, String latestReadyRevisionName, Long observedGeneration, List<TrafficTarget> traffic, String url) {
         super();
         this.address = address;
         this.annotations = annotations;
@@ -128,94 +116,160 @@ public class ServiceStatus implements KubernetesResource
         this.url = url;
     }
 
+    /**
+     * ServiceStatus represents the Status stanza of the Service resource.
+     */
     @JsonProperty("address")
     public Addressable getAddress() {
         return address;
     }
 
+    /**
+     * ServiceStatus represents the Status stanza of the Service resource.
+     */
     @JsonProperty("address")
     public void setAddress(Addressable address) {
         this.address = address;
     }
 
+    /**
+     * Annotations is additional Status fields for the Resource to save some additional State as well as convey more information to the user. This is roughly akin to Annotations on any k8s resource, just the reconciler conveying richer information outwards.
+     */
     @JsonProperty("annotations")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public Map<String, String> getAnnotations() {
         return annotations;
     }
 
+    /**
+     * Annotations is additional Status fields for the Resource to save some additional State as well as convey more information to the user. This is roughly akin to Annotations on any k8s resource, just the reconciler conveying richer information outwards.
+     */
     @JsonProperty("annotations")
     public void setAnnotations(Map<String, String> annotations) {
         this.annotations = annotations;
     }
 
+    /**
+     * Conditions the latest available observations of a resource's current state.
+     */
     @JsonProperty("conditions")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<Condition> getConditions() {
         return conditions;
     }
 
+    /**
+     * Conditions the latest available observations of a resource's current state.
+     */
     @JsonProperty("conditions")
     public void setConditions(List<Condition> conditions) {
         this.conditions = conditions;
     }
 
+    /**
+     * LatestCreatedRevisionName is the last revision that was created from this Configuration. It might not be ready yet, for that use LatestReadyRevisionName.
+     */
     @JsonProperty("latestCreatedRevisionName")
-    public java.lang.String getLatestCreatedRevisionName() {
+    public String getLatestCreatedRevisionName() {
         return latestCreatedRevisionName;
     }
 
+    /**
+     * LatestCreatedRevisionName is the last revision that was created from this Configuration. It might not be ready yet, for that use LatestReadyRevisionName.
+     */
     @JsonProperty("latestCreatedRevisionName")
-    public void setLatestCreatedRevisionName(java.lang.String latestCreatedRevisionName) {
+    public void setLatestCreatedRevisionName(String latestCreatedRevisionName) {
         this.latestCreatedRevisionName = latestCreatedRevisionName;
     }
 
+    /**
+     * LatestReadyRevisionName holds the name of the latest Revision stamped out from this Configuration that has had its "Ready" condition become "True".
+     */
     @JsonProperty("latestReadyRevisionName")
-    public java.lang.String getLatestReadyRevisionName() {
+    public String getLatestReadyRevisionName() {
         return latestReadyRevisionName;
     }
 
+    /**
+     * LatestReadyRevisionName holds the name of the latest Revision stamped out from this Configuration that has had its "Ready" condition become "True".
+     */
     @JsonProperty("latestReadyRevisionName")
-    public void setLatestReadyRevisionName(java.lang.String latestReadyRevisionName) {
+    public void setLatestReadyRevisionName(String latestReadyRevisionName) {
         this.latestReadyRevisionName = latestReadyRevisionName;
     }
 
+    /**
+     * ObservedGeneration is the 'Generation' of the Service that was last processed by the controller.
+     */
     @JsonProperty("observedGeneration")
     public Long getObservedGeneration() {
         return observedGeneration;
     }
 
+    /**
+     * ObservedGeneration is the 'Generation' of the Service that was last processed by the controller.
+     */
     @JsonProperty("observedGeneration")
     public void setObservedGeneration(Long observedGeneration) {
         this.observedGeneration = observedGeneration;
     }
 
+    /**
+     * Traffic holds the configured traffic distribution. These entries will always contain RevisionName references. When ConfigurationName appears in the spec, this will hold the LatestReadyRevisionName that we last observed.
+     */
     @JsonProperty("traffic")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
     public List<TrafficTarget> getTraffic() {
         return traffic;
     }
 
+    /**
+     * Traffic holds the configured traffic distribution. These entries will always contain RevisionName references. When ConfigurationName appears in the spec, this will hold the LatestReadyRevisionName that we last observed.
+     */
     @JsonProperty("traffic")
     public void setTraffic(List<TrafficTarget> traffic) {
         this.traffic = traffic;
     }
 
+    /**
+     * ServiceStatus represents the Status stanza of the Service resource.
+     */
     @JsonProperty("url")
-    public java.lang.String getUrl() {
+    public String getUrl() {
         return url;
     }
 
+    /**
+     * ServiceStatus represents the Status stanza of the Service resource.
+     */
     @JsonProperty("url")
-    public void setUrl(java.lang.String url) {
+    public void setUrl(String url) {
         this.url = url;
     }
 
+    @JsonIgnore
+    public ServiceStatusBuilder edit() {
+        return new ServiceStatusBuilder(this);
+    }
+
+    @JsonIgnore
+    public ServiceStatusBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
-    public Map<java.lang.String, Object> getAdditionalProperties() {
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 
     @JsonAnySetter
-    public void setAdditionalProperty(java.lang.String name, Object value) {
+    public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

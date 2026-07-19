@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,6 +42,10 @@ class CacheTest {
   @Test
   void testCacheIndex() {
     Pod testPodObj = new PodBuilder().withNewMetadata().withName("test-pod").withResourceVersion("1").endMetadata().build();
+
+    Map<String, Function<Pod, List<String>>> indexers = cache.getIndexers();
+    Function<Pod, List<String>> keyFunction = indexers.get("mock");
+    assertEquals(Collections.singletonList("io.fabric8.kubernetes.api.model.Pod"), keyFunction.apply(testPodObj));
 
     cache.put(testPodObj);
     replace(cache, Collections.singletonList(testPodObj));

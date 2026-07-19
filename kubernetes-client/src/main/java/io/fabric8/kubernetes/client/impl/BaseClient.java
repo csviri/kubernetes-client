@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.impl;
 
 import io.fabric8.kubernetes.api.model.APIGroup;
 import io.fabric8.kubernetes.api.model.APIGroupList;
 import io.fabric8.kubernetes.api.model.APIResourceList;
+import io.fabric8.kubernetes.api.model.APIVersions;
 import io.fabric8.kubernetes.api.model.GenericKubernetesResource;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.KubernetesResource;
@@ -36,22 +36,30 @@ import io.fabric8.kubernetes.client.dsl.internal.HasMetadataOperationsImpl;
 import io.fabric8.kubernetes.client.dsl.internal.OperationContext;
 import io.fabric8.kubernetes.client.dsl.internal.OperationSupport;
 import io.fabric8.kubernetes.client.extension.ExtensionAdapter;
-import io.fabric8.kubernetes.client.extension.SupportTestingClient;
 import io.fabric8.kubernetes.client.http.HttpClient;
 import io.fabric8.kubernetes.client.utils.ApiVersionUtil;
 import io.fabric8.kubernetes.client.utils.KubernetesSerialization;
 import io.fabric8.kubernetes.client.utils.Utils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.WeakHashMap;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Predicate;
 
 public abstract class BaseClient implements Client {
+
+  public static final Logger logger = LoggerFactory.getLogger(BaseClient.class);
 
   /**
    * An {@link ExecutorSupplier} that provides an unlimited thread pool {@link Executor} per client.
@@ -71,6 +79,7 @@ public abstract class BaseClient implements Client {
   };
 
   public static final String APIS = "/apis";
+  private static final String API = "/api";
 
   private URL masterUrl;
   private String apiVersion;
@@ -84,10 +93,13 @@ public abstract class BaseClient implements Client {
   private ExecutorSupplier executorSupplier;
   private Executor executor;
   protected KubernetesSerialization kubernetesSerialization;
+  private CompletableFuture<Void> closed;
+  private Set<AutoCloseable> closable;
 
   private OperationContext operationContext;
 
   BaseClient(BaseClient baseClient) {
+    this.closed = baseClient.closed;
     this.config = baseClient.config;
     this.httpClient = baseClient.httpClient;
     this.adapters = baseClient.adapters;
@@ -96,6 +108,7 @@ public abstract class BaseClient implements Client {
     this.executorSupplier = baseClient.executorSupplier;
     this.executor = baseClient.executor;
     this.kubernetesSerialization = baseClient.kubernetesSerialization;
+    this.closable = baseClient.closable;
     setDerivedFields();
     if (baseClient.operationContext != null) {
       operationContext(baseClient.operationContext);
@@ -104,6 +117,8 @@ public abstract class BaseClient implements Client {
 
   BaseClient(final HttpClient httpClient, Config config, ExecutorSupplier executorSupplier,
       KubernetesSerialization kubernetesSerialization) {
+    this.closable = Collections.synchronizedSet(Collections.newSetFromMap(new WeakHashMap<>()));
+    this.closed = new CompletableFuture<>();
     this.config = config;
     this.httpClient = httpClient;
     this.handlers = new Handlers();
@@ -135,12 +150,33 @@ public abstract class BaseClient implements Client {
   }
 
   @Override
-  public synchronized void close() {
+  public void close() {
+    if (closed.complete(null) && logger.isDebugEnabled()) {
+      logger.debug(
+          "The client and associated httpclient {} have been closed, the usage of this or any client using the httpclient will not work after this",
+          httpClient.getClass().getName());
+    }
     httpClient.close();
+    List<AutoCloseable> toClose = null;
+    synchronized (closable) {
+      toClose = new ArrayList<>(closable);
+      closable.clear();
+    }
+    toClose.forEach(c -> {
+      try {
+        c.close();
+      } catch (Exception e) {
+        logger.warn("Error closing resource", e);
+      }
+    });
     if (this.executorSupplier != null) {
       this.executorSupplier.onClose(executor);
       this.executorSupplier = null;
     }
+  }
+
+  public CompletableFuture<Void> getClosed() {
+    return closed;
   }
 
   @Override
@@ -178,17 +214,6 @@ public abstract class BaseClient implements Client {
         .getGroups()
         .stream()
         .anyMatch(g -> g.getName().endsWith(apiGroup));
-  }
-
-  @Override
-  public <C extends Client> Boolean isAdaptable(Class<C> type) {
-    // if type is an instanceof SupportTestingClient, then it's a proper
-    // test, otherwise it could be legacy support on an extension client
-    C toTest = adapt(type);
-    if (toTest instanceof SupportTestingClient) {
-      return ((SupportTestingClient) toTest).isSupported();
-    }
-    return true;
   }
 
   @Override
@@ -260,6 +285,11 @@ public abstract class BaseClient implements Client {
   @Override
   public APIGroup getApiGroup(String name) {
     return getOperationSupport().restCall(APIGroup.class, APIS, name);
+  }
+
+  @Override
+  public APIVersions getAPIVersions() {
+    return getOperationSupport().restCall(APIVersions.class, API);
   }
 
   private OperationSupport getOperationSupport() {
@@ -379,6 +409,19 @@ public abstract class BaseClient implements Client {
 
   public KubernetesSerialization getKubernetesSerialization() {
     return kubernetesSerialization;
+  }
+
+  public void addToCloseable(AutoCloseable closeable) {
+    synchronized (this.closable) {
+      if (this.closed.isDone()) {
+        throw new KubernetesClientException("Client is already closed");
+      }
+      this.closable.add(closeable);
+    }
+  }
+
+  public void removeFromCloseable(AutoCloseable closeable) {
+    this.closable.remove(closeable);
   }
 
 }

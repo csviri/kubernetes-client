@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,23 +15,23 @@
  */
 package io.fabric8.openshift.client.server.mock.hive;
 
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.openshift.api.model.hive.v1.ClusterDeployment;
 import io.fabric8.openshift.api.model.hive.v1.ClusterDeploymentBuilder;
 import io.fabric8.openshift.api.model.hive.v1.ClusterDeploymentList;
 import io.fabric8.openshift.api.model.hive.v1.ClusterDeploymentListBuilder;
 import io.fabric8.openshift.client.OpenShiftClient;
-import io.fabric8.openshift.client.server.mock.EnableOpenShiftMockClient;
-import io.fabric8.openshift.client.server.mock.OpenShiftMockServer;
 import org.junit.jupiter.api.Test;
 
 import java.net.HttpURLConnection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class ClusterDeploymentTest {
   private OpenShiftClient client;
-  private OpenShiftMockServer server;
+  KubernetesMockServer server;
 
   @Test
   void get() {

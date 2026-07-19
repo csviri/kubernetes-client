@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.http;
 
 import io.fabric8.kubernetes.client.Config;
@@ -120,6 +119,8 @@ public interface HttpClient extends AutoCloseable {
 
     Builder tlsVersions(TlsVersion... tlsVersions);
 
+    Builder tlsServerName(String tlsServerName);
+
     Builder preferHttp11();
 
     Builder proxyType(ProxyType type);
@@ -166,5 +167,7 @@ public interface HttpClient extends AutoCloseable {
   WebSocket.Builder newWebSocketBuilder();
 
   HttpRequest.Builder newHttpRequestBuilder();
+
+  boolean isClosed();
 
 }

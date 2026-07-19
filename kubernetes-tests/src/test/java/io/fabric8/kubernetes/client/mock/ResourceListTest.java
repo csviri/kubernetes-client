@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.mock;
 
 import io.fabric8.kubernetes.api.model.ConfigMap;
@@ -38,7 +37,7 @@ import io.fabric8.kubernetes.client.dsl.NamespaceListVisitFromServerGetDeleteRec
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.kubernetes.client.utils.Serialization;
-import okhttp3.mockwebserver.RecordedRequest;
+import io.fabric8.mockwebserver.http.RecordedRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -58,8 +57,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@EnableKubernetesMockClient
-public class ResourceListTest {
+@EnableKubernetesMockClient(https = false)
+class ResourceListTest {
 
   KubernetesMockServer server;
   KubernetesClient client;
@@ -206,7 +205,7 @@ public class ResourceListTest {
     ResourceTest.list(server, noReady2, null);
 
     server.expect().get().withPath(
-        "/api/v1/namespaces/ns1/pods?fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&allowWatchBookmarks=true&watch=true")
+        "/api/v1/namespaces/ns1/pods?allowWatchBookmarks=true&fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&watch=true")
         .andUpgradeToWebSocket()
         .open()
         .waitFor(500).andEmit(new WatchEvent(ready1, "MODIFIED"))
@@ -214,7 +213,7 @@ public class ResourceListTest {
         .once();
 
     server.expect().get().withPath(
-        "/api/v1/namespaces/ns1/pods?fieldSelector=metadata.name%3Dpod2&resourceVersion=1&timeoutSeconds=600&allowWatchBookmarks=true&watch=true")
+        "/api/v1/namespaces/ns1/pods?allowWatchBookmarks=true&fieldSelector=metadata.name%3Dpod2&resourceVersion=1&timeoutSeconds=600&watch=true")
         .andUpgradeToWebSocket()
         .open()
         .waitFor(500).andEmit(new WatchEvent(ready2, "MODIFIED"))
@@ -256,7 +255,7 @@ public class ResourceListTest {
 
     // This pod has a non-retryable error.
     server.expect().get().withPath(
-        "/api/v1/namespaces/ns1/pods?fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&allowWatchBookmarks=true&watch=true")
+        "/api/v1/namespaces/ns1/pods?allowWatchBookmarks=true&fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&watch=true")
         .andUpgradeToWebSocket()
         .open()
         .waitFor(500).andEmit(new WatchEvent(gone, "ERROR"))
@@ -265,7 +264,7 @@ public class ResourceListTest {
 
     // This pod succeeds.
     server.expect().get().withPath(
-        "/api/v1/namespaces/ns1/pods?fieldSelector=metadata.name%3Dpod2&resourceVersion=1&timeoutSeconds=600&allowWatchBookmarks=true&watch=true")
+        "/api/v1/namespaces/ns1/pods?allowWatchBookmarks=true&fieldSelector=metadata.name%3Dpod2&resourceVersion=1&timeoutSeconds=600&watch=true")
         .andUpgradeToWebSocket()
         .open()
         .waitFor(500).andEmit(new WatchEvent(ready2, "MODIFIED"))
@@ -307,7 +306,7 @@ public class ResourceListTest {
 
     // Both pods have a non-retryable error.
     server.expect().get().withPath(
-        "/api/v1/namespaces/ns1/pods?fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&allowWatchBookmarks=true&watch=true")
+        "/api/v1/namespaces/ns1/pods?allowWatchBookmarks=true&fieldSelector=metadata.name%3Dpod1&resourceVersion=1&timeoutSeconds=600&watch=true")
         .andUpgradeToWebSocket()
         .open()
         .waitFor(500).andEmit(new WatchEvent(gone, "ERROR"))
@@ -315,7 +314,7 @@ public class ResourceListTest {
         .once();
 
     server.expect().get().withPath(
-        "/api/v1/namespaces/ns1/pods?fieldSelector=metadata.name%3Dpod2&resourceVersion=1&timeoutSeconds=600&allowWatchBookmarks=true&watch=true")
+        "/api/v1/namespaces/ns1/pods?allowWatchBookmarks=true&fieldSelector=metadata.name%3Dpod2&resourceVersion=1&timeoutSeconds=600&watch=true")
         .andUpgradeToWebSocket()
         .open()
         .waitFor(500).andEmit(new WatchEvent(gone, "ERROR"))

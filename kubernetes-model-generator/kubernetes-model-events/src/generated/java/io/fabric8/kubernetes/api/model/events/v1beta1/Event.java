@@ -1,8 +1,9 @@
 
 package io.fabric8.kubernetes.api.model.events.v1beta1;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import javax.annotation.processing.Generated;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -10,7 +11,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.EventSource;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.IntOrString;
@@ -18,20 +22,24 @@ import io.fabric8.kubernetes.api.model.LabelSelector;
 import io.fabric8.kubernetes.api.model.LocalObjectReference;
 import io.fabric8.kubernetes.api.model.MicroTime;
 import io.fabric8.kubernetes.api.model.Namespaced;
+import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.fabric8.kubernetes.model.annotation.Group;
 import io.fabric8.kubernetes.model.annotation.Version;
 import io.sundr.builder.annotations.Buildable;
 import io.sundr.builder.annotations.BuildableReference;
-import io.sundr.transform.annotations.TemplateTransformation;
-import io.sundr.transform.annotations.TemplateTransformations;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
+/**
+ * Event is a report of an event somewhere in the cluster. It generally denotes some state change in the system. Events have a limited retention time and triggers and messages may evolve with time.  Event consumers should not rely on the timing of an event with a given Reason reflecting a consistent underlying trigger, or the continued existence of events with that Reason.  Events should be treated as informative, best-effort, supplemental data.
+ */
 @JsonDeserialize(using = com.fasterxml.jackson.databind.JsonDeserializer.None.class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
@@ -55,39 +63,35 @@ import lombok.experimental.Accessors;
 })
 @ToString
 @EqualsAndHashCode
-@Setter
 @Accessors(prefix = {
     "_",
     ""
 })
 @Buildable(editableEnabled = false, validationEnabled = false, generateBuilderPackage = false, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder", refs = {
-    @BuildableReference(io.fabric8.kubernetes.api.model.ObjectMeta.class),
+    @BuildableReference(ObjectMeta.class),
     @BuildableReference(LabelSelector.class),
     @BuildableReference(Container.class),
     @BuildableReference(PodTemplateSpec.class),
     @BuildableReference(ResourceRequirements.class),
     @BuildableReference(IntOrString.class),
-    @BuildableReference(io.fabric8.kubernetes.api.model.ObjectReference.class),
+    @BuildableReference(ObjectReference.class),
     @BuildableReference(LocalObjectReference.class),
-    @BuildableReference(PersistentVolumeClaim.class)
-})
-@TemplateTransformations({
-    @TemplateTransformation(value = "/manifest.vm", outputPath = "META-INF/services/io.fabric8.kubernetes.api.model.KubernetesResource", gather = true)
+    @BuildableReference(PersistentVolumeClaim.class),
+    @BuildableReference(EnvVar.class),
+    @BuildableReference(ContainerPort.class),
+    @BuildableReference(Volume.class),
+    @BuildableReference(VolumeMount.class)
 })
 @Version("v1beta1")
 @Group("events.k8s.io")
-public class Event implements HasMetadata, Namespaced
+@Generated("io.fabric8.kubernetes.schema.generator.model.ModelGenerator")
+public class Event implements Editable<EventBuilder>, HasMetadata, Namespaced
 {
 
     @JsonProperty("action")
-    private java.lang.String action;
-    /**
-     * 
-     * (Required)
-     * 
-     */
+    private String action;
     @JsonProperty("apiVersion")
-    private java.lang.String apiVersion = "events.k8s.io/v1beta1";
+    private String apiVersion = "events.k8s.io/v1beta1";
     @JsonProperty("deprecatedCount")
     private Integer deprecatedCount;
     @JsonProperty("deprecatedFirstTimestamp")
@@ -98,62 +102,36 @@ public class Event implements HasMetadata, Namespaced
     private EventSource deprecatedSource;
     @JsonProperty("eventTime")
     private MicroTime eventTime;
-    /**
-     * 
-     * (Required)
-     * 
-     */
     @JsonProperty("kind")
-    private java.lang.String kind = "Event";
+    private String kind = "Event";
     @JsonProperty("metadata")
-    private io.fabric8.kubernetes.api.model.ObjectMeta metadata;
+    private ObjectMeta metadata;
     @JsonProperty("note")
-    private java.lang.String note;
+    private String note;
     @JsonProperty("reason")
-    private java.lang.String reason;
+    private String reason;
     @JsonProperty("regarding")
-    private io.fabric8.kubernetes.api.model.ObjectReference regarding;
+    private ObjectReference regarding;
     @JsonProperty("related")
-    private io.fabric8.kubernetes.api.model.ObjectReference related;
+    private ObjectReference related;
     @JsonProperty("reportingController")
-    private java.lang.String reportingController;
+    private String reportingController;
     @JsonProperty("reportingInstance")
-    private java.lang.String reportingInstance;
+    private String reportingInstance;
     @JsonProperty("series")
     private EventSeries series;
     @JsonProperty("type")
-    private java.lang.String type;
+    private String type;
     @JsonIgnore
-    private Map<java.lang.String, Object> additionalProperties = new HashMap<java.lang.String, Object>();
+    private Map<String, Object> additionalProperties = new LinkedHashMap<String, Object>();
 
     /**
      * No args constructor for use in serialization
-     * 
      */
     public Event() {
     }
 
-    /**
-     * 
-     * @param note
-     * @param reason
-     * @param metadata
-     * @param reportingInstance
-     * @param deprecatedCount
-     * @param kind
-     * @param deprecatedSource
-     * @param type
-     * @param deprecatedLastTimestamp
-     * @param regarding
-     * @param deprecatedFirstTimestamp
-     * @param apiVersion
-     * @param reportingController
-     * @param related
-     * @param series
-     * @param eventTime
-     * @param action
-     */
-    public Event(java.lang.String action, java.lang.String apiVersion, Integer deprecatedCount, String deprecatedFirstTimestamp, String deprecatedLastTimestamp, EventSource deprecatedSource, MicroTime eventTime, java.lang.String kind, io.fabric8.kubernetes.api.model.ObjectMeta metadata, java.lang.String note, java.lang.String reason, io.fabric8.kubernetes.api.model.ObjectReference regarding, io.fabric8.kubernetes.api.model.ObjectReference related, java.lang.String reportingController, java.lang.String reportingInstance, EventSeries series, java.lang.String type) {
+    public Event(String action, String apiVersion, Integer deprecatedCount, String deprecatedFirstTimestamp, String deprecatedLastTimestamp, EventSource deprecatedSource, MicroTime eventTime, String kind, ObjectMeta metadata, String note, String reason, ObjectReference regarding, ObjectReference related, String reportingController, String reportingInstance, EventSeries series, String type) {
         super();
         this.action = action;
         this.apiVersion = apiVersion;
@@ -174,204 +152,301 @@ public class Event implements HasMetadata, Namespaced
         this.type = type;
     }
 
+    /**
+     * action is what action was taken/failed regarding to the regarding object. It is machine-readable. This field can have at most 128 characters.
+     */
     @JsonProperty("action")
-    public java.lang.String getAction() {
+    public String getAction() {
         return action;
     }
 
+    /**
+     * action is what action was taken/failed regarding to the regarding object. It is machine-readable. This field can have at most 128 characters.
+     */
     @JsonProperty("action")
-    public void setAction(java.lang.String action) {
+    public void setAction(String action) {
         this.action = action;
     }
 
     /**
-     * 
-     * (Required)
-     * 
+     * APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
      */
     @JsonProperty("apiVersion")
-    public java.lang.String getApiVersion() {
+    public String getApiVersion() {
         return apiVersion;
     }
 
     /**
-     * 
-     * (Required)
-     * 
+     * APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
      */
     @JsonProperty("apiVersion")
-    public void setApiVersion(java.lang.String apiVersion) {
+    public void setApiVersion(String apiVersion) {
         this.apiVersion = apiVersion;
     }
 
+    /**
+     * deprecatedCount is the deprecated field assuring backward compatibility with core.v1 Event type.
+     */
     @JsonProperty("deprecatedCount")
     public Integer getDeprecatedCount() {
         return deprecatedCount;
     }
 
+    /**
+     * deprecatedCount is the deprecated field assuring backward compatibility with core.v1 Event type.
+     */
     @JsonProperty("deprecatedCount")
     public void setDeprecatedCount(Integer deprecatedCount) {
         this.deprecatedCount = deprecatedCount;
     }
 
+    /**
+     * Event is a report of an event somewhere in the cluster. It generally denotes some state change in the system. Events have a limited retention time and triggers and messages may evolve with time.  Event consumers should not rely on the timing of an event with a given Reason reflecting a consistent underlying trigger, or the continued existence of events with that Reason.  Events should be treated as informative, best-effort, supplemental data.
+     */
     @JsonProperty("deprecatedFirstTimestamp")
     public String getDeprecatedFirstTimestamp() {
         return deprecatedFirstTimestamp;
     }
 
+    /**
+     * Event is a report of an event somewhere in the cluster. It generally denotes some state change in the system. Events have a limited retention time and triggers and messages may evolve with time.  Event consumers should not rely on the timing of an event with a given Reason reflecting a consistent underlying trigger, or the continued existence of events with that Reason.  Events should be treated as informative, best-effort, supplemental data.
+     */
     @JsonProperty("deprecatedFirstTimestamp")
     public void setDeprecatedFirstTimestamp(String deprecatedFirstTimestamp) {
         this.deprecatedFirstTimestamp = deprecatedFirstTimestamp;
     }
 
+    /**
+     * Event is a report of an event somewhere in the cluster. It generally denotes some state change in the system. Events have a limited retention time and triggers and messages may evolve with time.  Event consumers should not rely on the timing of an event with a given Reason reflecting a consistent underlying trigger, or the continued existence of events with that Reason.  Events should be treated as informative, best-effort, supplemental data.
+     */
     @JsonProperty("deprecatedLastTimestamp")
     public String getDeprecatedLastTimestamp() {
         return deprecatedLastTimestamp;
     }
 
+    /**
+     * Event is a report of an event somewhere in the cluster. It generally denotes some state change in the system. Events have a limited retention time and triggers and messages may evolve with time.  Event consumers should not rely on the timing of an event with a given Reason reflecting a consistent underlying trigger, or the continued existence of events with that Reason.  Events should be treated as informative, best-effort, supplemental data.
+     */
     @JsonProperty("deprecatedLastTimestamp")
     public void setDeprecatedLastTimestamp(String deprecatedLastTimestamp) {
         this.deprecatedLastTimestamp = deprecatedLastTimestamp;
     }
 
+    /**
+     * Event is a report of an event somewhere in the cluster. It generally denotes some state change in the system. Events have a limited retention time and triggers and messages may evolve with time.  Event consumers should not rely on the timing of an event with a given Reason reflecting a consistent underlying trigger, or the continued existence of events with that Reason.  Events should be treated as informative, best-effort, supplemental data.
+     */
     @JsonProperty("deprecatedSource")
     public EventSource getDeprecatedSource() {
         return deprecatedSource;
     }
 
+    /**
+     * Event is a report of an event somewhere in the cluster. It generally denotes some state change in the system. Events have a limited retention time and triggers and messages may evolve with time.  Event consumers should not rely on the timing of an event with a given Reason reflecting a consistent underlying trigger, or the continued existence of events with that Reason.  Events should be treated as informative, best-effort, supplemental data.
+     */
     @JsonProperty("deprecatedSource")
     public void setDeprecatedSource(EventSource deprecatedSource) {
         this.deprecatedSource = deprecatedSource;
     }
 
+    /**
+     * Event is a report of an event somewhere in the cluster. It generally denotes some state change in the system. Events have a limited retention time and triggers and messages may evolve with time.  Event consumers should not rely on the timing of an event with a given Reason reflecting a consistent underlying trigger, or the continued existence of events with that Reason.  Events should be treated as informative, best-effort, supplemental data.
+     */
     @JsonProperty("eventTime")
     public MicroTime getEventTime() {
         return eventTime;
     }
 
+    /**
+     * Event is a report of an event somewhere in the cluster. It generally denotes some state change in the system. Events have a limited retention time and triggers and messages may evolve with time.  Event consumers should not rely on the timing of an event with a given Reason reflecting a consistent underlying trigger, or the continued existence of events with that Reason.  Events should be treated as informative, best-effort, supplemental data.
+     */
     @JsonProperty("eventTime")
     public void setEventTime(MicroTime eventTime) {
         this.eventTime = eventTime;
     }
 
     /**
-     * 
-     * (Required)
-     * 
+     * Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
      */
     @JsonProperty("kind")
-    public java.lang.String getKind() {
+    public String getKind() {
         return kind;
     }
 
     /**
-     * 
-     * (Required)
-     * 
+     * Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
      */
     @JsonProperty("kind")
-    public void setKind(java.lang.String kind) {
+    public void setKind(String kind) {
         this.kind = kind;
     }
 
+    /**
+     * Event is a report of an event somewhere in the cluster. It generally denotes some state change in the system. Events have a limited retention time and triggers and messages may evolve with time.  Event consumers should not rely on the timing of an event with a given Reason reflecting a consistent underlying trigger, or the continued existence of events with that Reason.  Events should be treated as informative, best-effort, supplemental data.
+     */
     @JsonProperty("metadata")
-    public io.fabric8.kubernetes.api.model.ObjectMeta getMetadata() {
+    public ObjectMeta getMetadata() {
         return metadata;
     }
 
+    /**
+     * Event is a report of an event somewhere in the cluster. It generally denotes some state change in the system. Events have a limited retention time and triggers and messages may evolve with time.  Event consumers should not rely on the timing of an event with a given Reason reflecting a consistent underlying trigger, or the continued existence of events with that Reason.  Events should be treated as informative, best-effort, supplemental data.
+     */
     @JsonProperty("metadata")
-    public void setMetadata(io.fabric8.kubernetes.api.model.ObjectMeta metadata) {
+    public void setMetadata(ObjectMeta metadata) {
         this.metadata = metadata;
     }
 
+    /**
+     * note is a human-readable description of the status of this operation. Maximal length of the note is 1kB, but libraries should be prepared to handle values up to 64kB.
+     */
     @JsonProperty("note")
-    public java.lang.String getNote() {
+    public String getNote() {
         return note;
     }
 
+    /**
+     * note is a human-readable description of the status of this operation. Maximal length of the note is 1kB, but libraries should be prepared to handle values up to 64kB.
+     */
     @JsonProperty("note")
-    public void setNote(java.lang.String note) {
+    public void setNote(String note) {
         this.note = note;
     }
 
+    /**
+     * reason is why the action was taken. It is human-readable. This field can have at most 128 characters.
+     */
     @JsonProperty("reason")
-    public java.lang.String getReason() {
+    public String getReason() {
         return reason;
     }
 
+    /**
+     * reason is why the action was taken. It is human-readable. This field can have at most 128 characters.
+     */
     @JsonProperty("reason")
-    public void setReason(java.lang.String reason) {
+    public void setReason(String reason) {
         this.reason = reason;
     }
 
+    /**
+     * Event is a report of an event somewhere in the cluster. It generally denotes some state change in the system. Events have a limited retention time and triggers and messages may evolve with time.  Event consumers should not rely on the timing of an event with a given Reason reflecting a consistent underlying trigger, or the continued existence of events with that Reason.  Events should be treated as informative, best-effort, supplemental data.
+     */
     @JsonProperty("regarding")
-    public io.fabric8.kubernetes.api.model.ObjectReference getRegarding() {
+    public ObjectReference getRegarding() {
         return regarding;
     }
 
+    /**
+     * Event is a report of an event somewhere in the cluster. It generally denotes some state change in the system. Events have a limited retention time and triggers and messages may evolve with time.  Event consumers should not rely on the timing of an event with a given Reason reflecting a consistent underlying trigger, or the continued existence of events with that Reason.  Events should be treated as informative, best-effort, supplemental data.
+     */
     @JsonProperty("regarding")
-    public void setRegarding(io.fabric8.kubernetes.api.model.ObjectReference regarding) {
+    public void setRegarding(ObjectReference regarding) {
         this.regarding = regarding;
     }
 
+    /**
+     * Event is a report of an event somewhere in the cluster. It generally denotes some state change in the system. Events have a limited retention time and triggers and messages may evolve with time.  Event consumers should not rely on the timing of an event with a given Reason reflecting a consistent underlying trigger, or the continued existence of events with that Reason.  Events should be treated as informative, best-effort, supplemental data.
+     */
     @JsonProperty("related")
-    public io.fabric8.kubernetes.api.model.ObjectReference getRelated() {
+    public ObjectReference getRelated() {
         return related;
     }
 
+    /**
+     * Event is a report of an event somewhere in the cluster. It generally denotes some state change in the system. Events have a limited retention time and triggers and messages may evolve with time.  Event consumers should not rely on the timing of an event with a given Reason reflecting a consistent underlying trigger, or the continued existence of events with that Reason.  Events should be treated as informative, best-effort, supplemental data.
+     */
     @JsonProperty("related")
-    public void setRelated(io.fabric8.kubernetes.api.model.ObjectReference related) {
+    public void setRelated(ObjectReference related) {
         this.related = related;
     }
 
+    /**
+     * reportingController is the name of the controller that emitted this Event, e.g. `kubernetes.io/kubelet`. This field cannot be empty for new Events.
+     */
     @JsonProperty("reportingController")
-    public java.lang.String getReportingController() {
+    public String getReportingController() {
         return reportingController;
     }
 
+    /**
+     * reportingController is the name of the controller that emitted this Event, e.g. `kubernetes.io/kubelet`. This field cannot be empty for new Events.
+     */
     @JsonProperty("reportingController")
-    public void setReportingController(java.lang.String reportingController) {
+    public void setReportingController(String reportingController) {
         this.reportingController = reportingController;
     }
 
+    /**
+     * reportingInstance is the ID of the controller instance, e.g. `kubelet-xyzf`. This field cannot be empty for new Events and it can have at most 128 characters.
+     */
     @JsonProperty("reportingInstance")
-    public java.lang.String getReportingInstance() {
+    public String getReportingInstance() {
         return reportingInstance;
     }
 
+    /**
+     * reportingInstance is the ID of the controller instance, e.g. `kubelet-xyzf`. This field cannot be empty for new Events and it can have at most 128 characters.
+     */
     @JsonProperty("reportingInstance")
-    public void setReportingInstance(java.lang.String reportingInstance) {
+    public void setReportingInstance(String reportingInstance) {
         this.reportingInstance = reportingInstance;
     }
 
+    /**
+     * Event is a report of an event somewhere in the cluster. It generally denotes some state change in the system. Events have a limited retention time and triggers and messages may evolve with time.  Event consumers should not rely on the timing of an event with a given Reason reflecting a consistent underlying trigger, or the continued existence of events with that Reason.  Events should be treated as informative, best-effort, supplemental data.
+     */
     @JsonProperty("series")
     public EventSeries getSeries() {
         return series;
     }
 
+    /**
+     * Event is a report of an event somewhere in the cluster. It generally denotes some state change in the system. Events have a limited retention time and triggers and messages may evolve with time.  Event consumers should not rely on the timing of an event with a given Reason reflecting a consistent underlying trigger, or the continued existence of events with that Reason.  Events should be treated as informative, best-effort, supplemental data.
+     */
     @JsonProperty("series")
     public void setSeries(EventSeries series) {
         this.series = series;
     }
 
+    /**
+     * type is the type of this event (Normal, Warning), new types could be added in the future. It is machine-readable.
+     */
     @JsonProperty("type")
-    public java.lang.String getType() {
+    public String getType() {
         return type;
     }
 
+    /**
+     * type is the type of this event (Normal, Warning), new types could be added in the future. It is machine-readable.
+     */
     @JsonProperty("type")
-    public void setType(java.lang.String type) {
+    public void setType(String type) {
         this.type = type;
     }
 
+    @JsonIgnore
+    public EventBuilder edit() {
+        return new EventBuilder(this);
+    }
+
+    @JsonIgnore
+    public EventBuilder toBuilder() {
+        return edit();
+    }
+
     @JsonAnyGetter
-    public Map<java.lang.String, Object> getAdditionalProperties() {
+    @JsonIgnore
+    public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 
     @JsonAnySetter
-    public void setAdditionalProperty(java.lang.String name, Object value) {
+    public void setAdditionalProperty(String name, Object value) {
         this.additionalProperties.put(name, value);
+    }
+
+    public void setAdditionalProperties(Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
 }

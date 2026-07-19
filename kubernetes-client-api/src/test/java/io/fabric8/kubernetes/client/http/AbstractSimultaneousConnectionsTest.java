@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,46 +15,44 @@
  */
 package io.fabric8.kubernetes.client.http;
 
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
-import com.sun.net.httpserver.HttpServer;
-import okhttp3.Protocol;
-import okhttp3.Response;
-import okhttp3.WebSocketListener;
-import okhttp3.mockwebserver.MockResponse;
-import okhttp3.mockwebserver.MockWebServer;
+import io.fabric8.kubernetes.client.RequestConfigBuilder;
+import io.fabric8.mockwebserver.MockWebServer;
+import io.fabric8.mockwebserver.MockWebServerListener;
+import io.fabric8.mockwebserver.http.MockResponse;
+import io.fabric8.mockwebserver.http.RecordedHttpConnection;
+import io.fabric8.mockwebserver.http.Response;
+import io.fabric8.mockwebserver.http.WebSocketListener;
+import io.fabric8.mockwebserver.vertx.Protocol;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.HttpServerOptions;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.http.HttpVersion;
+import io.vertx.core.net.NetServerOptions;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.IntStream;
-
-import javax.net.ServerSocketFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@Tag("simultaneous-connections")
 public abstract class AbstractSimultaneousConnectionsTest {
 
   // TODO:
@@ -63,37 +61,31 @@ public abstract class AbstractSimultaneousConnectionsTest {
   private static final int MAX_HTTP_1_CONNECTIONS = 2048; // Should be able to at least make 2048
   private static final int MAX_HTTP_1_WS_CONNECTIONS = 1024; // Should be able to at least make 1024
 
-  private RegisteredServerSocketFactory serverSocketFactory;
+  private RegisteredConnections registeredConnections;
   private MockWebServer mockWebServer;
-  private ExecutorService httpExecutor;
-  private HttpServer httpServer;
+  private Vertx vertx;
 
   private HttpClient.Builder clientBuilder;
 
   @BeforeEach
-  void prepareServerAndBuilder() throws IOException {
-    serverSocketFactory = new RegisteredServerSocketFactory();
+  void prepareServerAndBuilder() {
+    registeredConnections = new RegisteredConnections();
     mockWebServer = new MockWebServer();
-    mockWebServer.setServerSocketFactory(serverSocketFactory);
-    httpExecutor = Executors.newCachedThreadPool();
-    httpServer = HttpServer.create(new InetSocketAddress(0), 0);
-    httpServer.setExecutor(httpExecutor);
-    httpServer.start();
+    mockWebServer.addListener(registeredConnections);
+    vertx = Vertx.vertx();
     clientBuilder = getHttpClientFactory().newBuilder()
         .connectTimeout(60, TimeUnit.SECONDS);
   }
 
   @AfterEach
-  void stopServer() throws IOException {
-    serverSocketFactory.close();
+  void stopServer() {
     mockWebServer.shutdown();
-    httpServer.stop(0);
-    httpExecutor.shutdownNow();
+    vertx.close();
   }
 
   protected abstract HttpClient.Factory getHttpClientFactory();
 
-  private void withHttp1() throws IOException {
+  private void withHttp1() {
     mockWebServer.setProtocols(Collections.singletonList(Protocol.HTTP_1_1));
     mockWebServer.start();
   }
@@ -102,23 +94,31 @@ public abstract class AbstractSimultaneousConnectionsTest {
   @DisplayName("Should be able to make 2048 simultaneous HTTP/1.x connections before processing the response")
   @DisabledOnOs(OS.WINDOWS)
   public void http1Connections() throws Exception {
-    final DelayedResponseHandler handler = new DelayedResponseHandler(MAX_HTTP_1_CONNECTIONS,
-        exchange -> exchange.sendResponseHeaders(204, -1));
-    httpServer.createContext("/http", handler);
-    try (final HttpClient client = clientBuilder.build()) {
-      final Collection<CompletableFuture<HttpResponse<AsyncBody>>> asyncResponses = ConcurrentHashMap.newKeySet();
-      final HttpRequest request = client.newHttpRequestBuilder()
-          .uri(String.format("http://localhost:%s/http", httpServer.getAddress().getPort()))
-          .build();
+    final Collection<CompletableFuture<HttpResponse<AsyncBody>>> asyncResponses = ConcurrentHashMap.newKeySet();
+    try (
+        var server = new DelayedResponseHttp1Server(vertx, MAX_HTTP_1_CONNECTIONS);
+        var client = clientBuilder.tag(new RequestConfigBuilder().withRequestRetryBackoffLimit(0).build()).build()) {
       for (int it = 0; it < MAX_HTTP_1_CONNECTIONS; it++) {
+        final HttpRequest request = client.newHttpRequestBuilder()
+            .uri(server.uri() + "?" + it)
+            .build();
         asyncResponses.add(client.consumeBytes(request, (value, asyncBody) -> asyncBody.consume()));
-        handler.await();
       }
-      CompletableFuture.allOf(asyncResponses.toArray(new CompletableFuture[0])).get(60, TimeUnit.SECONDS);
+      server.await();
+      assertThat(server.requests)
+          .hasSize(MAX_HTTP_1_CONNECTIONS);
+      for (HttpServerRequest serverRequest : server.requests) {
+        serverRequest.response().setStatusCode(204).end();
+      }
+      CompletableFuture.allOf(asyncResponses.toArray(new CompletableFuture[0])).get(70, TimeUnit.SECONDS);
       assertThat(asyncResponses)
           .hasSize(MAX_HTTP_1_CONNECTIONS)
           .extracting(CompletableFuture::join)
-          .extracting(HttpResponse::code).containsOnly(204);
+          .extracting(response -> {
+            response.body().consume();
+            return response.code();
+          })
+          .containsOnly(204);
     }
   }
 
@@ -126,19 +126,18 @@ public abstract class AbstractSimultaneousConnectionsTest {
   @DisplayName("Should be able to make 1024 simultaneous HTTP connections before upgrading to WebSocket")
   @DisabledOnOs(OS.WINDOWS)
   public void http1WebSocketConnectionsBeforeUpgrade() throws Exception {
-    final DelayedResponseHandler handler = new DelayedResponseHandler(MAX_HTTP_1_WS_CONNECTIONS,
-        exchange -> exchange.sendResponseHeaders(404, -1));
-    httpServer.createContext("/http", handler);
-    try (final HttpClient client = clientBuilder.build()) {
+    try (var server = new DelayedResponseHttp1Server(vertx, MAX_HTTP_1_WS_CONNECTIONS); var client = clientBuilder.build()) {
       for (int it = 0; it < MAX_HTTP_1_WS_CONNECTIONS; it++) {
         client.newWebSocketBuilder()
-            .uri(URI.create(String.format("http://localhost:%s/http", httpServer.getAddress().getPort())))
+            .uri(URI.create(server.uri()))
             .buildAsync(new WebSocket.Listener() {
             });
-        handler.await();
       }
+      server.await();
+      assertThat(server.requests)
+          .hasSize(MAX_HTTP_1_WS_CONNECTIONS);
+      server.requests.forEach(request -> request.response().setStatusCode(101).end());
     }
-    assertThat(handler.connectionCount.get(60, TimeUnit.SECONDS)).isEqualTo(MAX_HTTP_1_WS_CONNECTIONS);
   }
 
   @Test
@@ -146,141 +145,105 @@ public abstract class AbstractSimultaneousConnectionsTest {
   @DisabledOnOs(OS.WINDOWS)
   public void http1WebSocketConnections() throws Exception {
     withHttp1();
-    final Collection<okhttp3.WebSocket> serverSockets = ConcurrentHashMap.newKeySet();
-    final Collection<WebSocket> clientSockets = ConcurrentHashMap.newKeySet();
+    final Collection<io.fabric8.mockwebserver.http.WebSocket> serverSockets = ConcurrentHashMap.newKeySet();
+    final List<CompletableFuture<WebSocket>> clientFutures = new ArrayList<>(MAX_HTTP_1_WS_CONNECTIONS);
     final CyclicBarrier cyclicBarrier = new CyclicBarrier(2);
-    final CountDownLatch latch = new CountDownLatch(MAX_HTTP_1_WS_CONNECTIONS);
     final MockResponse response = new MockResponse()
         .withWebSocketUpgrade(new WebSocketListener() {
           @Override
-          public void onOpen(okhttp3.WebSocket webSocket, Response response) {
+          public void onOpen(io.fabric8.mockwebserver.http.WebSocket webSocket, Response response) {
+            // Register before the pacing barrier so the post-loop count assertion can't race the last iteration's add.
+            serverSockets.add(webSocket);
             try {
               cyclicBarrier.await(1, TimeUnit.SECONDS);
             } catch (Exception ignore) {
+              // Ignored
             }
-            serverSockets.add(webSocket);
-            webSocket.send("go on");
           }
         });
-    IntStream.range(0, MAX_HTTP_1_WS_CONNECTIONS).forEach(i -> mockWebServer.enqueue(response));
+    for (int it = 0; it < MAX_HTTP_1_WS_CONNECTIONS; it++) {
+      mockWebServer.enqueue(response);
+    }
     try (final HttpClient client = clientBuilder.build()) {
       for (int it = 0; it < MAX_HTTP_1_WS_CONNECTIONS; it++) {
-        client.newWebSocketBuilder()
+        clientFutures.add(client.newWebSocketBuilder()
             .uri(mockWebServer.url("/").uri())
             .buildAsync(new WebSocket.Listener() {
-
-              @Override
-              public void onMessage(WebSocket webSocket, String text) {
-                clientSockets.add(webSocket);
-                latch.countDown();
-                webSocket.request();
-              }
-            });
+            }));
         cyclicBarrier.await(1, TimeUnit.SECONDS);
       }
-      assertThat(latch.await(60L, TimeUnit.SECONDS)).isTrue();
+      CompletableFuture.allOf(clientFutures.toArray(new CompletableFuture[0])).get(60, TimeUnit.SECONDS);
       assertThat(serverSockets.size())
           .isEqualTo(MAX_HTTP_1_WS_CONNECTIONS)
-          .isLessThanOrEqualTo((int) serverSocketFactory.activeConnections());
-      //      assertThat(clientSockets)
-      //          .hasSize(MAX_HTTP_1_WS_CONNECTIONS);
+          .isLessThanOrEqualTo(registeredConnections.activeConnections());
     } finally {
-      for (okhttp3.WebSocket socket : serverSockets) {
+      for (io.fabric8.mockwebserver.http.WebSocket socket : serverSockets) {
         socket.close(1000, "done");
       }
     }
   }
 
-  private static class DelayedResponseHandler implements HttpHandler {
+  private static class DelayedResponseHttp1Server implements AutoCloseable {
 
-    private final int requestCount;
-    private final CyclicBarrier barrier;
-    private final Set<HttpExchange> exchanges;
-    private final CompletableFuture<Integer> connectionCount;
-    private final ExecutorService executorService;
+    private final int connections;
+    private final HttpServer httpServer;
+    private final Collection<HttpServerRequest> requests;
+    private final CountDownLatch connectionLatch;
 
-    private DelayedResponseHandler(int requestCount, HttpHandler handler) {
-      this.requestCount = requestCount;
-      this.barrier = new CyclicBarrier(2);
-      exchanges = ConcurrentHashMap.newKeySet();
-      connectionCount = new CompletableFuture<>();
-      executorService = Executors.newFixedThreadPool(1);
-      connectionCount.thenRunAsync(() -> {
-        for (HttpExchange exchange : exchanges) {
-          try {
-            handler.handle(exchange);
-          } catch (IOException ignore) {
-            // NO OP
-          }
-        }
-      }, executorService)
-          .whenComplete((unused, throwable) -> executorService.shutdownNow());
+    private DelayedResponseHttp1Server(Vertx vertx, int connections) throws Exception {
+      this.connections = connections;
+      requests = ConcurrentHashMap.newKeySet();
+      connectionLatch = new CountDownLatch(connections);
+      httpServer = vertx.createHttpServer(new HttpServerOptions()
+          .setPort(NetServerOptions.DEFAULT_PORT)
+          .setAlpnVersions(Collections.singletonList(HttpVersion.HTTP_1_1)));
+      httpServer.connectionHandler(event -> connectionLatch.countDown());
+      httpServer.requestHandler(requests::add);
+      httpServer.listen().toCompletionStage().toCompletableFuture().get(10, TimeUnit.SECONDS);
     }
 
     @Override
-    public void handle(HttpExchange exchange) throws IOException {
-      exchanges.add(exchange);
-      await();
-      if (exchanges.size() == requestCount) {
-        connectionCount.complete(requestCount);
-      }
-
+    public void close() throws Exception {
+      requests.forEach(request -> request.connection().close());
+      requests.clear();
+      httpServer.close().toCompletionStage().toCompletableFuture().get(10, TimeUnit.SECONDS);
     }
 
-    public final void await() {
+    private String uri() {
+      return String.format("http://localhost:%s/http-1-connections", httpServer.actualPort());
+    }
+
+    private void await() {
       try {
-        barrier.await(1, TimeUnit.SECONDS);
-      } catch (Exception ex) {
-        throw new RuntimeException("Failed to await the barrier");
+        if (!connectionLatch.await(10, TimeUnit.SECONDS)) {
+          throw new AssertionError(
+              "Failed to await the connection latch, remaining connections to open: " + connectionLatch.getCount());
+        }
+        Awaitility.await().atMost(5, TimeUnit.SECONDS).until(() -> requests.size() == connections);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new RuntimeException("Failed to await the connection latch (interrupted)", e);
       }
-      ;
     }
   }
 
-  private static class RegisteredServerSocketFactory extends ServerSocketFactory implements Closeable {
+  private static class RegisteredConnections implements MockWebServerListener {
 
-    private final Set<Socket> connections = new HashSet<>();
+    private final Set<RecordedHttpConnection> connections = ConcurrentHashMap.newKeySet();
 
-    final long activeConnections() {
-      return connections.stream().filter(Socket::isConnected).filter(s -> !s.isClosed()).count();
+    final int activeConnections() {
+      return connections.size();
     }
 
     @Override
-    public final void close() {
-      for (Socket socket : connections) {
-        try {
-          socket.close();
-        } catch (IOException ignored) {
-          // ignored
-        }
-      }
+    public void onConnection(RecordedHttpConnection connection) {
+      connections.add(connection);
+      MockWebServerListener.super.onConnection(connection);
     }
 
     @Override
-    public ServerSocket createServerSocket() throws IOException {
-      return new ServerSocket() {
-        @Override
-        public Socket accept() throws IOException {
-          final Socket socket = super.accept();
-          connections.add(socket);
-          return socket;
-        }
-      };
-    }
-
-    @Override
-    public ServerSocket createServerSocket(int port) throws IOException {
-      throw new SocketException("not implemented");
-    }
-
-    @Override
-    public ServerSocket createServerSocket(int port, int backlog) throws IOException {
-      throw new SocketException("not implemented");
-    }
-
-    @Override
-    public ServerSocket createServerSocket(int port, int backlog, InetAddress ifAddress) throws IOException {
-      throw new SocketException("not implemented");
+    public void onConnectionClosed(RecordedHttpConnection connection) {
+      connections.remove(connection);
     }
   }
 }

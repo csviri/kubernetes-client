@@ -21,11 +21,15 @@
   <parent>
     <groupId>io.fabric8</groupId>
     <artifactId>knative-extension-pom</artifactId>
-    <version>6.8-SNAPSHOT</version>
+    <version>999-SNAPSHOT</version>
   </parent>
 
   <artifactId>knative-examples</artifactId>
   <name>Fabric8 :: Knative :: Examples</name>
+
+  <properties>
+    <maven.deploy.skip>true</maven.deploy.skip>
+  </properties>
 
   <dependencies>
     <dependency>

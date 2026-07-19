@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.extension;
 
 import io.fabric8.kubernetes.api.model.DeletionPropagation;
@@ -89,6 +88,12 @@ public interface ExtensibleResource<T> extends Resource<T>, TimeoutableScalable<
 
   @Override
   ExtensibleResource<T> withTimeout(long timeout, TimeUnit unit);
+
+  @Override
+  ExtensibleResource<T> unlock();
+
+  @Override
+  ExtensibleResource<T> subresource(String subresource);
 
   @Override
   default ExtensibleResource<T> withTimeoutInMillis(long timeoutInMillis) {

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.fabric8.kubernetes.api.builder.Editable;
 import io.sundr.builder.annotations.Buildable;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -46,8 +47,8 @@ import java.util.Map;
 @Setter
 @ToString
 @EqualsAndHashCode
-@Buildable(editableEnabled = false, validationEnabled = false, generateBuilderPackage = true, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
-public class GenericKubernetesResource implements HasMetadata {
+@Buildable(editableEnabled = false, validationEnabled = false, generateBuilderPackage = false, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
+public class GenericKubernetesResource implements Editable<GenericKubernetesResourceBuilder>, HasMetadata {
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -59,6 +60,16 @@ public class GenericKubernetesResource implements HasMetadata {
   private ObjectMeta metadata;
   @JsonIgnore
   private Map<String, Object> additionalProperties = new LinkedHashMap<>();
+
+  @JsonIgnore
+  public GenericKubernetesResourceBuilder edit() {
+    return new GenericKubernetesResourceBuilder(this);
+  }
+
+  @JsonIgnore
+  public GenericKubernetesResourceBuilder toBuilder() {
+    return edit();
+  }
 
   @JsonAnyGetter
   public Map<String, Object> getAdditionalProperties() {
@@ -83,6 +94,7 @@ public class GenericKubernetesResource implements HasMetadata {
     return MAPPER.convertValue(getAdditionalProperties(), JsonNode.class);
   }
 
+  // spotless:off
   /**
    * Allows the retrieval of field values from this Resource for the provided path segments.
    *
@@ -128,6 +140,7 @@ public class GenericKubernetesResource implements HasMetadata {
    * @param <T> type of the returned object.
    * @return the value of the traversed path or null if the field does not exist.
    */
+  // spotless:on
   public <T> T get(Object... path) {
     return get(getAdditionalProperties(), path);
   }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,6 +43,7 @@ public class WatchConnectionManager<T extends HasMetadata, L extends KubernetesR
 
   private final long connectTimeoutMillis;
   protected WatcherWebSocketListener<T> listener;
+  @SuppressWarnings("java:S3077") // CompletableFuture is thread-safe; volatile ensures reference visibility
   private volatile CompletableFuture<WebSocket> websocketFuture;
 
   volatile boolean ready;
@@ -94,6 +95,7 @@ public class WatchConnectionManager<T extends HasMetadata, L extends KubernetesR
           }
         }
       }
+      state.started.set(true);
       this.ready = true;
       return w;
     });

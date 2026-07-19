@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client;
 
 import io.fabric8.kubernetes.client.http.HttpClient;
@@ -34,6 +33,8 @@ import java.util.function.Supplier;
  */
 public class KubernetesClientBuilder {
 
+  private static final String DEFAULT_IMPLEMENTATION = "io.fabric8.kubernetes.client.impl.KubernetesClientImpl";
+
   @FunctionalInterface
   public interface ExecutorSupplier extends Supplier<Executor> {
 
@@ -52,12 +53,11 @@ public class KubernetesClientBuilder {
 
   public KubernetesClientBuilder() {
     // basically the same logic as in KubernetesResourceUtil for finding list types
-    String className = "io.fabric8.kubernetes.client.impl.KubernetesClientImpl";
     try {
-      clazz = (Class<KubernetesClient>) Thread.currentThread().getContextClassLoader().loadClass(className);
+      clazz = (Class<KubernetesClient>) Thread.currentThread().getContextClassLoader().loadClass(DEFAULT_IMPLEMENTATION);
     } catch (ClassNotFoundException | ClassCastException | NullPointerException e) {
       try {
-        clazz = (Class<KubernetesClient>) KubernetesClient.class.getClassLoader().loadClass(className);
+        clazz = (Class<KubernetesClient>) KubernetesClient.class.getClassLoader().loadClass(DEFAULT_IMPLEMENTATION);
       } catch (Exception ex) {
         throw KubernetesClientException.launderThrowable(ex);
       }
@@ -94,24 +94,22 @@ public class KubernetesClientBuilder {
     return builder.build();
   }
 
-  public KubernetesClientBuilder withConfig(Config config) {
-    this.config = config;
-    return this;
-  }
-
   public KubernetesClientBuilder withKubernetesSerialization(KubernetesSerialization kubernetesSerialization) {
     this.kubernetesSerialization = Utils.checkNotNull(kubernetesSerialization, "kubernetesSerialization must not be null");
     return this;
   }
 
-  public KubernetesClientBuilder withConfig(String config) {
-    this.config = kubernetesSerialization.unmarshal(config, Config.class);
+  public KubernetesClientBuilder withConfig(Config config) {
+    this.config = config;
     return this;
   }
 
+  public KubernetesClientBuilder withConfig(String config) {
+    return withConfig(kubernetesSerialization.unmarshal(config, Config.class));
+  }
+
   public KubernetesClientBuilder withConfig(InputStream config) {
-    this.config = kubernetesSerialization.unmarshal(config, Config.class);
-    return this;
+    return withConfig(kubernetesSerialization.unmarshal(config, Config.class));
   }
 
   public KubernetesClientBuilder withHttpClientFactory(HttpClient.Factory factory) {
@@ -156,6 +154,25 @@ public class KubernetesClientBuilder {
   public KubernetesClientBuilder withHttpClientBuilderConsumer(Consumer<HttpClient.Builder> consumer) {
     this.builderConsumer = consumer;
     return this;
+  }
+
+  public class ConfigNested extends ConfigFluent<ConfigNested> {
+
+    private ConfigBuilder builder;
+
+    private ConfigNested() {
+      this.builder = new ConfigBuilder(this, config);
+    }
+
+    public KubernetesClientBuilder endConfig() {
+      config = this.builder.build();
+      return KubernetesClientBuilder.this;
+    }
+
+  }
+
+  public ConfigNested editOrNewConfig() {
+    return new ConfigNested();
   }
 
 }

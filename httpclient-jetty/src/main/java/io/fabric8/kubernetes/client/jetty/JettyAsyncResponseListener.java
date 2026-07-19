@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +24,7 @@ import org.eclipse.jetty.client.api.Result;
 import org.eclipse.jetty.util.Callback;
 
 import java.nio.ByteBuffer;
+import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.LongConsumer;
@@ -72,7 +73,17 @@ public abstract class JettyAsyncResponseListener extends Response.Listener.Adapt
 
   @Override
   public void onComplete(Result result) {
-    asyncBodyDone.complete(null);
+    if (result.isSucceeded()) {
+      asyncBodyDone.complete(null);
+    } else {
+      asyncBodyDone.completeExceptionally(
+          Optional.ofNullable(result.getFailure()).orElse(new RuntimeException("Request failed, but no failure was given")));
+    }
+  }
+
+  @Override
+  public void onFailure(Response response, Throwable failure) {
+    asyncResponse.completeExceptionally(failure);
   }
 
   public CompletableFuture<HttpResponse<AsyncBody>> listen(Request request) {

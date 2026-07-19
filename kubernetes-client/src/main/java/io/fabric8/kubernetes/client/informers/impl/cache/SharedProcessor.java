@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,8 +24,8 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Executor;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
@@ -36,13 +36,13 @@ import java.util.function.Supplier;
  * notifications.
  *
  * This has been taken from official-client:
- * https://github.com/kubernetes-client/java/blob/master/util/src/main/java/io/kubernetes/client/informer/cache/SharedProcessor.java
+ * https://github.com/kubernetes-client/java/blob/main/util/src/main/java/io/kubernetes/client/informer/cache/SharedProcessor.java
  *
  * <br>
  * Modified to simplify threading
  */
 public class SharedProcessor<T> {
-  private static final Logger log = LoggerFactory.getLogger(SharedProcessor.class);
+  private static final Logger logger = LoggerFactory.getLogger(SharedProcessor.class);
 
   private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
@@ -107,20 +107,16 @@ public class SharedProcessor<T> {
     } finally {
       lock.readLock().unlock();
     }
-    try {
-      executor.execute(() -> {
-        for (ProcessorListener<T> listener : toCall) {
-          try {
-            operation.accept(listener);
-          } catch (Exception ex) {
-            log.error("{} failed invoking {} event handler: {}", informerDescription, listener.getHandler(), ex.getMessage(),
-                ex);
-          }
+    executor.execute(() -> {
+      for (ProcessorListener<T> listener : toCall) {
+        try {
+          operation.accept(listener);
+        } catch (Exception ex) {
+          logger.error("{} failed invoking {} event handler: {}", informerDescription, listener.getHandler(), ex.getMessage(),
+              ex);
         }
-      });
-    } catch (RejectedExecutionException e) {
-      // do nothing
-    }
+      }
+    });
   }
 
   public boolean shouldResync() {
@@ -174,4 +170,35 @@ public class SharedProcessor<T> {
       lock.writeLock().unlock();
     }
   }
+
+  public Optional<ProcessorListener<T>> removeProcessorListener(ResourceEventHandler<? super T> handler) {
+    lock.writeLock().lock();
+    try {
+      var targetListener = this.listeners.stream().filter(l -> l.getHandler() == handler).findFirst();
+      targetListener.ifPresent(l -> {
+        this.listeners.remove(l);
+        if (l.isReSync()) {
+          this.syncingListeners.remove(l);
+        }
+      });
+      return targetListener;
+    } finally {
+      lock.writeLock().unlock();
+    }
+  }
+
+  public Optional<Long> getMinimalNonZeroResyncPeriod() {
+    lock.readLock().lock();
+    try {
+      return this.listeners.stream().map(ProcessorListener::getResyncPeriodInMillis)
+          .filter(p -> p > 0L).min(Long::compareTo);
+    } finally {
+      lock.readLock().unlock();
+    }
+  }
+
+  public SerialExecutor getSerialExecutor() {
+    return executor;
+  }
+
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,9 +19,9 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class ListOptionsTest {
+class ListOptionsTest {
   @Test
-  public void testBuilder() {
+  void testBuilder() {
     ListOptions listOptions = new io.fabric8.kubernetes.api.model.ListOptionsBuilder()
         .withLimit(100L)
         .withContinue("23243434")

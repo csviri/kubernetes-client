@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,13 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes.client.server.mock;
 
+import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
+import java.util.function.Consumer;
 
 import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
 import static java.lang.annotation.ElementType.METHOD;
@@ -34,10 +36,20 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Target({ TYPE, METHOD, ANNOTATION_TYPE })
 @Retention(RUNTIME)
 @ExtendWith(KubernetesMockServerExtension.class)
+@Inherited
 public @interface EnableKubernetesMockClient {
 
   boolean https() default true;
 
   boolean crud() default false;
+
+  /**
+   * No-arg constructor class implementing {@link Consumer} interface that accepts the {@link KubernetesClientBuilder} instance
+   * used by the KubernetesMockServerExtension for further customization.
+   * <p>
+   * Enables the customization of the automatically bootstrapped and injected
+   * {@link io.fabric8.kubernetes.client.KubernetesClient} instance.
+   */
+  Class<? extends Consumer<KubernetesClientBuilder>> kubernetesClientBuilderCustomizer() default KubernetesClientBuilderCustomizer.class;
 
 }

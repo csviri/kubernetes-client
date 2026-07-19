@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package io.fabric8.kubernetes;
 
 import io.fabric8.junit.jupiter.api.RequireK8sVersionAtLeast;
@@ -62,7 +61,9 @@ class GenericResourceIT {
 
     MixedOperation<GenericKubernetesResource, GenericKubernetesResourceList, Resource<GenericKubernetesResource>> resources = client
         .genericKubernetesResources("v1", "ConfigMap");
-    assertTrue(!resources.list().getItems().isEmpty());
+    List<GenericKubernetesResource> items = resources.list().getItems();
+    assertTrue(!items.isEmpty());
+    assertTrue(items.stream().allMatch(g -> g.getKind().equals("ConfigMap")));
   }
 
   @Test

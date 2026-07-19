@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,10 +17,10 @@ package io.fabric8.openclustermanagement.test.observability;
 
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
-import io.fabric8.openclustermanagement.api.model.multiclusterobservabilityoperator.apps.v1beta1.ObservabilityAddon;
-import io.fabric8.openclustermanagement.api.model.multiclusterobservabilityoperator.apps.v1beta1.ObservabilityAddonBuilder;
-import io.fabric8.openclustermanagement.api.model.multiclusterobservabilityoperator.apps.v1beta1.ObservabilityAddonList;
-import io.fabric8.openclustermanagement.api.model.multiclusterobservabilityoperator.apps.v1beta1.ObservabilityAddonListBuilder;
+import io.fabric8.openclustermanagement.api.model.observability.v1beta1.ObservabilityAddon;
+import io.fabric8.openclustermanagement.api.model.observability.v1beta1.ObservabilityAddonBuilder;
+import io.fabric8.openclustermanagement.api.model.observability.v1beta1.ObservabilityAddonList;
+import io.fabric8.openclustermanagement.api.model.observability.v1beta1.ObservabilityAddonListBuilder;
 import io.fabric8.openclustermanagement.client.OpenClusterManagementClient;
 import org.junit.jupiter.api.Test;
 
@@ -30,8 +30,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @EnableKubernetesMockClient
 class ObservabilityAddonTest {
-  private OpenClusterManagementClient client;
-  private KubernetesMockServer server;
+  OpenClusterManagementClient client;
+  KubernetesMockServer server;
 
   @Test
   void get() {

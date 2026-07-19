@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,11 +23,5 @@ public class OkHttpClientProxyTest extends AbstractHttpClientProxyTest {
   @Override
   protected HttpClient.Factory getHttpClientFactory() {
     return new OkHttpClientFactory();
-  }
-
-  @Override
-  protected void proxyConfigurationAddsRequiredHeaders() {
-    // NO-OP
-    // OkHttp uses a response intercept to add the auth proxy headers in case the original response failed
   }
 }

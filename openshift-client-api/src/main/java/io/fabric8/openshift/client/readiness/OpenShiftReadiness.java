@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,7 +36,7 @@ public class OpenShiftReadiness extends Readiness {
   }
 
   @Override
-  protected boolean isReadinessApplicable(HasMetadata item) {
+  public boolean isReadinessApplicable(HasMetadata item) {
     return super.isReadinessApplicable(item) ||
         item instanceof DeploymentConfig;
   }

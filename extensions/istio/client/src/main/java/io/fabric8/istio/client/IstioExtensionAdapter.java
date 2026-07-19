@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,6 +32,7 @@ public class IstioExtensionAdapter implements ExtensionAdapter<IstioClient> {
 
   @Override
   public void registerClients(ClientFactory factory) {
+    factory.register(V1APIGroupDSL.class, new V1APIGroupClient());
     factory.register(V1beta1APIGroupDSL.class, new V1beta1APIGroupClient());
     factory.register(V1alpha3APIGroupDSL.class, new V1alpha3APIGroupClient());
   }

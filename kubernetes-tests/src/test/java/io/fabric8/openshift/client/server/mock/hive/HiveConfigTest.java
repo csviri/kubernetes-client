@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,23 +15,23 @@
  */
 package io.fabric8.openshift.client.server.mock.hive;
 
+import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import io.fabric8.openshift.api.model.hive.v1.HiveConfig;
 import io.fabric8.openshift.api.model.hive.v1.HiveConfigBuilder;
 import io.fabric8.openshift.api.model.hive.v1.HiveConfigList;
 import io.fabric8.openshift.api.model.hive.v1.HiveConfigListBuilder;
 import io.fabric8.openshift.client.OpenShiftClient;
-import io.fabric8.openshift.client.server.mock.EnableOpenShiftMockClient;
-import io.fabric8.openshift.client.server.mock.OpenShiftMockServer;
 import org.junit.jupiter.api.Test;
 
 import java.net.HttpURLConnection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@EnableOpenShiftMockClient
+@EnableKubernetesMockClient(https = false)
 class HiveConfigTest {
   private OpenShiftClient client;
-  private OpenShiftMockServer server;
+  KubernetesMockServer server;
 
   @Test
   void get() {
@@ -76,7 +76,7 @@ class HiveConfigTest {
         .once();
 
     // When
-    boolean isDeleted = client.hive().hiveConfigs().withName("hiveconfig1").delete().size() == 1;
+    boolean isDeleted = client.hive().hiveConfigs().withName("hiveconfig1").withGracePeriod(0).delete().size() == 1;
 
     // Then
     assertThat(isDeleted).isTrue();

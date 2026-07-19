@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +15,6 @@
  */
 package io.fabric8.kubernetes.client.utils;
 
-import io.fabric8.kubernetes.api.Pluralize;
 import io.fabric8.kubernetes.api.model.Namespaced;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.model.annotation.Group;
@@ -43,6 +42,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -62,13 +62,14 @@ import java.util.stream.Stream;
 
 public class Utils {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(Utils.class);
+  private static final Logger logger = LoggerFactory.getLogger(Utils.class);
   private static final String ALL_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
   public static final String WINDOWS = "win";
   public static final String OS_NAME = "os.name";
   public static final String PATH_WINDOWS = "Path";
   public static final String PATH_UNIX = "PATH";
   private static final Random random = new Random();
+  private static final AtomicLong leastSigBits = new AtomicLong();
 
   private static final CachedSingleThreadScheduler SHARED_SCHEDULER = new CachedSingleThreadScheduler();
 
@@ -173,6 +174,9 @@ public class Utils {
       }
       t.addSuppressed(new Throwable("waiting here"));
       throw KubernetesClientException.launderThrowable(t);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw KubernetesClientException.launderThrowable(e);
     } catch (Exception e) {
       throw KubernetesClientException.launderThrowable(e);
     }
@@ -204,7 +208,7 @@ public class Utils {
           c.close();
         }
       } catch (IOException e) {
-        LOGGER.debug("Error closing: {}", c);
+        logger.debug("Error closing: {}", c);
       }
     }
   }
@@ -225,6 +229,17 @@ public class Utils {
       }
     }
     return null;
+  }
+
+  /**
+   * Utility method to generate UUIDs.
+   * This is taken from Spring Framework's <a href=
+   * "https://github.com/spring-projects/spring-framework/blob/a4db0e7448287028d228d46fe7b4df202150958a/spring-core/src/main/java/org/springframework/util/SimpleIdGenerator.java#L35">SimpleIdGenerator</a>
+   *
+   * @return generated UUID
+   */
+  public static UUID generateId() {
+    return new UUID(0, leastSigBits.incrementAndGet());
   }
 
   public static String randomString(int length) {
@@ -326,17 +341,6 @@ public class Utils {
       // Ignore
     }
     return null;
-  }
-
-  /**
-   *
-   * @param kind
-   * @return
-   * @deprecated use {@link io.fabric8.kubernetes.api.model.HasMetadata#getPlural(Class)}
-   */
-  @Deprecated
-  public static String getPluralFromKind(String kind) {
-    return Pluralize.toPlural(kind.toLowerCase(Locale.ROOT));
   }
 
   /**
@@ -532,5 +536,4 @@ public class Utils {
       });
     }, delay, unit));
   }
-
 }

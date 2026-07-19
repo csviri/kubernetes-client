@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2015 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,8 +20,11 @@ import io.fabric8.kubernetes.api.model.DeleteOptions;
 import io.fabric8.kubernetes.api.model.EphemeralContainer;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.PodCondition;
+import io.fabric8.kubernetes.api.model.PodConditionBuilder;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.PodSpec;
+import io.fabric8.kubernetes.api.model.PodStatus;
 import io.fabric8.kubernetes.api.model.policy.v1beta1.Eviction;
 import io.fabric8.kubernetes.api.model.policy.v1beta1.EvictionBuilder;
 import io.fabric8.kubernetes.client.Client;
@@ -66,7 +69,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -82,7 +84,10 @@ import java.nio.channels.WritableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -92,7 +97,7 @@ public class PodOperationsImpl extends HasMetadataOperation<Pod, PodList, PodRes
     implements PodResource, EphemeralContainersResource, CopyOrReadable {
 
   public static final int HTTP_TOO_MANY_REQUESTS = 429;
-  public static final int DEFAULT_POD_READY_WAIT_TIMEOUT_MS = 5000;
+  public static final int DEFAULT_POD_READY_WAIT_TIMEOUT_MS = 0;
   private static final String[] EMPTY_COMMAND = { "/bin/sh", "-i" };
   public static final String DEFAULT_CONTAINER_ANNOTATION_NAME = "kubectl.kubernetes.io/default-container";
 
@@ -188,8 +193,8 @@ public class PodOperationsImpl extends HasMetadataOperation<Pod, PodList, PodRes
   }
 
   @Override
-  public PodOperationsImpl withReadyWaitTimeout(Integer logWaitTimeout) {
-    return new PodOperationsImpl(getContext().withReadyWaitTimeout(logWaitTimeout), context);
+  public PodOperationsImpl withReadyWaitTimeout(Integer readyWaitTimeout) {
+    return new PodOperationsImpl(getContext().withReadyWaitTimeout(readyWaitTimeout), context);
   }
 
   @Override
@@ -369,17 +374,30 @@ public class PodOperationsImpl extends HasMetadataOperation<Pod, PodList, PodRes
   private ExecWebSocketListener setupConnectionToPod(URI uri) {
     ExecWebSocketListener execWebSocketListener = new ExecWebSocketListener(getContext(), this.context.getExecutor(),
         this.getKubernetesSerialization());
+    long requestTimeoutMs = getRequestConfig().getRequestTimeout();
     CompletableFuture<WebSocket> startedFuture = httpClient.newWebSocketBuilder()
         .subprotocol("v4.channel.k8s.io")
         .uri(uri)
-        .connectTimeout(getRequestConfig().getRequestTimeout(), TimeUnit.MILLISECONDS)
+        .connectTimeout(requestTimeoutMs, TimeUnit.MILLISECONDS)
         .buildAsync(execWebSocketListener);
     startedFuture.whenComplete((w, t) -> {
       if (t != null) {
         execWebSocketListener.onError(w, t);
       }
     });
-    Utils.waitUntilReadyOrFail(startedFuture, getRequestConfig().getRequestTimeout(), TimeUnit.MILLISECONDS);
+    final long startNanos = System.nanoTime();
+    try {
+      Utils.waitUntilReadyOrFail(startedFuture, requestTimeoutMs, TimeUnit.MILLISECONDS);
+    } catch (RuntimeException e) {
+      // Diagnostic for #7737: capture state when the WS-upgrade future fails to complete.
+      LOG.error("Exec WebSocket upgrade did not complete after {}ms (timeout {}ms). uri={} futureDone={} thread={}",
+          (System.nanoTime() - startNanos) / 1_000_000L,
+          requestTimeoutMs,
+          uri,
+          startedFuture.isDone(),
+          Thread.currentThread().getName());
+      throw e;
+    }
     return execWebSocketListener;
   }
 
@@ -394,6 +412,7 @@ public class PodOperationsImpl extends HasMetadataOperation<Pod, PodList, PodRes
   }
 
   @Override
+  @SuppressWarnings("java:S3516") // return value is part of the public API; cannot be changed without a breaking release
   public boolean copy(Path destination) {
     try {
       if (Utils.isNotNullOrEmpty(getContext().getFile())) {
@@ -417,7 +436,7 @@ public class PodOperationsImpl extends HasMetadataOperation<Pod, PodList, PodRes
       } catch (Exception ex) {
         throw KubernetesClientException.launderThrowable(ex);
       }
-    }, "TarArchiveOutputStream is provided by commons-compress");
+    }, "TarArchiveOutputStream is provided by commons-compress, an optional dependency. To use the read/copy functionality you must explicitly add commons-compress and commons-io dependency to the classpath.");
   }
 
   @Override
@@ -428,7 +447,7 @@ public class PodOperationsImpl extends HasMetadataOperation<Pod, PodList, PodRes
       } catch (Exception ex) {
         throw KubernetesClientException.launderThrowable(ex);
       }
-    }, "TarArchiveOutputStream is provided by commons-compress");
+    }, "TarArchiveOutputStream is provided by commons-compress, an optional dependency. To use the read/copy functionality you must explicitly add commons-compress and commons-io dependency to the classpath.");
   }
 
   @Override
@@ -471,9 +490,12 @@ public class PodOperationsImpl extends HasMetadataOperation<Pod, PodList, PodRes
       destination = destination.toPath().resolve(filename).toFile();
     }
 
-    try (OutputStream out = new BufferedOutputStream(new FileOutputStream(destination))) {
+    try (OutputStream out = new BufferedOutputStream(Files.newOutputStream(destination.toPath()))) {
       ExecWatch w = writingOutput(out).exec(readFileCommand(source));
       w.exitCode().get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw KubernetesClientException.launderThrowable(e);
     } catch (Exception e) {
       throw KubernetesClientException.launderThrowable(e);
     }
@@ -534,7 +556,7 @@ public class PodOperationsImpl extends HasMetadataOperation<Pod, PodList, PodRes
       }.run();
     } catch (NoClassDefFoundError e) {
       throw new KubernetesClientException(
-          "TarArchiveInputStream class is provided by commons-compress, an optional dependency. To use the read/copy functionality you must explicitly add this dependency to the classpath.");
+          "TarArchiveInputStream class is provided by commons-compress, an optional dependency. To use the read/copy functionality you must explicitly add commons-compress and commons-io dependency to the classpath.");
     }
   }
 
@@ -640,4 +662,30 @@ public class PodOperationsImpl extends HasMetadataOperation<Pod, PodList, PodRes
   public PodOperationsImpl terminateOnError() {
     return new PodOperationsImpl(getContext().toBuilder().terminateOnError(true).build(), context);
   }
+
+  @Override
+  public Pod patchReadinessGateStatus(Map<String, Boolean> readiness) {
+    Map<String, PodCondition> conditions = new LinkedHashMap<>();
+    Pod pod = getItemOrRequireFromServer();
+    if (pod.getStatus() == null) {
+      pod.setStatus(new PodStatus());
+    }
+    pod.getStatus().getConditions().forEach(pc -> conditions.put(pc.getType(), pc));
+    for (Map.Entry<String, Boolean> entry : readiness.entrySet()) {
+      if (entry.getValue() == null) { // effectively false, may not even need to account for this case
+        conditions.remove(entry.getKey());
+      } else {
+        PodCondition condition = conditions.get(entry.getKey());
+        String valueString = entry.getValue() ? "True" : "False";
+        if (condition == null) {
+          conditions.put(entry.getKey(), new PodConditionBuilder().withStatus(valueString).withType(entry.getKey()).build());
+        } else {
+          condition.setStatus(valueString);
+        }
+      }
+    }
+    pod.getStatus().setConditions(new ArrayList<>(conditions.values()));
+    return this.resource(pod).subresource("status").patch();
+  }
+
 }
